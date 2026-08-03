@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CRM «Поверка»</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=SN+Pro:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+[data-theme="light"]{
+  --bg:#F2F2F0; --bg2:#ECECEA; --surface:#FAFAF8; --card:#FFFFFF;
+  --border:#DCDCD7; --border2:#E6E6E2;
+  --ink:#171717; --ink2:#575757; --ink3:#8D8D8D;
+  --wash:rgba(23,23,23,.045); --mark:rgba(23,23,23,.22);
+  --success:#16A34A; --error:#DC2626; --warning:#D97706; --cold:#2563EB;
+  --btnA:#1B1B1B; --btnB:#343434; --btnFg:#F2F2F0;
+  --gridA:rgba(23,23,23,.05); --gridB:rgba(23,23,23,.024);
+  --glow:rgba(255,255,255,.6); --scan:rgba(23,23,23,.06);
+  --shSoft:0 6px 18px -10px rgba(20,20,20,.16);
+  --shCard:0 16px 32px -14px rgba(20,20,20,.2);
+}
+[data-theme="dark"]{
+  --bg:#0A0A0A; --bg2:#0D0D0D; --surface:#141414; --card:#181818;
+  --border:#252525; --border2:#1C1C1C;
+  --ink:#E7E7E7; --ink2:#A0A0A0; --ink3:#6B6B6B;
+  --wash:rgba(231,231,231,.05); --mark:rgba(231,231,231,.17);
+  --success:#22C55E; --error:#EF4444; --warning:#F59E0B; --cold:#60A5FA;
+  --btnA:rgba(236,236,236,.97); --btnB:#C9C9C9; --btnFg:#0B0B0B;
+  --gridA:rgba(231,231,231,.025); --gridB:rgba(231,231,231,.012);
+  --glow:rgba(231,231,231,.045); --scan:rgba(231,231,231,.07);
+  --shSoft:0 6px 18px -8px rgba(0,0,0,.45);
+  --shCard:0 16px 32px -12px rgba(0,0,0,.55);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:400 14px/1.5 'SN Pro',ui-sans-serif,system-ui,sans-serif;overflow:hidden;transition:background .4s ease,color .4s ease}
+::selection{background:var(--ink);color:var(--bg)}
+::placeholder{color:var(--ink3)}
+:focus-visible{outline:1px solid var(--ink3);outline-offset:2px}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--ink3)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.01em}
+@keyframes wsFade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes wsPulse{0%,100%{opacity:.45;transform:scale(1)}50%{opacity:1;transform:scale(1.2)}}
+@keyframes wsScan{0%{top:0;opacity:0}6%{opacity:1}94%{opacity:1}100%{top:100%;opacity:0}}
+@keyframes wsBreath{0%,100%{box-shadow:0 0 0 0 transparent}50%{box-shadow:0 0 22px -4px var(--mark)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.lbl{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink3)}
+
+/* ---------- фон ---------- */
+.fx{position:absolute;inset:0;pointer-events:none}
+.fx-glow{background:radial-gradient(ellipse 75% 50% at 50% -14%,var(--glow) 0%,transparent 60%)}
+.fx-grid{background-image:linear-gradient(var(--gridA) 1px,transparent 1px),linear-gradient(90deg,var(--gridA) 1px,transparent 1px),linear-gradient(var(--gridB) 1px,transparent 1px),linear-gradient(90deg,var(--gridB) 1px,transparent 1px);
+  background-size:96px 96px,96px 96px,24px 24px,24px 24px;
+  -webkit-mask-image:radial-gradient(ellipse 95% 90% at 50% 0%,#000 25%,transparent 80%);mask-image:radial-gradient(ellipse 95% 90% at 50% 0%,#000 25%,transparent 80%)}
+.fx-scan{position:absolute;left:0;right:0;height:1px;z-index:1;background:linear-gradient(90deg,transparent,var(--scan),transparent);animation:wsScan 11s linear infinite}
+
+/* ---------- вход ---------- */
+.login-wrap{position:relative;z-index:2;height:100vh;display:grid;place-items:center;padding:24px}
+.login{width:400px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px 30px 26px;box-shadow:var(--shCard);animation:wsFade .35s ease}
+.login .logo{width:40px;height:40px;border-radius:12px;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;margin-bottom:18px;animation:wsBreath 5s ease-in-out infinite}
+.login h1{font-size:21px;margin-bottom:5px}
+.login .sub{color:var(--ink2);font-size:12.5px;margin:0 0 22px}
+.roles{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.role{padding:10px 11px;border:1px solid var(--border);border-radius:10px;background:var(--card);text-align:left;font-size:12.5px;transition:all .2s ease}
+.role small{display:block;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;color:var(--ink3);margin-top:3px}
+.role:hover{border-color:var(--mark)}
+.role[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.role[aria-pressed="true"] small{color:var(--bg);opacity:.6}
+
+/* ---------- поля ---------- */
+.f{margin-bottom:12px}
+.f > label{display:block;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px}
+input,select,textarea{width:100%;padding:9px 11px;background:var(--card);border:1px solid var(--border);border-radius:10px;outline:none;font-size:13px;transition:border-color .2s ease}
+input:focus,select:focus,textarea:focus{border-color:var(--mark)}
+input[type=checkbox]{width:auto;padding:0}
+
+/* ---------- кнопки ---------- */
+.b{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:9px 15px;border:none;border-radius:10px;
+  background:linear-gradient(180deg,var(--btnA),var(--btnB));color:var(--btnFg);font-size:12.5px;font-weight:600;box-shadow:var(--shSoft);transition:all .25s ease}
+.b:hover{transform:translateY(-1px);box-shadow:0 8px 22px -8px var(--mark)}
+.b:disabled{opacity:.35;transform:none;box-shadow:none;cursor:not-allowed}
+.b.wide{width:100%;padding:11px}
+.g{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:7px 13px;border:1px solid var(--border);border-radius:999px;background:transparent;color:var(--ink2);font-size:11.5px;transition:all .25s ease}
+.g:hover{color:var(--ink);border-color:var(--mark)}
+.g:disabled{opacity:.35;cursor:not-allowed}
+.g:disabled:hover{color:var(--ink2);border-color:var(--border)}
+.ib{width:32px;height:32px;border:1px solid var(--border);border-radius:9px;background:transparent;color:var(--ink2);display:inline-flex;align-items:center;justify-content:center;transition:all .25s ease;flex-shrink:0}
+.ib:hover{color:var(--ink);border-color:var(--mark)}
+.ib:disabled{opacity:.3;cursor:not-allowed}
+.ib svg{width:14px;height:14px}
+
+/* ---------- каркас ---------- */
+.app{display:flex;width:100%;height:100vh;overflow:hidden;position:relative}
+.rail{width:64px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding:14px 0 16px;border-right:1px solid var(--border2);position:relative;z-index:5;gap:6px}
+.rail .logo{width:38px;height:38px;border-radius:12px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;margin-bottom:14px;animation:wsBreath 5s ease-in-out infinite}
+.rail .logo svg{width:19px;height:19px}
+.nb{position:relative;width:40px;height:40px;border-radius:12px;border:1px solid transparent;background:transparent;color:var(--ink3);display:flex;align-items:center;justify-content:center;transition:all .25s ease}
+.nb svg{width:20px;height:20px}
+.nb:hover{color:var(--ink);background:var(--wash)}
+.nb[aria-current="true"]{color:var(--ink);background:var(--wash);border-color:var(--border)}
+.nb .bdg{position:absolute;top:-3px;right:-3px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:var(--ink);color:var(--bg);font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.rail .foot{margin-top:auto;display:flex;flex-direction:column;align-items:center;gap:8px}
+.ava{position:relative;width:36px;height:36px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;letter-spacing:.04em}
+.ava i{position:absolute;bottom:-1px;right:-1px;width:9px;height:9px;border-radius:50%;background:var(--success);border:2px solid var(--bg)}
+
+.col{flex:1;min-width:0;display:flex;flex-direction:column;position:relative;z-index:2}
+.hd{height:56px;flex-shrink:0;display:flex;align-items:center;gap:14px;padding:0 20px;border-bottom:1px solid var(--border2)}
+.hd .ttl{display:flex;align-items:baseline;gap:9px;white-space:nowrap}
+.hd .ttl b{font-size:14.5px;font-weight:600}
+.srch{display:flex;align-items:center;gap:9px;width:300px;padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--ink3)}
+.srch input{border:none;background:transparent;padding:0;font-size:12.5px;border-radius:0}
+.srch kbd{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink3);border:1px solid var(--border);border-bottom-width:2px;border-radius:6px;padding:1px 6px;background:var(--card)}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:4px 11px;border:1px solid var(--border2);border-radius:999px;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.13em;color:var(--ink3);white-space:nowrap}
+.chip .dot{width:6px;height:6px;border-radius:50%;background:var(--success);animation:wsPulse 2.2s ease-in-out infinite}
+
+.body{flex:1;min-height:0;display:flex;animation:wsFade .3s ease}
+.side{width:246px;flex-shrink:0;border-right:1px solid var(--border2);padding:14px 12px;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+.side .sb{display:flex;align-items:center;gap:9px;width:100%;padding:8px 10px;border:1px solid transparent;border-radius:9px;background:transparent;color:var(--ink2);font-size:12.5px;text-align:left;transition:all .2s ease}
+.side .sb:hover{background:var(--wash);color:var(--ink)}
+.side .sb[aria-current="true"]{background:var(--wash);color:var(--ink);border-color:var(--border)}
+.side .sb .n{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--ink3)}
+.main{flex:1;min-width:0;overflow-y:auto;padding:18px 20px 40px}
+.cap{font-size:12px;color:var(--ink3);line-height:1.5;margin:0 0 14px;max-width:76ch}
+
+/* ---------- карточки ---------- */
+.c{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:14px}
+.c > h3{font-size:14px;margin-bottom:4px}
+.c > h3 + .cap{margin-bottom:12px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.row .f{margin-bottom:0}
+
+/* ---------- лента ёмкости ---------- */
+.rib{display:flex;gap:4px;align-items:flex-end}
+.day{flex:1 0 0;min-width:44px;background:none;border:0;padding:0}
+.day .bar{height:96px;border:1px solid var(--border);border-radius:8px;background:var(--card);position:relative;overflow:hidden;transition:all .2s ease}
+.day .fill{position:absolute;left:0;right:0;bottom:0;background:var(--ink3);opacity:.3;transition:height .3s ease}
+.day[data-s="fill"] .fill{background:var(--cold);opacity:.45}
+.day[data-s="full"] .fill{background:var(--ink);opacity:.72}
+.day[data-s="over"] .fill{background:var(--error);opacity:.6}
+.day .bar::after{content:"";position:absolute;left:0;right:0;bottom:90.9%;border-top:1px dashed var(--mark);opacity:.5}
+.day .pct{position:absolute;left:0;right:0;top:6px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink2)}
+.day .dd{font-family:'JetBrains Mono',monospace;font-size:10.5px;margin-top:6px;color:var(--ink2)}
+.day .wd{font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);margin-top:2px}
+.day:hover .bar{border-color:var(--mark)}
+.day[aria-pressed="true"] .bar{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+.day.off .fill{background:repeating-linear-gradient(45deg,transparent,transparent 5px,var(--wash) 5px,var(--wash) 6px);opacity:1;height:100%!important}
+.lg{display:flex;gap:14px;margin-top:12px;flex-wrap:wrap;font-size:11px;color:var(--ink3)}
+.lg i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+
+/* ---------- таблицы ---------- */
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);font-weight:500;text-align:left;padding:0 10px 8px;border-bottom:1px solid var(--border2)}
+td{padding:8px 10px;border-bottom:1px solid var(--border2);color:var(--ink2)}
+tbody tr:hover td{background:var(--wash)}
+tbody tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:right;font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+td b{color:var(--ink);font-weight:600}
+td input{padding:4px 7px;border-radius:7px;font-size:12px;font-family:'JetBrains Mono',monospace;text-align:right}
+td select{padding:5px 8px;border-radius:8px;font-size:12px}
+.tg{display:inline-flex;align-items:center;padding:2px 9px;border:1px solid currentColor;border-radius:999px;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase}
+.t-ok{color:var(--success)} .t-warn{color:var(--warning)} .t-err{color:var(--error)}
+.t-cold{color:var(--cold)} .t-ink{color:var(--ink)} .t-mut{color:var(--ink3)}
+.empty{padding:34px 10px;text-align:center;color:var(--ink3);font-size:12.5px}
+
+/* ---------- маршрут ---------- */
+.tl{display:flex;height:26px;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--card);margin:12px 0}
+.tl div{flex:1;border-right:1px solid var(--border2);font-family:'JetBrains Mono',monospace;font-size:9px;line-height:24px;text-align:center;color:var(--ink3)}
+.tl div:last-child{border-right:0}
+.tl div.busy{background:var(--wash);color:var(--ink)}
+.stops{max-height:300px;overflow-y:auto}
+.stop{display:grid;grid-template-columns:26px 1fr auto;gap:10px;align-items:center;padding:8px 2px;border-bottom:1px solid var(--border2);font-size:12.5px}
+.stop:last-child{border-bottom:0}
+.stop .n{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink3)}
+.stop small{display:block;font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--ink3);margin-top:2px}
+.stamp{position:absolute;right:18px;bottom:16px;width:88px;height:88px;border:1.5px solid var(--mark);border-radius:50%;color:var(--ink3);display:grid;place-content:center;text-align:center;transform:rotate(-11deg);opacity:.6;pointer-events:none}
+.stamp::after{content:"";position:absolute;inset:5px;border:1px dashed var(--mark);border-radius:50%}
+.stamp b{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.16em;display:block;color:var(--ink2)}
+.stamp span{font-family:'JetBrains Mono',monospace;font-size:8.5px;display:block;margin-top:3px}
+
+/* ---------- прочее ---------- */
+.chat{border:1px solid var(--border);border-radius:10px;background:var(--card);height:220px;overflow-y:auto;padding:12px}
+.msg{margin-bottom:10px;font-size:12.5px;line-height:1.45;color:var(--ink2)}
+.msg b{font-size:12px;color:var(--ink)}
+.msg small{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink3);margin-left:6px}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:14px}
+.kpi > div{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+.kpi .v{font-family:'JetBrains Mono',monospace;font-size:23px;font-weight:500}
+.kpi .k{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);margin-top:5px;line-height:1.4}
+.toast{position:fixed;right:22px;bottom:22px;background:var(--card);border:1px solid var(--border);border-left:2px solid var(--ink);border-radius:10px;padding:12px 16px;font-size:12.5px;z-index:60;max-width:380px;box-shadow:var(--shCard);animation:wsFade .25s ease}
+.dev{display:grid;grid-template-columns:1.5fr .75fr 1fr .85fr auto 32px;gap:6px;margin-bottom:6px;align-items:center}
+.dev input,.dev select{padding:6px 9px;font-size:12px;border-radius:8px}
+.dev label{display:flex;gap:6px;align-items:center;font-size:11.5px;color:var(--ink2);white-space:nowrap}
+.svc{display:flex;gap:7px;flex-wrap:wrap}
+.svc label{display:flex;gap:7px;align-items:center;padding:8px 12px;border:1px solid var(--border);border-radius:10px;background:var(--card);font-size:12px;transition:all .2s ease}
+.svc label:hover{border-color:var(--mark)}
+.svc label:has(input:checked){border-color:var(--ink);background:var(--wash)}
+.note{font-size:11.5px;color:var(--ink3);line-height:1.5}
+a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--mark)}
+a:hover{color:var(--ink2)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+/* ============================================================
+   CRM «Поверка» · прототип на дизайн-системе Alchemist Workspace
+   Без базы и интеграций: состояние живёт в памяти вкладки.
+   ============================================================ */
+
+const I = {
+  logo:'<path d="M9 3h6"/><path d="M10 3v5L4 18a2.5 2.5 0 0 0 2.2 3.7h11.6A2.5 2.5 0 0 0 20 18L14 8V3"/><path d="M7.5 14.5h9"/>',
+  intake:'<path d="M15.5 3H21v5.5"/><path d="M21 3l-7 7"/><path d="M21 15.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.7A2 2 0 0 1 3.1 1h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L7.1 8.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/>',
+  plan:'<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/><path d="M9 15l2 2 4-4"/>',
+  schedule:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>',
+  logistics:'<path d="M3 6.5l6-3 6 3 6-3v14l-6 3-6-3-6 3z"/><path d="M9 3.5v14M15 6.5v14"/>',
+  routes:'<circle cx="6" cy="19" r="3"/><circle cx="18" cy="5" r="3"/><path d="M9 19h6a4 4 0 0 0 0-8H9a4 4 0 0 1 0-8h6"/>',
+  duty:'<path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>',
+  uk:'<path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16"/><path d="M15 9h4a2 2 0 0 1 2 2v10"/><path d="M9 7h2M9 11h2M9 15h2"/>',
+  me:'<path d="M20 12V8H6a2 2 0 0 1 0-4h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/>',
+  payroll:'<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>',
+  services:'<path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/>',
+  myroute:'<path d="M12 21s7-6.4 7-11a7 7 0 1 0-14 0c0 4.6 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/>',
+  absence:'<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/><path d="M10 15l4 4M14 15l-4 4"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  moon:'<path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/>',
+  bell:'<path d="M6 9a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M10 20a2 2 0 0 0 4 0"/>',
+  out:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  up:'<path d="M12 19V5M5 12l7-7 7 7"/>', down:'<path d="M12 5v14M19 12l-7 7-7-7"/>',
+  ok:'<path d="M20 6L9 17l-5-5"/>', fwd:'<path d="M5 12h14M13 6l6 6-6 6"/>', no:'<path d="M18 6L6 18M6 6l12 12"/>'
+};
+const svg = (p,w=20) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:${w}px;height:${w}px">${p}</svg>`;
+
+const CITIES = ['Екатеринбург','Тюмень','Челябинск'];
+const SERVICES = [
+  {id:'wv',grp:'Вода',  name:'Поверка счётчика воды',  pF:900, pU:1200,rV:280, rO:45},
+  {id:'wr',grp:'Вода',  name:'Замена счётчика воды',   pF:2600,pU:3200,rV:750, rO:70},
+  {id:'hv',grp:'Тепло', name:'Поверка теплосчётчика',  pF:3400,pU:4100,rV:950, rO:90},
+  {id:'hm',grp:'Тепло', name:'Монтаж теплосчётчика',   pF:7800,pU:9200,rV:2100,rO:120},
+  {id:'hd',grp:'Тепло', name:'Демонтаж теплосчётчика', pF:2200,pU:2700,rV:600, rO:60}
+];
+const SVC = Object.fromEntries(SERVICES.map(s=>[s.id,s]));
+const DEV_TYPES = ['Бетар СГВ-15','Бетар СХВ-15','Ителма WFW20','Пульсар М-15','Норма СВК-15','ТСК-7 (тепло)'];
+const ROOMS = ['Кухня','Санузел','Иное'];
+const STREETS = ['Ленина','Малышева','Победы','Крауля','Сурикова','Белинского','Уральская','Мира','Куйбышева','Гагарина','Есенина','Шевченко'];
+
+const ROLES = {
+  operator:{label:'Оператор',code:'OP'}, senior:{label:'Старший оператор',code:'SR'},
+  supervisor:{label:'Руководитель',code:'SV'}, verifier:{label:'Поверитель',code:'PV'}
+};
+const NAV = {
+  operator:['intake','logistics','routes','duty','uk','me'],
+  senior:['intake','logistics','routes','duty','uk','me'],
+  supervisor:['plan','schedule','logistics','routes','uk','payroll','services'],
+  verifier:['myroute','me','absence']
+};
+const TITLES = {intake:'Приём заявки',logistics:'Логистика',routes:'Маршруты',duty:'Дежурство',
+  uk:'Уведомления УК',me:'Мой заработок',plan:'План набора',schedule:'График смен',
+  payroll:'Сдельная оплата',services:'Услуги и ставки',myroute:'Мой маршрут',absence:'Отсутствия'};
+const CAPS = {
+  intake:'Лента ёмкости показывает загрузку выбранного города на две недели. Пунктир — граница допустимого превышения плана на 10%.',
+  plan:'План задаётся на день по каждому городу отдельно. Рекомендация — поверители в смене × 25 заявок на маршрут.',
+  schedule:'Графики 5/2 и 2/2 плюс дополнительные смены. Клик по выходному ставит доп. смену.',
+  logistics:'Пул сортируется по городу и улице. Автосборка режет его на маршруты по 25 заявок.',
+  routes:'Маршрут уходит поверителю только после прозвонки. Окно прибытия — два часа: час до и час после назначенного времени.',
+  duty:'Маршруты сегодняшнего дня. Вопрос поверителя берёт один оператор — у остальных кнопка гаснет.',
+  uk:'Разовое уведомление по клиенту или сводный отчёт за месяц. Пломба УК обязательна.',
+  me:'Сдельная оплата по выполненным работам. Виден только собственный заработок.',
+  payroll:'Начисления по всем сотрудникам за период.',
+  services:'Цены для физических и юридических лиц, сдельные ставки поверителя и оператора.',
+  myroute:'Маршрут на сегодня. Позиция закрывается только с заполненной пломбой УК.',
+  absence:'Запрос отсутствия уходит руководителю на согласование.'
+};
+
+/* ---------- утилиты ---------- */
+const pad = n => String(n).padStart(2,'0');
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const today = new Date(); today.setHours(0,0,0,0);
+const addDays = (d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x;};
+const WD = ['вс','пн','вт','ср','чт','пт','сб'];
+const ru = s => s.split('-').reverse().join('.');
+const money = n => n.toLocaleString('ru-RU')+' ₽';
+const rnd = a => a[Math.floor(Math.random()*a.length)];
+const rint = (a,b) => a+Math.floor(Math.random()*(b-a+1));
+const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function onShift(p,ds){
+  if(p.extra?.includes(ds)) return true;
+  const d = new Date(ds+'T00:00:00');
+  if(p.pattern==='5/2') return d.getDay()>=1 && d.getDay()<=5;
+  const diff = Math.floor((d-new Date(p.anchor+'T00:00:00'))/864e5);
+  return ((diff%4)+4)%4 < 2;
+}
+
+/* ---------- состояние ---------- */
+const S = {
+  view:'intake', user:null, role:null, pendRole:'operator', theme:'light',
+  city:CITIES[0], day:iso(today), staff:[], plan:[], requests:[], routes:[], seq:1000,
+  toast:null, openRoute:null,
+  intake:{devices:[{type:DEV_TYPES[0],carrier:'ХВС',serial:'',room:'Кухня',seal:true}],services:['wv']}
+};
+
+function seed(){
+  ['Алимпиев И.','Ковалёв Д.','Ситников П.','Нурмухаметов Р.','Гладких А.','Бабенко С.',
+   'Тарасов В.','Юсупов М.','Черных К.','Ложкин Е.','Демидов А.','Рогов Н.'].forEach((n,i)=>
+    S.staff.push({id:'v'+i,name:n,role:'verifier',pattern:i%3===0?'5/2':'2/2',
+      anchor:iso(addDays(today,-(i%4))),extra:i===2?[iso(addDays(today,3))]:[]}));
+  ['Кузнецова Е.','Панова М.','Ефимова О.','Салтыкова А.'].forEach((n,i)=>
+    S.staff.push({id:'o'+i,name:n,role:i<2?'senior':'operator',pattern:i<2?'2/2':'5/2',
+      anchor:iso(addDays(today,-(i%2))),extra:[],ext:'10'+(i+1)}));
+
+  for(let i=0;i<14;i++){
+    const ds = iso(addDays(today,i));
+    const crew = S.staff.filter(p=>p.role==='verifier'&&onShift(p,ds)).length;
+    CITIES.forEach((c,ci)=>S.plan.push({date:ds,city:c,
+      planned:Math.max(0,Math.round(crew*25*(ci===0?.55:ci===1?.28:.17)))}));
+  }
+  const clients = ['Смирнова Т.А.','Волков Р.П.','Гареев И.М.','Дьяконова Л.С.','ООО «Стройсервис»',
+    'Пшеничников А.А.','ТСЖ «Восход»','Кириллова Н.В.','Абрамов Д.Ю.','ООО «Гарант-Плюс»'];
+  for(let i=0;i<14;i++){
+    const ds = iso(addDays(today,i));
+    const rate = i===0?.95:i===1?.8:i<4?.5:i<7?.25:.06;
+    CITIES.forEach(c=>{
+      const p = S.plan.find(x=>x.date===ds&&x.city===c);
+      const n = Math.round(p.planned*rate*(.8+Math.random()*.4));
+      for(let k=0;k<n;k++) S.requests.push(mkReq(ds,c,clients));
+    });
+  }
+}
+function mkReq(ds,city,clients){
+  const nm = rnd(clients), isU = /^(ООО|ТСЖ)/.test(nm);
+  const svc = Math.random()<.72?['wv']:Math.random()<.6?['wr']:[rnd(['hv','hm','hd'])];
+  const nd = svc[0][0]==='w'?rint(1,2):1;
+  return {id:'R'+(++S.seq),date:ds,city,clientType:isU?'Юрлицо':'Физлицо',name:nm,
+    phone:'+7 9'+rint(10,99)+' '+rint(100,999)+'-'+rint(10,99)+'-'+rint(10,99),
+    street:rnd(STREETS),house:String(rint(1,120)),flat:isU?'':String(rint(1,240)),time:rint(10,20),
+    services:svc,status:'новая',routeId:null,operator:null,verified:null,
+    devices:Array.from({length:nd},(_,j)=>({
+      type: svc[0][0]==='h'?'ТСК-7 (тепло)':rnd(DEV_TYPES.slice(0,5)),
+      carrier: svc[0][0]==='h'?'Тепло':(j===0?'ХВС':'ГВС'),
+      serial: rint(10,99)+'-'+rint(100000,999999), room:rnd(ROOMS), seal:Math.random()<.85}))};
+}
+
+const crewOn = ds => S.staff.filter(p=>p.role==='verifier'&&onShift(p,ds));
+const opsOn  = ds => S.staff.filter(p=>p.role!=='verifier'&&onShift(p,ds));
+const planFor = (ds,c) => S.plan.find(p=>p.date===ds&&p.city===c)?.planned ?? 0;
+function dayState(ds,c){
+  const p = planFor(ds,c);
+  const b = S.requests.filter(r=>r.date===ds&&r.city===c&&r.status!=='отменена').length;
+  const pct = p?b/p:0;
+  return {p,b,pct,s:p===0?'off':pct>1.1?'over':pct>=1?'full':pct>=.5?'fill':'free'};
+}
+const rateV = r => r.services.reduce((a,id)=>a+SVC[id].rV,0);
+const rateO = r => r.services.reduce((a,id)=>a+SVC[id].rO,0);
+function toast(m){ S.toast=m; render(); setTimeout(()=>{S.toast=null;render();},2800); }
+
+/* ============================================================ */
+function viewLogin(){
+  return `<div class="fx fx-glow"></div><div class="fx fx-grid"></div>
+  <div class="login-wrap"><form class="login" onsubmit="doLogin(event)">
+    <div class="logo">${svg(I.logo,20)}</div>
+    <div class="lbl">Сервис поверки приборов учёта</div>
+    <h1>CRM «Поверка»</h1>
+    <p class="sub">Прототип интерфейса. Данные живут только в этой вкладке.</p>
+    <div class="f"><label>Логин</label><input name="login" value="operator" required></div>
+    <div class="f"><label>Пароль</label><input name="pw" type="password" value="1234" required></div>
+    <div class="f"><label>Войти как</label><div class="roles">${Object.entries(ROLES).map(([k,v])=>
+      `<button type="button" class="role" aria-pressed="${S.pendRole===k}" onclick="S.pendRole='${k}';render()">${v.label}<small>${v.code}</small></button>`).join('')}</div></div>
+    <button class="b wide" style="margin-top:14px">Войти</button>
+    <p class="note" style="margin-top:14px">Подойдёт любая пара логин и пароль — авторизация не проверяется. Роль определяет набор разделов.</p>
+  </form></div>`;
+}
+function doLogin(e){
+  e.preventDefault();
+  const nm = new FormData(e.target).get('login');
+  S.role = S.pendRole; S.user = {name:nm.charAt(0).toUpperCase()+nm.slice(1)};
+  S.view = NAV[S.role][0]; render();
+}
+function toggleTheme(){
+  S.theme = S.theme==='light'?'dark':'light';
+  document.documentElement.setAttribute('data-theme',S.theme); render();
+}
+
+function shell(side,main){
+  const ini = S.user.name.slice(0,2).toUpperCase();
+  const crew = crewOn(S.day).length, ops = opsOn(S.day).length, need = Math.ceil(crew/10);
+  const now = new Date();
+  return `<div class="fx fx-glow"></div><div class="fx fx-grid"></div><div class="fx-scan"></div>
+  <div class="app">
+    <nav class="rail">
+      <div class="logo" title="CRM «Поверка»">${svg(I.logo,19)}</div>
+      ${NAV[S.role].map(v=>`<button class="nb" title="${TITLES[v]}" aria-current="${S.view===v}" onclick="go('${v}')">${svg(I[v])}</button>`).join('')}
+      <div class="foot">
+        <button class="nb" title="Переключить тему" onclick="toggleTheme()">${svg(S.theme==='light'?I.moon:I.sun,18)}</button>
+        <button class="nb" title="Выйти" onclick="S.user=null;render()">${svg(I.out,18)}</button>
+        <div class="ava" title="${esc(S.user.name)} · ${ROLES[S.role].label}">${ini}<i></i></div>
+      </div>
+    </nav>
+    <div class="col">
+      <header class="hd">
+        <div class="ttl"><span class="lbl">CRM /</span><b>${TITLES[S.view]}</b></div>
+        <label class="srch">${svg(I.search,14)}<input placeholder="Поиск по адресу, телефону, номеру заявки"><kbd>⌘K</kbd></label>
+        <div style="flex:1"></div>
+        <span class="chip"><span class="dot"></span>${crew} В СМЕНЕ</span>
+        <span class="chip" ${ops<need?'style="color:var(--warning);border-color:var(--warning)"':''}>ОПЕРАТОРЫ ${ops}/${need}</span>
+        <span class="mono" style="font-size:10.5px;letter-spacing:.1em;color:var(--ink3)">${ru(iso(now))} · <span style="color:var(--ink2)">${pad(now.getHours())}:${pad(now.getMinutes())}</span></span>
+        <button class="ib" title="Уведомления">${svg(I.bell,16)}</button>
+      </header>
+      <div class="body">
+        ${side?`<aside class="side">${side}</aside>`:''}
+        <div class="main">${main}</div>
+      </div>
+    </div>
+  </div>
+  ${S.toast?`<div class="toast">${esc(S.toast)}</div>`:''}`;
+}
+const cap = () => `<p class="cap">${CAPS[S.view]||''}</p>`;
+
+/* ---------- лента ёмкости ---------- */
+function ribbon(){
+  return `<div class="rib">${Array.from({length:14},(_,i)=>iso(addDays(today,i))).map(ds=>{
+    const {p,pct,s} = dayState(ds,S.city), d = new Date(ds+'T00:00:00');
+    return `<button class="day ${s==='off'?'off':''}" data-s="${s}" aria-pressed="${S.day===ds}"
+      ${s==='off'?'disabled':`onclick="S.day='${ds}';render()"`}>
+      <div class="bar"><div class="fill" style="height:${Math.min(100,pct*90.9)}%"></div>
+      <span class="pct">${p?Math.round(pct*100)+'%':'—'}</span></div>
+      <div class="dd">${pad(d.getDate())}.${pad(d.getMonth()+1)}</div><div class="wd">${WD[d.getDay()]}</div></button>`;
+  }).join('')}</div>
+  <div class="lg">
+    <span><i style="background:var(--ink3);opacity:.3"></i>свободно</span>
+    <span><i style="background:var(--cold);opacity:.45"></i>заполняется</span>
+    <span><i style="background:var(--ink);opacity:.72"></i>план набран</span>
+    <span><i style="background:var(--error);opacity:.6"></i>сверх 110% — приём закрыт</span>
+    <span><i style="border-top:1px dashed var(--mark);height:0;width:14px"></i>граница отклонения +10%</span></div>`;
+}
+const citySide = () => `<div class="lbl" style="padding:6px 10px 8px">Города</div>
+  ${CITIES.map(c=>{const st=dayState(S.day,c);
+    return `<button class="sb" aria-current="${S.city===c}" onclick="S.city='${c}';render()">
+      <span>${c}</span><span class="n">${st.b}/${st.p}</span></button>`}).join('')}
+  <div class="lbl" style="padding:16px 10px 8px">Выбранный день</div>
+  <div style="padding:10px 12px;border:1px solid var(--border2);border-radius:10px">
+    <div class="mono" style="font-size:15px">${ru(S.day)}</div>
+    <div class="note" style="margin-top:4px">${crewOn(S.day).length} поверителей · ${opsOn(S.day).length} операторов</div>
+  </div>`;
+
+/* ---------- приём заявки ---------- */
+function viewIntake(){
+  const st = dayState(S.day,S.city), closed = st.pct>1.1 || st.p===0;
+  const left = Math.max(0,Math.ceil(st.p*1.1)-st.b);
+  return shell(citySide(), `${cap()}
+  <div class="c"><h3>Ёмкость · ${S.city}</h3>
+    <p class="cap">Набрано <b class="mono" style="color:var(--ink)">${st.b}</b> из <b class="mono" style="color:var(--ink)">${st.p}</b> на ${ru(S.day)}${closed?' — <span class="tg t-err">приём закрыт</span>':` · осталось <b class="mono" style="color:var(--ink)">${left}</b> с учётом +10%`}</p>
+    ${ribbon()}</div>
+  <form class="c" onsubmit="createReq(event)"><h3>Новая заявка</h3>
+    <p class="cap">Окно прибытия формируется автоматически: час до и час после назначенного времени.</p>
+    <div class="g3">
+      <div class="f"><label>Тип клиента</label><select name="ctype"><option>Физлицо</option><option>Юрлицо</option></select></div>
+      <div class="f"><label>ФИО или организация</label><input name="name" required placeholder="Смирнова Т. А."></div>
+      <div class="f"><label>Телефон</label><input name="phone" required placeholder="+7 900 000-00-00"></div>
+      <div class="f"><label>Улица</label><select name="street">${STREETS.map(s=>`<option>${s}</option>`).join('')}</select></div>
+      <div class="f"><label>Дом и квартира</label><div style="display:flex;gap:6px">
+        <input name="house" required placeholder="12"><input name="flat" placeholder="45"></div></div>
+      <div class="f"><label>Время прибытия</label><select name="time">${Array.from({length:11},(_,i)=>10+i).map(h=>
+        `<option value="${h}">${pad(h)}:00 · окно ${pad(h-1)}:00–${pad(h+1)}:00</option>`).join('')}</select></div>
+    </div>
+    <div class="f"><label>Услуги</label><div class="svc">${SERVICES.map(s=>
+      `<label><input type="checkbox" ${S.intake.services.includes(s.id)?'checked':''} onchange="tgSvc('${s.id}',this.checked)">${s.name}</label>`).join('')}</div></div>
+    <div class="f"><label>Приборы</label>${S.intake.devices.map((d,i)=>`<div class="dev">
+      <select onchange="S.intake.devices[${i}].type=this.value">${DEV_TYPES.map(t=>`<option ${d.type===t?'selected':''}>${t}</option>`).join('')}</select>
+      <select onchange="S.intake.devices[${i}].carrier=this.value">${['ХВС','ГВС','Тепло'].map(c=>`<option ${d.carrier===c?'selected':''}>${c}</option>`).join('')}</select>
+      <input placeholder="Заводской №" value="${esc(d.serial)}" oninput="S.intake.devices[${i}].serial=this.value">
+      <select onchange="S.intake.devices[${i}].room=this.value">${ROOMS.map(r=>`<option ${d.room===r?'selected':''}>${r}</option>`).join('')}</select>
+      <label><input type="checkbox" ${d.seal?'checked':''} onchange="S.intake.devices[${i}].seal=this.checked">пломба УК</label>
+      <button type="button" class="ib" onclick="S.intake.devices.splice(${i},1);render()" ${S.intake.devices.length<2?'disabled':''}>${svg(I.no,13)}</button>
+    </div>`).join('')}
+      <button type="button" class="g" style="margin-top:4px" onclick="S.intake.devices.push({type:DEV_TYPES[0],carrier:'ХВС',serial:'',room:'Кухня',seal:true});render()">${svg(I.plus,12)}Добавить прибор</button></div>
+    <div class="row" style="margin-top:16px;justify-content:space-between">
+      <span class="note">По прайсу для физлица <b class="mono" style="color:var(--ink)">${money(S.intake.services.reduce((a,id)=>a+SVC[id].pF,0))}</b> · оператору начислится <b class="mono" style="color:var(--ink)">${money(S.intake.services.reduce((a,id)=>a+SVC[id].rO,0))}</b></span>
+      <button class="b" ${closed?'disabled':''}>${closed?'День закрыт':'Записать заявку'}</button></div>
+  </form>`);
+}
+function tgSvc(id,on){
+  S.intake.services = on?[...new Set([...S.intake.services,id])]:S.intake.services.filter(x=>x!==id); render();
+}
+function createReq(e){
+  e.preventDefault();
+  if(!S.intake.services.length) return toast('Выберите хотя бы одну услугу.');
+  const f = new FormData(e.target);
+  S.requests.push({id:'R'+(++S.seq),date:S.day,city:S.city,clientType:f.get('ctype'),name:f.get('name'),
+    phone:f.get('phone'),street:f.get('street'),house:f.get('house'),flat:f.get('flat'),time:+f.get('time'),
+    services:[...S.intake.services],devices:S.intake.devices.map(d=>({...d})),
+    status:'новая',routeId:null,operator:S.user.name,verified:null});
+  S.intake = {devices:[{type:DEV_TYPES[0],carrier:'ХВС',serial:'',room:'Кухня',seal:true}],services:['wv']};
+  toast('Заявка записана на '+ru(S.day));
+}
+
+/* ---------- план ---------- */
+function viewPlan(){
+  const days = Array.from({length:14},(_,i)=>iso(addDays(today,i)));
+  return shell(null,`${cap()}<div class="c"><h3>План по городам на две недели</h3>
+    <p class="cap">Значения планов редактируются прямо в таблице. Красным — выход за коридор ±10%.</p>
+    <table><thead><tr><th>Дата</th><th>День</th><th class="num">Смена</th>
+      ${CITIES.map(c=>`<th class="num">${c}</th>`).join('')}<th class="num">Итого</th><th class="num">Откл.</th></tr></thead><tbody>
+    ${days.map(ds=>{const d=new Date(ds+'T00:00:00');let tp=0,tb=0;
+      const cells = CITIES.map(c=>{const {p,b}=dayState(ds,c);tp+=p;tb+=b;
+        return `<td class="num"><input value="${p}" style="width:52px" onchange="setPlan('${ds}','${c}',this.value)"> <b>${b}</b></td>`}).join('');
+      const dev = tp?Math.round((tb/tp-1)*100):0;
+      return `<tr><td class="mono">${ru(ds)}</td><td>${WD[d.getDay()]}</td><td class="num">${crewOn(ds).length}</td>${cells}
+        <td class="num"><b>${tb}/${tp}</b></td><td class="num"><span class="tg ${Math.abs(dev)>10?'t-err':'t-ok'}">${dev>0?'+':''}${dev}%</span></td></tr>`}).join('')}
+    </tbody></table>
+    <p class="note" style="margin-top:12px">Рекомендация на день: поверители в смене × 25 заявок на маршрут. Приём автоматически закрывается на 110% от плана.</p></div>`);
+}
+function setPlan(ds,c,v){ S.plan.find(x=>x.date===ds&&x.city===c).planned = Math.max(0,parseInt(v)||0); render(); }
+
+/* ---------- график ---------- */
+function viewSchedule(){
+  const days = Array.from({length:14},(_,i)=>iso(addDays(today,i)));
+  return shell(null,`${cap()}<div class="c"><h3>Смены</h3>
+    <table><thead><tr><th>Сотрудник</th><th>Роль</th><th>График</th>
+      ${days.map(ds=>{const d=new Date(ds+'T00:00:00');return `<th class="num" style="text-align:center">${pad(d.getDate())}<br>${WD[d.getDay()]}</th>`}).join('')}</tr></thead><tbody>
+    ${S.staff.map(p=>`<tr><td><b>${esc(p.name)}</b></td>
+      <td><span class="tg t-mut">${p.role==='verifier'?'поверитель':p.role==='senior'?'старший':'оператор'}</span></td>
+      <td class="mono">${p.pattern}</td>
+      ${days.map(ds=>{const ex=p.extra?.includes(ds),on=onShift(p,ds);
+        return `<td style="text-align:center;padding:6px 2px;cursor:pointer" onclick="tgExtra('${p.id}','${ds}')"
+          title="${ex?'дополнительная смена':on?'по графику':'выходной — нажмите, чтобы поставить доп. смену'}">
+          ${ex?'<b style="color:var(--warning)">+</b>':on?'<span style="color:var(--cold)">●</span>':'<span style="color:var(--border)">·</span>'}</td>`}).join('')}
+    </tr>`).join('')}</tbody></table>
+    <p class="note" style="margin-top:12px"><span style="color:var(--cold)">●</span> по графику · <b style="color:var(--warning)">+</b> дополнительная смена · <span style="color:var(--border)">·</span> выходной</p></div>`);
+}
+function tgExtra(id,ds){
+  const p = S.staff.find(x=>x.id===id);
+  if(onShift(p,ds)&&!p.extra.includes(ds)) return toast('Это рабочий день по графику.');
+  p.extra = p.extra.includes(ds)?p.extra.filter(x=>x!==ds):[...p.extra,ds]; render();
+}
+
+/* ---------- логистика ---------- */
+function viewLogistics(){
+  const pool = S.requests.filter(r=>r.date===S.day&&r.city===S.city&&!r.routeId)
+    .sort((a,b)=>a.street.localeCompare(b.street,'ru')||(+a.house)-(+b.house));
+  const routes = S.routes.filter(r=>r.date===S.day&&r.city===S.city);
+  const crew = crewOn(S.day);
+  return shell(`${citySide()}
+    <div class="lbl" style="padding:16px 10px 8px">Дата</div>
+    <input type="date" value="${S.day}" onchange="S.day=this.value;render()">
+    <button class="b" style="margin-top:12px" onclick="build()" ${pool.length?'':'disabled'}>${svg(I.plus,13)}Собрать ${Math.ceil(pool.length/25)||0} маршрут(ов)</button>
+    <p class="note" style="margin-top:10px">${pool.length} заявок без маршрута. Норматив — 25 на маршрут.</p>`,
+  `${cap()}
+  <div class="c"><h3>Пул заявок · ${ru(S.day)}</h3>
+    <p class="cap">Сортировка по улице и номеру дома — чтобы глазами ловить соседние адреса.</p>
+    ${pool.length?`<table><thead><tr><th>№</th><th>Улица</th><th class="num">Дом</th><th>Кв.</th><th>Клиент</th><th>Тип</th><th>Услуги</th><th class="num">Окно</th></tr></thead><tbody>
+      ${pool.slice(0,50).map((r,i)=>`<tr><td class="mono">${i+1}</td><td><b>${r.street}</b></td><td class="num">${r.house}</td>
+        <td class="mono">${r.flat||'—'}</td><td>${esc(r.name)}</td>
+        <td><span class="tg ${r.clientType==='Юрлицо'?'t-ink':'t-mut'}">${r.clientType==='Юрлицо'?'юр':'физ'}</span></td>
+        <td>${r.services.map(s=>SVC[s].name).join(', ')}</td>
+        <td class="num">${pad(r.time-1)}:00–${pad(r.time+1)}:00</td></tr>`).join('')}</tbody></table>
+      ${pool.length>50?`<p class="note" style="margin-top:10px">Показаны первые 50 из ${pool.length}.</p>`:''}`
+      :`<div class="empty">Свободных заявок нет. Выберите другой день или город.</div>`}</div>
+  ${routes.length?`<div class="c"><h3>Маршруты дня</h3><table>
+    <thead><tr><th>Маршрут</th><th class="num">Точек</th><th>Поверитель</th><th>Статус</th><th></th></tr></thead><tbody>
+    ${routes.map(rt=>`<tr><td class="mono"><b>${rt.id}</b></td><td class="num">${rt.stops.length}</td>
+      <td><select onchange="assign('${rt.id}',this.value)"><option value="">— не назначен —</option>
+        ${crew.map(v=>`<option value="${v.id}" ${rt.verifier===v.id?'selected':''}>${v.name}</option>`).join('')}</select></td>
+      <td>${stTag(rt.status)}</td>
+      <td style="text-align:right"><button class="g" onclick="S.openRoute='${rt.id}';go('routes')">Открыть</button></td></tr>`).join('')}
+    </tbody></table></div>`:''}`);
+}
+const stTag = s => `<span class="tg ${s==='выполнен'?'t-ok':s==='обзвонен'?'t-cold':'t-mut'}">${s}</span>`;
+function build(){
+  const pool = S.requests.filter(r=>r.date===S.day&&r.city===S.city&&!r.routeId)
+    .sort((a,b)=>a.street.localeCompare(b.street,'ru')||(+a.house)-(+b.house));
+  let n=0;
+  for(let i=0;i<pool.length;i+=25){
+    const chunk = pool.slice(i,i+25), id = 'M'+(++S.seq);
+    chunk.forEach(r=>{r.routeId=id;r.status='в маршруте';});
+    S.routes.push({id,date:S.day,city:S.city,verifier:null,status:'черновик',
+      stops:chunk.map(r=>({req:r.id,called:null})),chat:[],duty:null});
+    n++;
+  }
+  toast(`Собрано маршрутов: ${n}. Проверьте порядок точек и назначьте поверителей.`);
+}
+function assign(id,v){ S.routes.find(r=>r.id===id).verifier = v||null; render(); }
+
+/* ---------- маршруты ---------- */
+function viewRoutes(){
+  const list = S.routes.filter(r=>r.date===S.day);
+  const open = S.routes.find(r=>r.id===S.openRoute) || list[0];
+  const side = `<div class="lbl" style="padding:6px 10px 8px">Дата</div>
+    <input type="date" value="${S.day}" onchange="S.day=this.value;S.openRoute=null;render()">
+    <div class="lbl" style="padding:16px 10px 8px">Маршруты · ${list.length}</div>
+    ${list.length?list.map(rt=>{const v=S.staff.find(x=>x.id===rt.verifier);
+      return `<button class="sb" aria-current="${open&&open.id===rt.id}" onclick="S.openRoute='${rt.id}';render()">
+        <span><span class="mono" style="font-size:12px">${rt.id}</span>
+        <span style="display:block;font-size:11px;color:var(--ink3)">${v?esc(v.name):'не назначен'} · ${rt.status}</span></span>
+        <span class="n">${rt.stops.filter(s=>s.called).length}/${rt.stops.length}</span></button>`}).join('')
+      :`<p class="note" style="padding:8px 10px">Маршрутов нет. Соберите их в разделе «Логистика».</p>`}`;
+  return shell(side, open?`${cap()}${routeCard(open)}`:`${cap()}<div class="c"><div class="empty">Выберите дату, на которую собраны маршруты.</div></div>`);
+}
+function routeCard(rt){
+  const v = S.staff.find(x=>x.id===rt.verifier), called = rt.stops.filter(s=>s.called).length;
+  const busy = new Set(rt.stops.map(s=>S.requests.find(r=>r.id===s.req)?.time));
+  return `<div class="g2">
+  <div class="c" style="position:relative;margin-bottom:0">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+      <div><h3>${rt.id}</h3>
+        <div class="mono" style="font-size:10.5px;color:var(--ink3);margin-top:3px">${rt.city} · ${ru(rt.date)} · ${rt.stops.length} точек · ${v?esc(v.name):'поверитель не назначен'}</div></div>
+      ${stTag(rt.status)}</div>
+    <div class="tl">${Array.from({length:12},(_,i)=>9+i).map(h=>`<div class="${busy.has(h)?'busy':''}">${h}</div>`).join('')}</div>
+    <div class="stops">${rt.stops.map((s,i)=>{const r=S.requests.find(x=>x.id===s.req); if(!r) return '';
+      return `<div class="stop"><span class="n">${pad(i+1)}</span>
+        <div><b style="color:var(--ink)">${r.street}, ${r.house}${r.flat?', кв. '+r.flat:''}</b>
+          <small>${pad(r.time-1)}:00–${pad(r.time+1)}:00 · ${esc(r.name)} · ${r.clientType==='Юрлицо'?'юр':'физ'}</small></div>
+        <div style="display:flex;gap:4px;align-items:center">
+          ${s.called?`<span class="tg ${s.called==='подтверждена'?'t-ok':s.called==='перенос'?'t-warn':'t-err'}">${s.called}</span>`
+            :`<button class="ib" title="Подтверждена" onclick="callStop('${rt.id}',${i},'подтверждена')">${svg(I.ok,13)}</button>
+              <button class="ib" title="Перенос" onclick="callStop('${rt.id}',${i},'перенос')">${svg(I.fwd,13)}</button>
+              <button class="ib" title="Отказ" onclick="callStop('${rt.id}',${i},'отказ')">${svg(I.no,13)}</button>`}
+          <button class="ib" onclick="move('${rt.id}',${i},-1)" ${i?'':'disabled'}>${svg(I.up,12)}</button>
+          <button class="ib" onclick="move('${rt.id}',${i},1)" ${i<rt.stops.length-1?'':'disabled'}>${svg(I.down,12)}</button>
+        </div></div>`}).join('')}</div>
+    <div class="row" style="margin-top:14px;justify-content:space-between">
+      <span class="note">Прозвонено ${called} из ${rt.stops.length}</span>
+      <div style="display:flex;gap:6px">
+        <button class="g" onclick="setStatus('${rt.id}','обзвонен')" ${called===rt.stops.length&&rt.status==='черновик'?'':'disabled'}>Отметить обзвоненным</button>
+        <button class="b" onclick="setStatus('${rt.id}','выполнен')" ${rt.status==='обзвонен'?'':'disabled'}>Закрыть маршрут</button></div></div>
+    ${rt.status==='выполнен'?`<div class="stamp"><b>ПОВЕРЕНО</b><span>${rt.id}</span></div>`:''}
+  </div>
+  <div class="c" style="margin-bottom:0"><h3>Чат маршрута</h3>
+    <p class="cap">Дежурный: ${rt.duty?`<b style="color:var(--ink)">${esc(rt.duty)}</b>`:'<span class="tg t-warn">не взят</span>'}</p>
+    <div class="chat">${rt.chat.length?rt.chat.map(m=>`<div class="msg"><b>${esc(m.who)}</b><small>${m.t}</small><br>${esc(m.txt)}</div>`).join('')
+      :`<div class="empty">Сообщений нет. Поверитель напишет сюда, если что-то пойдёт не так.</div>`}</div>
+    <div class="row" style="margin-top:10px;flex-wrap:nowrap">
+      <input id="chatin" placeholder="Сообщение поверителю">
+      <button class="b" onclick="send('${rt.id}')">Отправить</button></div>
+    ${!rt.duty?`<button class="g" style="margin-top:10px" onclick="takeDuty('${rt.id}');render()">Подключиться к маршруту</button>`:''}
+  </div></div>`;
+}
+function callStop(id,i,res){
+  const rt = S.routes.find(r=>r.id===id); rt.stops[i].called = res;
+  if(res!=='подтверждена'){const r=S.requests.find(x=>x.id===rt.stops[i].req); if(r) r.status = res==='отказ'?'отменена':'перенос';}
+  render();
+}
+function move(id,i,d){ const st=S.routes.find(r=>r.id===id).stops; [st[i],st[i+d]]=[st[i+d],st[i]]; render(); }
+function setStatus(id,st){
+  const rt = S.routes.find(r=>r.id===id); rt.status = st;
+  if(st==='выполнен') rt.stops.forEach(s=>{const r=S.requests.find(x=>x.id===s.req);
+    if(r&&s.called==='подтверждена'){r.status='выполнена';r.verified={verifier:rt.verifier};}});
+  toast(st==='выполнен'?'Маршрут закрыт. Работы ушли в реестр УК и в расчёт сдельной оплаты.':'Маршрут обзвонен и готов к выдаче поверителю.');
+}
+function send(id){
+  const el = document.getElementById('chatin'), t = el.value.trim(); if(!t) return;
+  const rt = S.routes.find(r=>r.id===id);
+  rt.chat.push({who:S.user.name,txt:t,t:new Date().toTimeString().slice(0,5)});
+  if(!rt.duty) rt.duty = S.user.name; render();
+}
+function takeDuty(id){ S.routes.find(r=>r.id===id).duty = S.user.name; toast('Маршрут закреплён за вами. У остальных операторов кнопка погасла.'); }
+
+/* ---------- дежурство ---------- */
+function viewDuty(){
+  const list = S.routes.filter(r=>r.date===iso(today));
+  return shell(null,`${cap()}<div class="c"><h3>Маршруты на сегодня</h3>
+    ${list.length?`<table><thead><tr><th>Маршрут</th><th>Город</th><th>Поверитель</th><th class="num">Точек</th><th>Статус</th><th>Дежурный</th><th></th></tr></thead><tbody>
+      ${list.map(rt=>{const v=S.staff.find(x=>x.id===rt.verifier);
+        return `<tr><td class="mono"><b>${rt.id}</b></td><td>${rt.city}</td><td>${v?esc(v.name):'—'}</td>
+        <td class="num">${rt.stops.length}</td><td>${stTag(rt.status)}</td>
+        <td>${rt.duty?`<b>${esc(rt.duty)}</b>`:'<span class="note">свободен</span>'}</td>
+        <td style="text-align:right">${rt.duty?`<button class="g" disabled>Занято</button>`
+          :`<button class="b" onclick="takeDuty('${rt.id}');render()">Подключиться</button>`}</td></tr>`}).join('')}
+      </tbody></table>`:`<div class="empty">На сегодня маршрутов нет.</div>`}</div>`);
+}
+
+/* ---------- уведомления УК ---------- */
+function viewUK(){
+  const rows = S.requests.filter(r=>r.status==='выполнена').flatMap(r=>r.devices.map(d=>({r,d})));
+  return shell(null,`${cap()}<div class="c"><h3>Реестр для управляющих компаний</h3>
+    <div class="row" style="margin-bottom:14px">
+      <button class="b" onclick="toast('Сформирован сводный отчёт за месяц: ${rows.length} позиций. В боевой версии — файл Excel.')">Сводный отчёт за месяц</button>
+      <button class="g" onclick="toast('Разовое уведомление отправлено в УК по выбранному адресу.')">Уведомить по одному клиенту</button>
+      <span class="note" style="padding-bottom:8px">${rows.length} позиций готово к выгрузке</span></div>
+    ${rows.length?`<table><thead><tr><th>Адрес</th><th>Заводской №</th><th>Тип устройства</th><th>Носитель</th>
+      <th>Помещение</th><th>Пломба УК</th><th class="num">Поверка</th><th class="num">Следующая</th><th>Сертификат</th></tr></thead><tbody>
+      ${rows.slice(0,40).map(({r,d})=>{const nx=new Date(r.date+'T00:00:00');nx.setFullYear(nx.getFullYear()+(d.carrier==='Тепло'?4:6));
+        return `<tr><td><b>${r.city}, ${r.street}, ${r.house}${r.flat?', кв. '+r.flat:''}</b></td>
+        <td class="mono">${d.serial}</td><td>${d.type}</td>
+        <td><span class="tg ${d.carrier==='ГВС'?'t-err':d.carrier==='ХВС'?'t-cold':'t-warn'}">${d.carrier}</span></td>
+        <td>${d.room}</td><td>${d.seal?'<span class="tg t-ok">есть</span>':'<span class="tg t-err">нет</span>'}</td>
+        <td class="num">${ru(r.date)}</td><td class="num">${ru(iso(nx))}</td>
+        <td>${d.seal?`<a href="#" onclick="event.preventDefault();toast('Ссылка на сертификат приходит из «Аршина» после приёмки пакета.')">открыть</a>`:'<span class="note">—</span>'}</td></tr>`}).join('')}
+      </tbody></table>${rows.length>40?`<p class="note" style="margin-top:10px">Показаны первые 40 из ${rows.length}.</p>`:''}`
+      :`<div class="empty">Закройте хотя бы один маршрут — выполненные работы появятся здесь.</div>`}</div>`);
+}
+
+/* ---------- заработок ---------- */
+function viewMe(){
+  const isV = S.role==='verifier';
+  const done = S.requests.filter(r=>r.status==='выполнена');
+  const sum = done.reduce((a,r)=>a+(isV?rateV(r):rateO(r)),0);
+  const td = done.filter(r=>r.date===iso(today)).reduce((a,r)=>a+(isV?rateV(r):rateO(r)),0);
+  return shell(null,`${cap()}
+  <div class="kpi">
+    <div><div class="v">${money(td)}</div><div class="k">начислено сегодня</div></div>
+    <div><div class="v">${money(sum)}</div><div class="k">за период</div></div>
+    <div><div class="v">${done.length}</div><div class="k">${isV?'выполнено работ':'заявок дошло до выполнения'}</div></div>
+    <div><div class="v">${isV?crewOn(S.day).length:opsOn(S.day).length}</div><div class="k">человек в смене сегодня</div></div>
+  </div>
+  <div class="c"><h3>Детализация</h3>
+    <p class="cap">${isV?'Ставка поверителя за выполненную услугу.':'Ставка оператора за принятую заявку, дошедшую до выполнения.'}</p>
+    ${done.length?`<table><thead><tr><th>Заявка</th><th class="num">Дата</th><th>Адрес</th><th>Услуги</th><th class="num">Начислено</th></tr></thead><tbody>
+      ${done.slice(0,30).map(r=>`<tr><td class="mono">${r.id}</td><td class="num">${ru(r.date)}</td>
+        <td><b>${r.city}, ${r.street}, ${r.house}</b></td><td>${r.services.map(s=>SVC[s].name).join(', ')}</td>
+        <td class="num"><b>${money(isV?rateV(r):rateO(r))}</b></td></tr>`).join('')}</tbody></table>`
+      :`<div class="empty">Пока нечего показать. Начисление появляется после закрытия маршрута.</div>`}</div>`);
+}
+function viewPayroll(){
+  const done = S.requests.filter(r=>r.status==='выполнена'), byV={}, byO={};
+  S.routes.filter(r=>r.status==='выполнен').forEach(rt=>{
+    const v = S.staff.find(x=>x.id===rt.verifier); if(!v) return;
+    rt.stops.forEach(s=>{const r=S.requests.find(x=>x.id===s.req);
+      if(r&&r.status==='выполнена') byV[v.name]=(byV[v.name]||0)+rateV(r);});
+  });
+  done.forEach(r=>{ if(r.operator) byO[r.operator]=(byO[r.operator]||0)+rateO(r); });
+  const t = (o,l) => Object.keys(o).length?`<table><thead><tr><th>${l}</th><th class="num">Начислено</th></tr></thead><tbody>
+    ${Object.entries(o).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<tr><td><b>${esc(k)}</b></td><td class="num">${money(v)}</td></tr>`).join('')}</tbody></table>`
+    :`<div class="empty">Нет начислений за период.</div>`;
+  return shell(null,`${cap()}<div class="g2">
+    <div class="c"><h3>Поверители</h3><p class="cap">По закрытым маршрутам.</p>${t(byV,'Сотрудник')}</div>
+    <div class="c"><h3>Операторы</h3><p class="cap">По заявкам, дошедшим до выполнения.</p>${t(byO,'Сотрудник')}</div></div>`);
+}
+function viewServices(){
+  return shell(null,`${cap()}<div class="c"><h3>Прайс и сдельные ставки</h3>
+    <table><thead><tr><th>Группа</th><th>Услуга</th><th class="num">Физлицо</th><th class="num">Юрлицо</th>
+      <th class="num">Поверителю</th><th class="num">Оператору</th></tr></thead><tbody>
+      ${SERVICES.map(s=>`<tr><td><span class="tg t-mut">${s.grp}</span></td><td><b>${s.name}</b></td>
+        <td class="num">${money(s.pF)}</td><td class="num">${money(s.pU)}</td>
+        <td class="num">${money(s.rV)}</td><td class="num">${money(s.rO)}</td></tr>`).join('')}</tbody></table></div>`);
+}
+function viewMyRoute(){
+  const rt = S.routes.find(r=>r.date===iso(today)) || S.routes[0];
+  return shell(null, rt?`${cap()}${routeCard(rt)}`
+    :`${cap()}<div class="c"><div class="empty">Маршрут не назначен. Соберите маршруты под ролью оператора.</div></div>`);
+}
+function viewAbsence(){
+  return shell(null,`${cap()}<form class="c" style="max-width:660px" onsubmit="event.preventDefault();toast('Запрос отправлен руководителю на согласование.')">
+    <h3>Запрос отсутствия</h3><p class="cap">До согласования дни остаются рабочими по графику.</p>
+    <div class="g3">
+      <div class="f"><label>С какого числа</label><input type="date" value="${iso(addDays(today,3))}" required></div>
+      <div class="f"><label>По какое</label><input type="date" value="${iso(addDays(today,5))}" required></div>
+      <div class="f"><label>Причина</label><input placeholder="Семейные обстоятельства" required></div></div>
+    <button class="b" style="margin-top:4px">Отправить запрос</button></form>`);
+}
+
+/* ============================================================ */
+const VIEWS = {intake:viewIntake,plan:viewPlan,schedule:viewSchedule,logistics:viewLogistics,
+  routes:viewRoutes,duty:viewDuty,uk:viewUK,me:viewMe,payroll:viewPayroll,
+  services:viewServices,myroute:viewMyRoute,absence:viewAbsence};
+function go(v){ S.view=v; render(); }
+function render(){ document.getElementById('root').innerHTML = S.user?(VIEWS[S.view]||viewIntake)():viewLogin(); }
+seed();
+render();
+</script>
+</body>
+</html>
