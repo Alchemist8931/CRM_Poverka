@@ -42,10 +42,13 @@ body{background:var(--bg);color:var(--ink);font:400 14px/1.5 'SN Pro',ui-sans-se
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 ::-webkit-scrollbar-thumb:hover{background:var(--ink3)}
-button,input,select,textarea{font:inherit;color:inherit}
+button,input,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.01em}
+a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--mark)}
+a:hover{color:var(--ink2)}
 @keyframes wsFade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes wsPop{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
 @keyframes wsPulse{0%,100%{opacity:.45;transform:scale(1)}50%{opacity:1;transform:scale(1.2)}}
 @keyframes wsScan{0%{top:0;opacity:0}6%{opacity:1}94%{opacity:1}100%{top:100%;opacity:0}}
 @keyframes wsBreath{0%,100%{box-shadow:0 0 0 0 transparent}50%{box-shadow:0 0 22px -4px var(--mark)}}
@@ -53,6 +56,7 @@ h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.01em}
 
 .mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
 .lbl{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink3)}
+.note{font-size:11.5px;color:var(--ink3);line-height:1.5}
 
 /* ---------- фон ---------- */
 .fx{position:absolute;inset:0;pointer-events:none}
@@ -62,73 +66,105 @@ h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.01em}
   -webkit-mask-image:radial-gradient(ellipse 95% 90% at 50% 0%,#000 25%,transparent 80%);mask-image:radial-gradient(ellipse 95% 90% at 50% 0%,#000 25%,transparent 80%)}
 .fx-scan{position:absolute;left:0;right:0;height:1px;z-index:1;background:linear-gradient(90deg,transparent,var(--scan),transparent);animation:wsScan 11s linear infinite}
 
-/* ---------- вход ---------- */
-.login-wrap{position:relative;z-index:2;height:100vh;display:grid;place-items:center;padding:24px}
-.login{width:400px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px 30px 26px;box-shadow:var(--shCard);animation:wsFade .35s ease}
-.login .logo{width:40px;height:40px;border-radius:12px;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;margin-bottom:18px;animation:wsBreath 5s ease-in-out infinite}
-.login h1{font-size:21px;margin-bottom:5px}
-.login .sub{color:var(--ink2);font-size:12.5px;margin:0 0 22px}
-.roles{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.role{padding:10px 11px;border:1px solid var(--border);border-radius:10px;background:var(--card);text-align:left;font-size:12.5px;transition:all .2s ease}
-.role small{display:block;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;color:var(--ink3);margin-top:3px}
-.role:hover{border-color:var(--mark)}
-.role[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
-.role[aria-pressed="true"] small{color:var(--bg);opacity:.6}
-
-/* ---------- поля ---------- */
-.f{margin-bottom:12px}
+/* ============ ПОЛЯ — единый вид ============ */
+.f{margin-bottom:12px;min-width:0}
 .f > label{display:block;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px}
-input,select,textarea{width:100%;padding:9px 11px;background:var(--card);border:1px solid var(--border);border-radius:10px;outline:none;font-size:13px;transition:border-color .2s ease}
-input:focus,select:focus,textarea:focus{border-color:var(--mark)}
-input[type=checkbox]{width:auto;padding:0}
+.fld{display:flex;align-items:center;gap:8px;width:100%;height:38px;padding:0 11px;background:var(--card);border:1px solid var(--border);border-radius:10px;
+  font-size:13px;color:var(--ink);text-align:left;outline:none;transition:border-color .2s ease,box-shadow .2s ease}
+textarea.fld{height:auto;padding:9px 11px;resize:vertical;min-height:76px;line-height:1.5}
+.fld:hover{border-color:var(--mark)}
+.fld:focus{border-color:var(--ink);box-shadow:0 0 0 3px var(--wash)}
+.fld.sm{height:32px;padding:0 9px;font-size:12px;border-radius:8px}
+.fld.mono{font-size:12.5px}
+.sel{position:relative;min-width:0}
+.sel .fld{cursor:pointer}
+.sel.open > .fld{border-color:var(--ink);box-shadow:0 0 0 3px var(--wash)}
+.sel .v{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sel .v.ph{color:var(--ink3)}
+.sel .cv{color:var(--ink3);flex-shrink:0;transition:transform .2s ease}
+.sel.open .cv{transform:rotate(180deg)}
+.pop{position:absolute;z-index:40;top:calc(100% + 5px);left:0;min-width:100%;background:var(--card);border:1px solid var(--border);
+  border-radius:10px;box-shadow:var(--shCard);padding:5px;max-height:268px;overflow-y:auto;animation:wsPop .16s ease}
+.pop.right{left:auto;right:0}
+.o{display:flex;align-items:center;gap:9px;width:100%;padding:7px 9px;border:0;border-radius:7px;background:transparent;color:var(--ink2);font-size:12.5px;text-align:left;white-space:nowrap}
+.o:hover{background:var(--wash);color:var(--ink)}
+.o[aria-selected="true"]{color:var(--ink);font-weight:500}
+.o .tail{margin-left:auto;display:flex;align-items:center;gap:7px;flex-shrink:0}
+.o .hint{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--ink3)}
+.o .ck{opacity:0;color:var(--ink)}
+.o[aria-selected="true"] .ck{opacity:1}
+.chk{display:inline-flex;align-items:center;gap:8px;background:none;border:0;padding:0;color:var(--ink3);font-size:12.5px;white-space:nowrap}
+.chk i{width:17px;height:17px;flex-shrink:0;border:1px solid var(--border);border-radius:5px;background:var(--card);display:grid;place-items:center;transition:all .2s ease}
+.chk i svg{width:11px;height:11px;opacity:0;transition:opacity .15s ease}
+.chk:hover i{border-color:var(--mark)}
+.chk[aria-checked="true"]{color:var(--ink)}
+.chk[aria-checked="true"] i{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.chk[aria-checked="true"] i svg{opacity:1}
+.seg{display:inline-flex;gap:3px;padding:3px;background:var(--surface);border:1px solid var(--border);border-radius:10px}
+.seg button{padding:6px 13px;border:0;border-radius:8px;background:transparent;color:var(--ink3);font-size:12px;transition:all .2s ease;white-space:nowrap}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--card);color:var(--ink);font-weight:500;box-shadow:var(--shSoft)}
+.opt{display:inline-flex;align-items:center;gap:8px;padding:0 13px;height:38px;border:1px solid var(--border);border-radius:10px;background:var(--card);color:var(--ink2);font-size:12.5px;transition:all .2s ease}
+.opt:hover{border-color:var(--mark);color:var(--ink)}
+.opt[aria-pressed="true"]{border-color:var(--ink);background:var(--wash);color:var(--ink)}
+.cal{width:250px;padding:10px}
+.cal-h{display:flex;align-items:center;gap:5px;margin-bottom:9px}
+.cal-h b{flex:1;text-align:center;font-size:12.5px}
+.cal-w{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:5px}
+.cal-w span{text-align:center;font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+.cal-g{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cal-g button{height:28px;border:1px solid transparent;border-radius:7px;background:transparent;color:var(--ink2);font-family:'JetBrains Mono',monospace;font-size:11.5px}
+.cal-g button:hover{background:var(--wash);color:var(--ink)}
+.cal-g button.out{color:var(--border)}
+.cal-g button.tdy{border-color:var(--border)}
+.cal-g button.on{background:var(--ink);color:var(--bg)}
 
 /* ---------- кнопки ---------- */
-.b{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:9px 15px;border:none;border-radius:10px;
+.b{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:0 15px;height:38px;border:none;border-radius:10px;
   background:linear-gradient(180deg,var(--btnA),var(--btnB));color:var(--btnFg);font-size:12.5px;font-weight:600;box-shadow:var(--shSoft);transition:all .25s ease}
 .b:hover{transform:translateY(-1px);box-shadow:0 8px 22px -8px var(--mark)}
 .b:disabled{opacity:.35;transform:none;box-shadow:none;cursor:not-allowed}
-.b.wide{width:100%;padding:11px}
-.g{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:7px 13px;border:1px solid var(--border);border-radius:999px;background:transparent;color:var(--ink2);font-size:11.5px;transition:all .25s ease}
+.b.wide{width:100%}
+.g{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 14px;height:38px;border:1px solid var(--border);border-radius:999px;background:transparent;color:var(--ink2);font-size:11.5px;transition:all .25s ease}
 .g:hover{color:var(--ink);border-color:var(--mark)}
-.g:disabled{opacity:.35;cursor:not-allowed}
-.g:disabled:hover{color:var(--ink2);border-color:var(--border)}
+.g.sm{height:30px;padding:0 11px;font-size:11px}
+.g:disabled{opacity:.35;cursor:not-allowed;color:var(--ink2);border-color:var(--border)}
 .ib{width:32px;height:32px;border:1px solid var(--border);border-radius:9px;background:transparent;color:var(--ink2);display:inline-flex;align-items:center;justify-content:center;transition:all .25s ease;flex-shrink:0}
+.ib.sm{width:28px;height:28px;border-radius:8px}
 .ib:hover{color:var(--ink);border-color:var(--mark)}
 .ib:disabled{opacity:.3;cursor:not-allowed}
-.ib svg{width:14px;height:14px}
+.ib.ok:hover{color:var(--success)} .ib.no:hover{color:var(--error)} .ib.wr:hover{color:var(--warning)}
 
 /* ---------- каркас ---------- */
 .app{display:flex;width:100%;height:100vh;overflow:hidden;position:relative}
 .rail{width:64px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding:14px 0 16px;border-right:1px solid var(--border2);position:relative;z-index:5;gap:6px}
 .rail .logo{width:38px;height:38px;border-radius:12px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;margin-bottom:14px;animation:wsBreath 5s ease-in-out infinite}
-.rail .logo svg{width:19px;height:19px}
 .nb{position:relative;width:40px;height:40px;border-radius:12px;border:1px solid transparent;background:transparent;color:var(--ink3);display:flex;align-items:center;justify-content:center;transition:all .25s ease}
-.nb svg{width:20px;height:20px}
 .nb:hover{color:var(--ink);background:var(--wash)}
 .nb[aria-current="true"]{color:var(--ink);background:var(--wash);border-color:var(--border)}
-.nb .bdg{position:absolute;top:-3px;right:-3px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:var(--ink);color:var(--bg);font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.nb .bdg{position:absolute;top:-2px;right:-2px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:var(--ink);color:var(--bg);font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center}
 .rail .foot{margin-top:auto;display:flex;flex-direction:column;align-items:center;gap:8px}
 .ava{position:relative;width:36px;height:36px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;letter-spacing:.04em}
 .ava i{position:absolute;bottom:-1px;right:-1px;width:9px;height:9px;border-radius:50%;background:var(--success);border:2px solid var(--bg)}
 
 .col{flex:1;min-width:0;display:flex;flex-direction:column;position:relative;z-index:2}
-.hd{height:56px;flex-shrink:0;display:flex;align-items:center;gap:14px;padding:0 20px;border-bottom:1px solid var(--border2)}
+.hd{height:56px;flex-shrink:0;display:flex;align-items:center;gap:12px;padding:0 20px;border-bottom:1px solid var(--border2)}
 .hd .ttl{display:flex;align-items:baseline;gap:9px;white-space:nowrap}
 .hd .ttl b{font-size:14.5px;font-weight:600}
-.srch{display:flex;align-items:center;gap:9px;width:300px;padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--ink3)}
-.srch input{border:none;background:transparent;padding:0;font-size:12.5px;border-radius:0}
+.srch{display:flex;align-items:center;gap:9px;width:290px;height:36px;padding:0 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--ink3)}
+.srch input{flex:1;min-width:0;border:none;background:transparent;padding:0;height:auto;font-size:12.5px;outline:none}
 .srch kbd{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink3);border:1px solid var(--border);border-bottom-width:2px;border-radius:6px;padding:1px 6px;background:var(--card)}
 .chip{display:inline-flex;align-items:center;gap:7px;padding:4px 11px;border:1px solid var(--border2);border-radius:999px;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.13em;color:var(--ink3);white-space:nowrap}
 .chip .dot{width:6px;height:6px;border-radius:50%;background:var(--success);animation:wsPulse 2.2s ease-in-out infinite}
 
 .body{flex:1;min-height:0;display:flex;animation:wsFade .3s ease}
-.side{width:246px;flex-shrink:0;border-right:1px solid var(--border2);padding:14px 12px;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+.side{width:250px;flex-shrink:0;border-right:1px solid var(--border2);padding:14px 12px;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
 .side .sb{display:flex;align-items:center;gap:9px;width:100%;padding:8px 10px;border:1px solid transparent;border-radius:9px;background:transparent;color:var(--ink2);font-size:12.5px;text-align:left;transition:all .2s ease}
 .side .sb:hover{background:var(--wash);color:var(--ink)}
 .side .sb[aria-current="true"]{background:var(--wash);color:var(--ink);border-color:var(--border)}
-.side .sb .n{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--ink3)}
-.main{flex:1;min-width:0;overflow-y:auto;padding:18px 20px 40px}
-.cap{font-size:12px;color:var(--ink3);line-height:1.5;margin:0 0 14px;max-width:76ch}
+.side .sb .n{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--ink3);flex-shrink:0}
+.main{flex:1;min-width:0;overflow-y:auto;padding:18px 20px 44px}
+.cap{font-size:12px;color:var(--ink3);line-height:1.5;margin:0 0 14px;max-width:78ch}
 
 /* ---------- карточки ---------- */
 .c{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:14px}
@@ -141,8 +177,8 @@ input[type=checkbox]{width:auto;padding:0}
 
 /* ---------- лента ёмкости ---------- */
 .rib{display:flex;gap:4px;align-items:flex-end}
-.day{flex:1 0 0;min-width:44px;background:none;border:0;padding:0}
-.day .bar{height:96px;border:1px solid var(--border);border-radius:8px;background:var(--card);position:relative;overflow:hidden;transition:all .2s ease}
+.day{flex:1 0 0;min-width:42px;background:none;border:0;padding:0}
+.day .bar{height:94px;border:1px solid var(--border);border-radius:8px;background:var(--card);position:relative;overflow:hidden;transition:all .2s ease}
 .day .fill{position:absolute;left:0;right:0;bottom:0;background:var(--ink3);opacity:.3;transition:height .3s ease}
 .day[data-s="fill"] .fill{background:var(--cold);opacity:.45}
 .day[data-s="full"] .fill{background:var(--ink);opacity:.72}
@@ -153,21 +189,19 @@ input[type=checkbox]{width:auto;padding:0}
 .day .wd{font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);margin-top:2px}
 .day:hover .bar{border-color:var(--mark)}
 .day[aria-pressed="true"] .bar{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
-.day.off .fill{background:repeating-linear-gradient(45deg,transparent,transparent 5px,var(--wash) 5px,var(--wash) 6px);opacity:1;height:100%!important}
+.day.past .bar{opacity:.5}
 .lg{display:flex;gap:14px;margin-top:12px;flex-wrap:wrap;font-size:11px;color:var(--ink3)}
 .lg i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:-1px}
 
 /* ---------- таблицы ---------- */
 table{width:100%;border-collapse:collapse;font-size:12.5px}
-th{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);font-weight:500;text-align:left;padding:0 10px 8px;border-bottom:1px solid var(--border2)}
+th{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);font-weight:500;text-align:left;padding:0 10px 8px;border-bottom:1px solid var(--border2);white-space:nowrap}
 td{padding:8px 10px;border-bottom:1px solid var(--border2);color:var(--ink2)}
 tbody tr:hover td{background:var(--wash)}
 tbody tr:last-child td{border-bottom:0}
 td.num,th.num{text-align:right;font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
 td b{color:var(--ink);font-weight:600}
-td input{padding:4px 7px;border-radius:7px;font-size:12px;font-family:'JetBrains Mono',monospace;text-align:right}
-td select{padding:5px 8px;border-radius:8px;font-size:12px}
-.tg{display:inline-flex;align-items:center;padding:2px 9px;border:1px solid currentColor;border-radius:999px;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase}
+.tg{display:inline-flex;align-items:center;padding:2px 9px;border:1px solid currentColor;border-radius:999px;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
 .t-ok{color:var(--success)} .t-warn{color:var(--warning)} .t-err{color:var(--error)}
 .t-cold{color:var(--cold)} .t-ink{color:var(--ink)} .t-mut{color:var(--ink3)}
 .empty{padding:34px 10px;text-align:center;color:var(--ink3);font-size:12.5px}
@@ -177,36 +211,41 @@ td select{padding:5px 8px;border-radius:8px;font-size:12px}
 .tl div{flex:1;border-right:1px solid var(--border2);font-family:'JetBrains Mono',monospace;font-size:9px;line-height:24px;text-align:center;color:var(--ink3)}
 .tl div:last-child{border-right:0}
 .tl div.busy{background:var(--wash);color:var(--ink)}
-.stops{max-height:300px;overflow-y:auto}
-.stop{display:grid;grid-template-columns:26px 1fr auto;gap:10px;align-items:center;padding:8px 2px;border-bottom:1px solid var(--border2);font-size:12.5px}
+.tl div.done{background:var(--ink);color:var(--bg)}
+.stops{max-height:320px;overflow-y:auto}
+.stop{display:grid;grid-template-columns:24px 1fr auto;gap:10px;align-items:center;padding:8px 2px;border-bottom:1px solid var(--border2);font-size:12.5px}
 .stop:last-child{border-bottom:0}
 .stop .n{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink3)}
 .stop small{display:block;font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--ink3);margin-top:2px}
+.stop.fin b{color:var(--ink3);text-decoration:line-through}
 .stamp{position:absolute;right:18px;bottom:16px;width:88px;height:88px;border:1.5px solid var(--mark);border-radius:50%;color:var(--ink3);display:grid;place-content:center;text-align:center;transform:rotate(-11deg);opacity:.6;pointer-events:none}
 .stamp::after{content:"";position:absolute;inset:5px;border:1px dashed var(--mark);border-radius:50%}
 .stamp b{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.16em;display:block;color:var(--ink2)}
 .stamp span{font-family:'JetBrains Mono',monospace;font-size:8.5px;display:block;margin-top:3px}
 
 /* ---------- прочее ---------- */
-.chat{border:1px solid var(--border);border-radius:10px;background:var(--card);height:220px;overflow-y:auto;padding:12px}
-.msg{margin-bottom:10px;font-size:12.5px;line-height:1.45;color:var(--ink2)}
+.chat{border:1px solid var(--border);border-radius:10px;background:var(--card);height:236px;overflow-y:auto;padding:12px}
+.msg{margin-bottom:11px;font-size:12.5px;line-height:1.45;color:var(--ink2)}
 .msg b{font-size:12px;color:var(--ink)}
 .msg small{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink3);margin-left:6px}
-.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:14px}
+.msg.v{padding-left:9px;border-left:2px solid var(--border)}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:12px;margin-bottom:14px}
 .kpi > div{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
-.kpi .v{font-family:'JetBrains Mono',monospace;font-size:23px;font-weight:500}
+.kpi .v{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:500}
 .kpi .k{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);margin-top:5px;line-height:1.4}
-.toast{position:fixed;right:22px;bottom:22px;background:var(--card);border:1px solid var(--border);border-left:2px solid var(--ink);border-radius:10px;padding:12px 16px;font-size:12.5px;z-index:60;max-width:380px;box-shadow:var(--shCard);animation:wsFade .25s ease}
-.dev{display:grid;grid-template-columns:1.5fr .75fr 1fr .85fr auto 32px;gap:6px;margin-bottom:6px;align-items:center}
-.dev input,.dev select{padding:6px 9px;font-size:12px;border-radius:8px}
-.dev label{display:flex;gap:6px;align-items:center;font-size:11.5px;color:var(--ink2);white-space:nowrap}
-.svc{display:flex;gap:7px;flex-wrap:wrap}
-.svc label{display:flex;gap:7px;align-items:center;padding:8px 12px;border:1px solid var(--border);border-radius:10px;background:var(--card);font-size:12px;transition:all .2s ease}
-.svc label:hover{border-color:var(--mark)}
-.svc label:has(input:checked){border-color:var(--ink);background:var(--wash)}
-.note{font-size:11.5px;color:var(--ink3);line-height:1.5}
-a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--mark)}
-a:hover{color:var(--ink2)}
+.toast{position:fixed;right:22px;bottom:22px;background:var(--card);border:1px solid var(--border);border-left:2px solid var(--ink);border-radius:10px;padding:12px 16px;font-size:12.5px;z-index:60;max-width:390px;box-shadow:var(--shCard);animation:wsFade .25s ease}
+.dev{display:grid;grid-template-columns:1.45fr .7fr 1fr .8fr auto 32px;gap:6px;margin-bottom:6px;align-items:center}
+.login-wrap{position:relative;z-index:2;height:100vh;display:grid;place-items:center;padding:24px}
+.login{width:410px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px 30px 26px;box-shadow:var(--shCard);animation:wsFade .35s ease}
+.login .logo{width:40px;height:40px;border-radius:12px;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;margin-bottom:18px;animation:wsBreath 5s ease-in-out infinite}
+.login h1{font-size:21px;margin-bottom:5px}
+.login .sub{color:var(--ink2);font-size:12.5px;margin:0 0 22px}
+.roles{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.role{padding:10px 11px;border:1px solid var(--border);border-radius:10px;background:var(--card);text-align:left;font-size:12.5px;transition:all .2s ease}
+.role small{display:block;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.06em;color:var(--ink3);margin-top:3px}
+.role:hover{border-color:var(--mark)}
+.role[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.role[aria-pressed="true"] small{color:var(--bg);opacity:.62}
 </style>
 </head>
 <body>
@@ -236,33 +275,42 @@ const I = {
   bell:'<path d="M6 9a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M10 20a2 2 0 0 0 4 0"/>',
   out:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/>',
   search:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
-  plus:'<path d="M12 5v14M5 12h14"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>', chev:'<path d="M6 9l6 6 6-6"/>',
+  cal:'<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/>',
+  left:'<path d="M15 6l-6 6 6 6"/>', right:'<path d="M9 6l6 6-6 6"/>',
   up:'<path d="M12 19V5M5 12l7-7 7 7"/>', down:'<path d="M12 5v14M19 12l-7 7-7-7"/>',
-  ok:'<path d="M20 6L9 17l-5-5"/>', fwd:'<path d="M5 12h14M13 6l6 6-6 6"/>', no:'<path d="M18 6L6 18M6 6l12 12"/>'
+  ok:'<path d="M20 6L9 17l-5-5"/>', fwd:'<path d="M5 12h14M13 6l6 6-6 6"/>', no:'<path d="M18 6L6 18M6 6l12 12"/>',
+  send:'<path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/>'
 };
-const svg = (p,w=20) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:${w}px;height:${w}px">${p}</svg>`;
+const svg = (p,w=20) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:${w}px;height:${w}px;flex-shrink:0">${p}</svg>`;
 
+/* ---------- справочники ---------- */
 const CITIES = ['Екатеринбург','Тюмень','Челябинск'];
 const SERVICES = [
-  {id:'wv',grp:'Вода',  name:'Поверка счётчика воды',  pF:900, pU:1200,rV:280, rO:45},
-  {id:'wr',grp:'Вода',  name:'Замена счётчика воды',   pF:2600,pU:3200,rV:750, rO:70},
-  {id:'hv',grp:'Тепло', name:'Поверка теплосчётчика',  pF:3400,pU:4100,rV:950, rO:90},
-  {id:'hm',grp:'Тепло', name:'Монтаж теплосчётчика',   pF:7800,pU:9200,rV:2100,rO:120},
-  {id:'hd',grp:'Тепло', name:'Демонтаж теплосчётчика', pF:2200,pU:2700,rV:600, rO:60}
+  {id:'wv',grp:'Вода', name:'Поверка счётчика воды',  pF:900, pU:1200,rV:280, rO:45},
+  {id:'wr',grp:'Вода', name:'Замена счётчика воды',   pF:2600,pU:3200,rV:750, rO:70},
+  {id:'hv',grp:'Тепло',name:'Поверка теплосчётчика',  pF:3400,pU:4100,rV:950, rO:90},
+  {id:'hm',grp:'Тепло',name:'Монтаж теплосчётчика',   pF:7800,pU:9200,rV:2100,rO:120},
+  {id:'hd',grp:'Тепло',name:'Демонтаж теплосчётчика', pF:2200,pU:2700,rV:600, rO:60}
 ];
 const SVC = Object.fromEntries(SERVICES.map(s=>[s.id,s]));
-const DEV_TYPES = ['Бетар СГВ-15','Бетар СХВ-15','Ителма WFW20','Пульсар М-15','Норма СВК-15','ТСК-7 (тепло)'];
+const DEV_TYPES = [
+  {v:'Бетар СХВ-15',   grsi:'32245-11'}, {v:'Бетар СГВ-15', grsi:'32245-11'},
+  {v:'Ителма WFW20',   grsi:'31001-12'}, {v:'Пульсар М-15', grsi:'50480-12'},
+  {v:'Норма СВК-15',   grsi:'28151-09'}, {v:'ТСК-7 (тепло)',grsi:'44096-10'}
+];
 const ROOMS = ['Кухня','Санузел','Иное'];
 const STREETS = ['Ленина','Малышева','Победы','Крауля','Сурикова','Белинского','Уральская','Мира','Куйбышева','Гагарина','Есенина','Шевченко'];
-
 const ROLES = {
-  operator:{label:'Оператор',code:'OP'}, senior:{label:'Старший оператор',code:'SR'},
-  supervisor:{label:'Руководитель',code:'SV'}, verifier:{label:'Поверитель',code:'PV'}
+  operator:{label:'Оператор',who:'Ефимова О.',id:'o2'},
+  senior:{label:'Старший оператор',who:'Кузнецова Е.',id:'o0'},
+  supervisor:{label:'Руководитель',who:'Панченко И.',id:'sv'},
+  verifier:{label:'Поверитель',who:'Алимпиев И.',id:'v0'}
 };
 const NAV = {
   operator:['intake','logistics','routes','duty','uk','me'],
   senior:['intake','logistics','routes','duty','uk','me'],
-  supervisor:['plan','schedule','logistics','routes','uk','payroll','services'],
+  supervisor:['plan','schedule','absence','logistics','routes','uk','payroll','services'],
   verifier:['myroute','me','absence']
 };
 const TITLES = {intake:'Приём заявки',logistics:'Логистика',routes:'Маршруты',duty:'Дежурство',
@@ -280,80 +328,195 @@ const CAPS = {
   payroll:'Начисления по всем сотрудникам за период.',
   services:'Цены для физических и юридических лиц, сдельные ставки поверителя и оператора.',
   myroute:'Маршрут на сегодня. Позиция закрывается только с заполненной пломбой УК.',
-  absence:'Запрос отсутствия уходит руководителю на согласование.'
+  absence:'Запросы на отсутствие. До согласования дни остаются рабочими по графику.'
 };
 
 /* ---------- утилиты ---------- */
 const pad = n => String(n).padStart(2,'0');
 const iso = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const today = new Date(); today.setHours(0,0,0,0);
+const TODAY = iso(today);
 const addDays = (d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x;};
 const WD = ['вс','пн','вт','ср','чт','пт','сб'];
+const MN = ['январь','февраль','март','апрель','май','июнь','июль','август','сентябрь','октябрь','ноябрь','декабрь'];
 const ru = s => s.split('-').reverse().join('.');
-const money = n => n.toLocaleString('ru-RU')+' ₽';
-const rnd = a => a[Math.floor(Math.random()*a.length)];
-const rint = (a,b) => a+Math.floor(Math.random()*(b-a+1));
+const money = n => Math.round(n).toLocaleString('ru-RU')+' ₽';
 const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let sd = 20260803;
+const rr = () => (sd = (sd*1103515245+12345) % 2147483648) / 2147483648;
+const rnd = a => a[Math.floor(rr()*a.length)];
+const rint = (a,b) => a+Math.floor(rr()*(b-a+1));
 
+/* ============ КОМПОНЕНТЫ ПОЛЕЙ ============ */
+const H = {};                                   // реестр обработчиков полей
+function dd(id){ S.dd = S.dd===id?null:id; render(); }
+function pick(id,v){ S.dd=null; H[id]?.(v); render(); }
+
+function SEL(id,val,items,fn,o={}){
+  H[id] = fn;
+  const list = items.map(x=>typeof x==='object'?x:{v:x,l:x});
+  const cur = list.find(x=>String(x.v)===String(val));
+  const open = S.dd===id;
+  return `<div class="sel ${open?'open':''}" data-fld>
+    <button type="button" class="fld ${o.sm?'sm':''}" onclick="dd('${id}')" aria-expanded="${open}" aria-haspopup="listbox">
+      <span class="v ${cur?'':'ph'}">${cur?esc(cur.l):esc(o.ph||'Выберите')}</span>${svg(I.chev,14).replace('style="','class="cv" style="')}</button>
+    ${open?`<div class="pop ${o.right?'right':''}" role="listbox">${list.map(x=>
+      `<button type="button" class="o" role="option" aria-selected="${cur&&String(cur.v)===String(x.v)}"
+        data-v="${esc(x.v)}" onclick="pick('${id}',this.dataset.v)">
+        <span>${esc(x.l)}</span><span class="tail">${x.hint?`<span class="hint">${esc(x.hint)}</span>`:''}<span class="ck">${svg(I.ok,13)}</span></span></button>`).join('')}</div>`:''}
+  </div>`;
+}
+function DATE(id,val,fn,o={}){
+  H[id] = fn;
+  const open = S.dd===id;
+  const cur = new Date((S.ddM||val||TODAY)+'T00:00:00'); cur.setDate(1);
+  const first = new Date(cur), shift = (first.getDay()+6)%7;
+  first.setDate(1-shift);
+  const cells = Array.from({length:42},(_,i)=>addDays(first,i));
+  return `<div class="sel ${open?'open':''}" data-fld>
+    <button type="button" class="fld ${o.sm?'sm':''}" onclick="S.ddM='${val}';dd('${id}')" aria-expanded="${open}">
+      <span class="v mono">${val?ru(val):'—'}</span>${svg(I.cal,14).replace('style="','class="cv" style="')}</button>
+    ${open?`<div class="pop cal">
+      <div class="cal-h">
+        <button type="button" class="ib sm" onclick="calMove(-1)">${svg(I.left,13)}</button>
+        <b>${MN[cur.getMonth()]} ${cur.getFullYear()}</b>
+        <button type="button" class="ib sm" onclick="calMove(1)">${svg(I.right,13)}</button></div>
+      <div class="cal-w">${['пн','вт','ср','чт','пт','сб','вс'].map(d=>`<span>${d}</span>`).join('')}</div>
+      <div class="cal-g">${cells.map(d=>{const s=iso(d);
+        return `<button type="button" class="${d.getMonth()!==cur.getMonth()?'out':''} ${s===TODAY?'tdy':''} ${s===val?'on':''}"
+          onclick="pick('${id}','${s}')">${d.getDate()}</button>`}).join('')}</div>
+      <button type="button" class="g sm" style="width:100%;margin-top:8px" onclick="pick('${id}','${TODAY}')">Сегодня</button>
+    </div>`:''}
+  </div>`;
+}
+function calMove(n){ const d=new Date((S.ddM||TODAY)+'T00:00:00'); d.setDate(1); d.setMonth(d.getMonth()+n); S.ddM=iso(d); render(); }
+const CHK = (on,label,fn) => `<button type="button" class="chk" role="checkbox" aria-checked="${!!on}" onclick="${fn}">
+  <i>${svg(I.ok,11)}</i>${label?`<span>${esc(label)}</span>`:''}</button>`;
+const SEG = (val,items,fn) => `<div class="seg">${items.map(x=>{const o=typeof x==='object'?x:{v:x,l:x};
+  return `<button type="button" aria-pressed="${String(val)===String(o.v)}" onclick="${fn.replace('$v',`'${o.v}'`)}">${esc(o.l)}</button>`}).join('')}</div>`;
+
+/* ---------- состояние ---------- */
+const S = {
+  view:'intake', user:null, role:null, pendRole:'operator', theme:'light', dd:null, ddM:null,
+  city:CITIES[0], day:TODAY, staff:[], plan:[], requests:[], routes:[], absences:[], seq:1000,
+  toast:null, openRoute:null, ukCity:'', ukSeal:'',
+  intake:{ctype:'Физлицо',name:'',phone:'',street:STREETS[0],house:'',flat:'',time:12,
+    services:['wv'],devices:[{type:'Бетар СХВ-15',carrier:'ХВС',serial:'',room:'Кухня',seal:true}]}
+};
+const staffById = id => S.staff.find(s=>s.id===id);
+const nameOf = id => staffById(id)?.name || '—';
+
+/* ============ ТЕСТОВЫЕ ДАННЫЕ ============ */
+function seed(){
+  ['Алимпиев И.','Ковалёв Д.','Ситников П.','Нурмухаметов Р.','Гладких А.','Бабенко С.',
+   'Тарасов В.','Юсупов М.','Черных К.','Ложкин Е.','Демидов А.','Рогов Н.'].forEach((n,i)=>
+    S.staff.push({id:'v'+i,name:n,role:'verifier',pattern:i%3===0?'5/2':'2/2',
+      anchor:iso(addDays(today,-(i%4))),extra:i===2?[iso(addDays(today,3))]:[],
+      phone:'+7 9'+rint(10,99)+' '+rint(100,999)+'-'+rint(10,99)+'-'+rint(10,99)}));
+  ['Кузнецова Е.','Панова М.','Ефимова О.','Салтыкова А.'].forEach((n,i)=>
+    S.staff.push({id:'o'+i,name:n,role:i<2?'senior':'operator',pattern:i<2?'2/2':'5/2',
+      anchor:iso(addDays(today,-(i%2))),extra:[],ext:'10'+(i+1)}));
+  S.staff.push({id:'sv',name:'Панченко И.',role:'supervisor',pattern:'5/2',anchor:TODAY,extra:[],ext:'100'});
+
+  S.absences = [
+    {id:'A1',staff:'v4',from:iso(addDays(today,4)),to:iso(addDays(today,6)),reason:'Поездка к родителям, ремонт крыши',status:'на согласовании',comment:''},
+    {id:'A2',staff:'v7',from:iso(addDays(today,8)),to:iso(addDays(today,9)),reason:'Плановый медосмотр',status:'на согласовании',comment:''},
+    {id:'A3',staff:'v1',from:iso(addDays(today,2)),to:iso(addDays(today,3)),reason:'Семейные обстоятельства',status:'согласовано',comment:'Подменит Ложкин'},
+    {id:'A4',staff:'v9',from:iso(addDays(today,-4)),to:iso(addDays(today,-3)),reason:'Больничный',status:'согласовано',comment:''},
+    {id:'A5',staff:'v5',from:iso(addDays(today,1)),to:iso(addDays(today,5)),reason:'Отпуск за свой счёт',status:'отклонено',comment:'Пик набора, перенесите на конец месяца'},
+    {id:'A6',staff:'v0',from:iso(addDays(today,11)),to:iso(addDays(today,12)),reason:'Личные дела',status:'на согласовании',comment:''}
+  ];
+
+  for(let i=-7;i<14;i++){
+    const ds = iso(addDays(today,i));
+    const crew = S.staff.filter(p=>p.role==='verifier'&&onShift(p,ds)).length;
+    CITIES.forEach((c,ci)=>S.plan.push({date:ds,city:c,
+      planned:Math.max(0,Math.round(crew*25*(ci===0?.55:ci===1?.28:.17)))}));
+  }
+  const clients = ['Смирнова Т. А.','Волков Р. П.','Гареев И. М.','Дьяконова Л. С.','ООО «Стройсервис»',
+    'Пшеничников А. А.','ТСЖ «Восход»','Кириллова Н. В.','Абрамов Д. Ю.','ООО «Гарант-Плюс»',
+    'Мезенцева О. И.','Хайруллин Т. Р.','ТСН «Малышева 84»','Гончарова Е. В.','Поляков С. Н.'];
+  const ops = S.staff.filter(s=>s.role!=='verifier'&&s.role!=='supervisor');
+  let oi = 0;
+  for(let i=-7;i<14;i++){
+    const ds = iso(addDays(today,i));
+    const rate = i<0?0.98 : i===0?.95 : i===1?.8 : i<4?.5 : i<7?.25 : .06;
+    CITIES.forEach(c=>{
+      const p = S.plan.find(x=>x.date===ds&&x.city===c);
+      const n = Math.round(p.planned*rate*(.85+rr()*.3));
+      for(let k=0;k<n;k++){
+        const r = mkReq(ds,c,clients);
+        r.operator = ops[oi++%ops.length].id;
+        S.requests.push(r);
+      }
+    });
+  }
+  // маршруты: прошлое закрыто, сегодня — разные стадии, завтра — черновики
+  for(let i=-7;i<=1;i++){
+    const ds = iso(addDays(today,i));
+    CITIES.forEach(c=>{
+      const crew = crewOn(ds).filter(v=>true);
+      const built = build(ds,c,true);
+      built.forEach((rt,k)=>{
+        rt.verifier = crew.length ? crew[(k+i+9)%crew.length].id : null;
+        if(i<0) finishRoute(rt,1);
+        else if(i===0){
+          if(k===0) finishRoute(rt,1);
+          else if(k===1){ callAll(rt); rt.status='в работе'; rt.stops.forEach((s,j)=>{if(j<Math.floor(rt.stops.length*.6)) s.done=true;});
+            rt.duty = ops[1].id; }
+          else if(k===2){ callAll(rt); rt.status='обзвонен'; rt.duty = ops[0].id; }
+          else { rt.stops.forEach((s,j)=>{ if(j<Math.floor(rt.stops.length*.4)) s.called='подтверждена'; }); }
+        }
+      });
+    });
+  }
+  // чаты
+  const chats = [
+    [['v','Не открывают, Крауля 12 кв. 45. Жду 5 минут'],['o','Созвонилась, спускается — она в магазине была']],
+    [['v','На Сурикова 8 пломбы УК нет. Снимать счётчик?'],['o','Нет, фиксируй в акте отсутствие пломбы и ставь свою'],['v','Принято']],
+    [['v','Задерживаюсь на 40 минут, пробка на Малышева'],['o','Обзвонила три последние точки, перенесли окно'],['v','Спасибо']],
+    [['v','Клиент хочет заодно замену на горячей. Считать?'],['o','Да, добавила услугу в заявку, цена 2600']]
+  ];
+  S.routes.filter(r=>r.date===TODAY||r.date===iso(addDays(today,-1))).slice(0,4).forEach((rt,i)=>{
+    const v = nameOf(rt.verifier), o = nameOf(rt.duty||ops[0].id);
+    rt.chat = (chats[i%chats.length]).map(([who,txt],j)=>({who:who==='v'?v:o,vf:who==='v',
+      txt, t:pad(9+j*2)+':'+pad(rint(10,55))}));
+    if(!rt.duty) rt.duty = ops[i%ops.length].id;
+  });
+}
+function mkReq(ds,city,clients){
+  const nm = rnd(clients), isU = /^(ООО|ТСЖ|ТСН)/.test(nm);
+  const svc = rr()<.7?['wv'] : rr()<.55?['wr'] : [rnd(['hv','hm','hd'])];
+  const heat = svc[0][0]==='h';
+  const nd = heat?1:rint(1,2);
+  return {id:'R'+(++S.seq),date:ds,city,clientType:isU?'Юрлицо':'Физлицо',name:nm,
+    phone:'+7 9'+rint(10,99)+' '+rint(100,999)+'-'+rint(10,99)+'-'+rint(10,99),
+    street:rnd(STREETS),house:String(rint(1,120)),flat:isU?'':String(rint(1,240)),time:rint(10,20),
+    services:svc,status:'новая',routeId:null,operator:null,
+    devices:Array.from({length:nd},(_,j)=>{const t = heat?DEV_TYPES[5]:rnd(DEV_TYPES.slice(0,5));
+      return {type:t.v,grsi:t.grsi,carrier:heat?'Тепло':(j===0?'ХВС':'ГВС'),
+        serial:rint(10,99)+'-'+rint(100000,999999),room:rnd(ROOMS),seal:rr()<.86};})};
+}
+function callAll(rt){ rt.stops.forEach(s=>{ if(!s.called) s.called = rr()<.9?'подтверждена':(rr()<.6?'перенос':'отказ'); }); }
+function finishRoute(rt,share){
+  callAll(rt); rt.status='выполнен';
+  rt.stops.forEach(s=>{ const r=S.requests.find(x=>x.id===s.req); if(!r) return;
+    if(s.called==='подтверждена'){ s.done=true; r.status='выполнена'; r.verifier=rt.verifier; }
+    else r.status = s.called==='отказ'?'отменена':'перенос'; });
+}
+
+/* ---------- расчёты ---------- */
+function absentOn(id,ds){ return S.absences.some(a=>a.staff===id&&a.status==='согласовано'&&ds>=a.from&&ds<=a.to); }
 function onShift(p,ds){
+  if(absentOn(p.id,ds)) return false;
   if(p.extra?.includes(ds)) return true;
   const d = new Date(ds+'T00:00:00');
   if(p.pattern==='5/2') return d.getDay()>=1 && d.getDay()<=5;
   const diff = Math.floor((d-new Date(p.anchor+'T00:00:00'))/864e5);
   return ((diff%4)+4)%4 < 2;
 }
-
-/* ---------- состояние ---------- */
-const S = {
-  view:'intake', user:null, role:null, pendRole:'operator', theme:'light',
-  city:CITIES[0], day:iso(today), staff:[], plan:[], requests:[], routes:[], seq:1000,
-  toast:null, openRoute:null,
-  intake:{devices:[{type:DEV_TYPES[0],carrier:'ХВС',serial:'',room:'Кухня',seal:true}],services:['wv']}
-};
-
-function seed(){
-  ['Алимпиев И.','Ковалёв Д.','Ситников П.','Нурмухаметов Р.','Гладких А.','Бабенко С.',
-   'Тарасов В.','Юсупов М.','Черных К.','Ложкин Е.','Демидов А.','Рогов Н.'].forEach((n,i)=>
-    S.staff.push({id:'v'+i,name:n,role:'verifier',pattern:i%3===0?'5/2':'2/2',
-      anchor:iso(addDays(today,-(i%4))),extra:i===2?[iso(addDays(today,3))]:[]}));
-  ['Кузнецова Е.','Панова М.','Ефимова О.','Салтыкова А.'].forEach((n,i)=>
-    S.staff.push({id:'o'+i,name:n,role:i<2?'senior':'operator',pattern:i<2?'2/2':'5/2',
-      anchor:iso(addDays(today,-(i%2))),extra:[],ext:'10'+(i+1)}));
-
-  for(let i=0;i<14;i++){
-    const ds = iso(addDays(today,i));
-    const crew = S.staff.filter(p=>p.role==='verifier'&&onShift(p,ds)).length;
-    CITIES.forEach((c,ci)=>S.plan.push({date:ds,city:c,
-      planned:Math.max(0,Math.round(crew*25*(ci===0?.55:ci===1?.28:.17)))}));
-  }
-  const clients = ['Смирнова Т.А.','Волков Р.П.','Гареев И.М.','Дьяконова Л.С.','ООО «Стройсервис»',
-    'Пшеничников А.А.','ТСЖ «Восход»','Кириллова Н.В.','Абрамов Д.Ю.','ООО «Гарант-Плюс»'];
-  for(let i=0;i<14;i++){
-    const ds = iso(addDays(today,i));
-    const rate = i===0?.95:i===1?.8:i<4?.5:i<7?.25:.06;
-    CITIES.forEach(c=>{
-      const p = S.plan.find(x=>x.date===ds&&x.city===c);
-      const n = Math.round(p.planned*rate*(.8+Math.random()*.4));
-      for(let k=0;k<n;k++) S.requests.push(mkReq(ds,c,clients));
-    });
-  }
-}
-function mkReq(ds,city,clients){
-  const nm = rnd(clients), isU = /^(ООО|ТСЖ)/.test(nm);
-  const svc = Math.random()<.72?['wv']:Math.random()<.6?['wr']:[rnd(['hv','hm','hd'])];
-  const nd = svc[0][0]==='w'?rint(1,2):1;
-  return {id:'R'+(++S.seq),date:ds,city,clientType:isU?'Юрлицо':'Физлицо',name:nm,
-    phone:'+7 9'+rint(10,99)+' '+rint(100,999)+'-'+rint(10,99)+'-'+rint(10,99),
-    street:rnd(STREETS),house:String(rint(1,120)),flat:isU?'':String(rint(1,240)),time:rint(10,20),
-    services:svc,status:'новая',routeId:null,operator:null,verified:null,
-    devices:Array.from({length:nd},(_,j)=>({
-      type: svc[0][0]==='h'?'ТСК-7 (тепло)':rnd(DEV_TYPES.slice(0,5)),
-      carrier: svc[0][0]==='h'?'Тепло':(j===0?'ХВС':'ГВС'),
-      serial: rint(10,99)+'-'+rint(100000,999999), room:rnd(ROOMS), seal:Math.random()<.85}))};
-}
-
 const crewOn = ds => S.staff.filter(p=>p.role==='verifier'&&onShift(p,ds));
-const opsOn  = ds => S.staff.filter(p=>p.role!=='verifier'&&onShift(p,ds));
+const opsOn  = ds => S.staff.filter(p=>(p.role==='operator'||p.role==='senior')&&onShift(p,ds));
 const planFor = (ds,c) => S.plan.find(p=>p.date===ds&&p.city===c)?.planned ?? 0;
 function dayState(ds,c){
   const p = planFor(ds,c);
@@ -363,9 +526,10 @@ function dayState(ds,c){
 }
 const rateV = r => r.services.reduce((a,id)=>a+SVC[id].rV,0);
 const rateO = r => r.services.reduce((a,id)=>a+SVC[id].rO,0);
-function toast(m){ S.toast=m; render(); setTimeout(()=>{S.toast=null;render();},2800); }
+const priceOf = r => r.services.reduce((a,id)=>a+(r.clientType==='Юрлицо'?SVC[id].pU:SVC[id].pF),0);
+function toast(m){ S.toast=m; render(); clearTimeout(S._t); S._t=setTimeout(()=>{S.toast=null;render();},3000); }
 
-/* ============================================================ */
+/* ============ ЭКРАНЫ ============ */
 function viewLogin(){
   return `<div class="fx fx-glow"></div><div class="fx fx-grid"></div>
   <div class="login-wrap"><form class="login" onsubmit="doLogin(event)">
@@ -373,57 +537,57 @@ function viewLogin(){
     <div class="lbl">Сервис поверки приборов учёта</div>
     <h1>CRM «Поверка»</h1>
     <p class="sub">Прототип интерфейса. Данные живут только в этой вкладке.</p>
-    <div class="f"><label>Логин</label><input name="login" value="operator" required></div>
-    <div class="f"><label>Пароль</label><input name="pw" type="password" value="1234" required></div>
+    <div class="f"><label>Логин</label><input class="fld" name="login" value="operator" required></div>
+    <div class="f"><label>Пароль</label><input class="fld" name="pw" type="password" value="1234" required></div>
     <div class="f"><label>Войти как</label><div class="roles">${Object.entries(ROLES).map(([k,v])=>
-      `<button type="button" class="role" aria-pressed="${S.pendRole===k}" onclick="S.pendRole='${k}';render()">${v.label}<small>${v.code}</small></button>`).join('')}</div></div>
+      `<button type="button" class="role" aria-pressed="${S.pendRole===k}" onclick="S.pendRole='${k}';render()">${v.label}<small>${v.who}</small></button>`).join('')}</div></div>
     <button class="b wide" style="margin-top:14px">Войти</button>
-    <p class="note" style="margin-top:14px">Подойдёт любая пара логин и пароль — авторизация не проверяется. Роль определяет набор разделов.</p>
+    <p class="note" style="margin-top:14px">Подойдёт любая пара логин и пароль. Роль определяет набор разделов и подставляет демо-профиль сотрудника.</p>
   </form></div>`;
 }
 function doLogin(e){
   e.preventDefault();
-  const nm = new FormData(e.target).get('login');
-  S.role = S.pendRole; S.user = {name:nm.charAt(0).toUpperCase()+nm.slice(1)};
+  S.role = S.pendRole; S.me = ROLES[S.role].id; S.user = ROLES[S.role].who;
   S.view = NAV[S.role][0]; render();
 }
-function toggleTheme(){
-  S.theme = S.theme==='light'?'dark':'light';
-  document.documentElement.setAttribute('data-theme',S.theme); render();
-}
+function toggleTheme(){ S.theme = S.theme==='light'?'dark':'light';
+  document.documentElement.setAttribute('data-theme',S.theme); render(); }
 
+function badgeFor(v){
+  if(v==='duty') return S.routes.filter(r=>r.date===TODAY&&!r.duty).length;
+  if(v==='routes') return S.routes.filter(r=>r.date===TODAY&&r.status==='черновик').length;
+  if(v==='absence') return S.role==='supervisor'?S.absences.filter(a=>a.status==='на согласовании').length:0;
+  return 0;
+}
 function shell(side,main){
-  const ini = S.user.name.slice(0,2).toUpperCase();
-  const crew = crewOn(S.day).length, ops = opsOn(S.day).length, need = Math.ceil(crew/10);
+  const ini = S.user.replace(/[^А-ЯA-Z]/g,'').slice(0,2);
+  const crew = crewOn(S.day).length, ops = opsOn(S.day).length, need = Math.max(1,Math.ceil(crew/10));
   const now = new Date();
   return `<div class="fx fx-glow"></div><div class="fx fx-grid"></div><div class="fx-scan"></div>
   <div class="app">
     <nav class="rail">
       <div class="logo" title="CRM «Поверка»">${svg(I.logo,19)}</div>
-      ${NAV[S.role].map(v=>`<button class="nb" title="${TITLES[v]}" aria-current="${S.view===v}" onclick="go('${v}')">${svg(I[v])}</button>`).join('')}
+      ${NAV[S.role].map(v=>{const b=badgeFor(v);
+        return `<button class="nb" title="${TITLES[v]}" aria-current="${S.view===v}" onclick="go('${v}')">${svg(I[v])}${b?`<span class="bdg">${b}</span>`:''}</button>`}).join('')}
       <div class="foot">
         <button class="nb" title="Переключить тему" onclick="toggleTheme()">${svg(S.theme==='light'?I.moon:I.sun,18)}</button>
         <button class="nb" title="Выйти" onclick="S.user=null;render()">${svg(I.out,18)}</button>
-        <div class="ava" title="${esc(S.user.name)} · ${ROLES[S.role].label}">${ini}<i></i></div>
+        <div class="ava" title="${esc(S.user)} · ${ROLES[S.role].label}">${ini}<i></i></div>
       </div>
     </nav>
     <div class="col">
       <header class="hd">
         <div class="ttl"><span class="lbl">CRM /</span><b>${TITLES[S.view]}</b></div>
-        <label class="srch">${svg(I.search,14)}<input placeholder="Поиск по адресу, телефону, номеру заявки"><kbd>⌘K</kbd></label>
+        <label class="srch">${svg(I.search,14)}<input placeholder="Адрес, телефон, номер заявки"><kbd>⌘K</kbd></label>
         <div style="flex:1"></div>
-        <span class="chip"><span class="dot"></span>${crew} В СМЕНЕ</span>
+        <span class="chip"><span class="dot"></span>${crew} ПОВЕРИТЕЛЕЙ</span>
         <span class="chip" ${ops<need?'style="color:var(--warning);border-color:var(--warning)"':''}>ОПЕРАТОРЫ ${ops}/${need}</span>
-        <span class="mono" style="font-size:10.5px;letter-spacing:.1em;color:var(--ink3)">${ru(iso(now))} · <span style="color:var(--ink2)">${pad(now.getHours())}:${pad(now.getMinutes())}</span></span>
+        <span class="mono" style="font-size:10.5px;letter-spacing:.1em;color:var(--ink3)">${ru(TODAY)} · <span style="color:var(--ink2)">${pad(now.getHours())}:${pad(now.getMinutes())}</span></span>
         <button class="ib" title="Уведомления">${svg(I.bell,16)}</button>
       </header>
-      <div class="body">
-        ${side?`<aside class="side">${side}</aside>`:''}
-        <div class="main">${main}</div>
-      </div>
+      <div class="body">${side?`<aside class="side">${side}</aside>`:''}<div class="main">${main}</div></div>
     </div>
-  </div>
-  ${S.toast?`<div class="toast">${esc(S.toast)}</div>`:''}`;
+  </div>${S.toast?`<div class="toast">${esc(S.toast)}</div>`:''}`;
 }
 const cap = () => `<p class="cap">${CAPS[S.view]||''}</p>`;
 
@@ -431,8 +595,7 @@ const cap = () => `<p class="cap">${CAPS[S.view]||''}</p>`;
 function ribbon(){
   return `<div class="rib">${Array.from({length:14},(_,i)=>iso(addDays(today,i))).map(ds=>{
     const {p,pct,s} = dayState(ds,S.city), d = new Date(ds+'T00:00:00');
-    return `<button class="day ${s==='off'?'off':''}" data-s="${s}" aria-pressed="${S.day===ds}"
-      ${s==='off'?'disabled':`onclick="S.day='${ds}';render()"`}>
+    return `<button class="day" data-s="${s}" aria-pressed="${S.day===ds}" ${s==='off'?'disabled':`onclick="S.day='${ds}';render()"`}>
       <div class="bar"><div class="fill" style="height:${Math.min(100,pct*90.9)}%"></div>
       <span class="pct">${p?Math.round(pct*100)+'%':'—'}</span></div>
       <div class="dd">${pad(d.getDate())}.${pad(d.getMonth()+1)}</div><div class="wd">${WD[d.getDay()]}</div></button>`;
@@ -442,84 +605,107 @@ function ribbon(){
     <span><i style="background:var(--cold);opacity:.45"></i>заполняется</span>
     <span><i style="background:var(--ink);opacity:.72"></i>план набран</span>
     <span><i style="background:var(--error);opacity:.6"></i>сверх 110% — приём закрыт</span>
-    <span><i style="border-top:1px dashed var(--mark);height:0;width:14px"></i>граница отклонения +10%</span></div>`;
+    <span><i style="border-top:1px dashed var(--mark);height:0;width:14px"></i>граница +10%</span></div>`;
 }
 const citySide = () => `<div class="lbl" style="padding:6px 10px 8px">Города</div>
   ${CITIES.map(c=>{const st=dayState(S.day,c);
-    return `<button class="sb" aria-current="${S.city===c}" onclick="S.city='${c}';render()">
-      <span>${c}</span><span class="n">${st.b}/${st.p}</span></button>`}).join('')}
-  <div class="lbl" style="padding:16px 10px 8px">Выбранный день</div>
-  <div style="padding:10px 12px;border:1px solid var(--border2);border-radius:10px">
-    <div class="mono" style="font-size:15px">${ru(S.day)}</div>
-    <div class="note" style="margin-top:4px">${crewOn(S.day).length} поверителей · ${opsOn(S.day).length} операторов</div>
+    return `<button class="sb" aria-current="${S.city===c}" onclick="S.city='${c}';render()"><span>${c}</span><span class="n">${st.b}/${st.p}</span></button>`}).join('')}
+  <div class="lbl" style="padding:16px 10px 8px">Дата</div>
+  ${DATE('sideDate',S.day,v=>{S.day=v;})}
+  <div style="margin-top:12px;padding:11px 12px;border:1px solid var(--border2);border-radius:10px">
+    <div class="note">В смене на ${ru(S.day)}</div>
+    <div style="display:flex;gap:14px;margin-top:6px">
+      <div><div class="mono" style="font-size:17px">${crewOn(S.day).length}</div><div class="lbl">поверителей</div></div>
+      <div><div class="mono" style="font-size:17px">${opsOn(S.day).length}</div><div class="lbl">операторов</div></div></div>
   </div>`;
 
 /* ---------- приём заявки ---------- */
 function viewIntake(){
   const st = dayState(S.day,S.city), closed = st.pct>1.1 || st.p===0;
   const left = Math.max(0,Math.ceil(st.p*1.1)-st.b);
+  const K = S.intake;
+  const price = K.services.reduce((a,id)=>a+(K.ctype==='Юрлицо'?SVC[id].pU:SVC[id].pF),0);
+  const mine = S.requests.filter(r=>r.operator===S.me).slice(-6).reverse();
   return shell(citySide(), `${cap()}
   <div class="c"><h3>Ёмкость · ${S.city}</h3>
     <p class="cap">Набрано <b class="mono" style="color:var(--ink)">${st.b}</b> из <b class="mono" style="color:var(--ink)">${st.p}</b> на ${ru(S.day)}${closed?' — <span class="tg t-err">приём закрыт</span>':` · осталось <b class="mono" style="color:var(--ink)">${left}</b> с учётом +10%`}</p>
     ${ribbon()}</div>
-  <form class="c" onsubmit="createReq(event)"><h3>Новая заявка</h3>
+  <div class="c"><h3>Новая заявка</h3>
     <p class="cap">Окно прибытия формируется автоматически: час до и час после назначенного времени.</p>
-    <div class="g3">
-      <div class="f"><label>Тип клиента</label><select name="ctype"><option>Физлицо</option><option>Юрлицо</option></select></div>
-      <div class="f"><label>ФИО или организация</label><input name="name" required placeholder="Смирнова Т. А."></div>
-      <div class="f"><label>Телефон</label><input name="phone" required placeholder="+7 900 000-00-00"></div>
-      <div class="f"><label>Улица</label><select name="street">${STREETS.map(s=>`<option>${s}</option>`).join('')}</select></div>
-      <div class="f"><label>Дом и квартира</label><div style="display:flex;gap:6px">
-        <input name="house" required placeholder="12"><input name="flat" placeholder="45"></div></div>
-      <div class="f"><label>Время прибытия</label><select name="time">${Array.from({length:11},(_,i)=>10+i).map(h=>
-        `<option value="${h}">${pad(h)}:00 · окно ${pad(h-1)}:00–${pad(h+1)}:00</option>`).join('')}</select></div>
+    <div class="row" style="margin-bottom:14px">
+      <div class="f" style="flex:none"><label>Тип клиента</label>${SEG(K.ctype,['Физлицо','Юрлицо'],"setIn('ctype',$v)")}</div>
+      <div class="f" style="flex:1;min-width:200px"><label>${K.ctype==='Юрлицо'?'Организация':'ФИО клиента'}</label>
+        <input class="fld" value="${esc(K.name)}" oninput="S.intake.name=this.value" placeholder="${K.ctype==='Юрлицо'?'ООО «Стройсервис»':'Смирнова Т. А.'}"></div>
+      <div class="f" style="width:190px"><label>Телефон</label>
+        <input class="fld mono" value="${esc(K.phone)}" oninput="S.intake.phone=this.value" placeholder="+7 900 000-00-00"></div>
     </div>
-    <div class="f"><label>Услуги</label><div class="svc">${SERVICES.map(s=>
-      `<label><input type="checkbox" ${S.intake.services.includes(s.id)?'checked':''} onchange="tgSvc('${s.id}',this.checked)">${s.name}</label>`).join('')}</div></div>
-    <div class="f"><label>Приборы</label>${S.intake.devices.map((d,i)=>`<div class="dev">
-      <select onchange="S.intake.devices[${i}].type=this.value">${DEV_TYPES.map(t=>`<option ${d.type===t?'selected':''}>${t}</option>`).join('')}</select>
-      <select onchange="S.intake.devices[${i}].carrier=this.value">${['ХВС','ГВС','Тепло'].map(c=>`<option ${d.carrier===c?'selected':''}>${c}</option>`).join('')}</select>
-      <input placeholder="Заводской №" value="${esc(d.serial)}" oninput="S.intake.devices[${i}].serial=this.value">
-      <select onchange="S.intake.devices[${i}].room=this.value">${ROOMS.map(r=>`<option ${d.room===r?'selected':''}>${r}</option>`).join('')}</select>
-      <label><input type="checkbox" ${d.seal?'checked':''} onchange="S.intake.devices[${i}].seal=this.checked">пломба УК</label>
-      <button type="button" class="ib" onclick="S.intake.devices.splice(${i},1);render()" ${S.intake.devices.length<2?'disabled':''}>${svg(I.no,13)}</button>
+    <div class="row" style="margin-bottom:14px">
+      <div class="f" style="width:210px"><label>Улица</label>${SEL('inStreet',K.street,STREETS,v=>S.intake.street=v)}</div>
+      <div class="f" style="width:90px"><label>Дом</label><input class="fld" value="${esc(K.house)}" oninput="S.intake.house=this.value" placeholder="12"></div>
+      <div class="f" style="width:90px"><label>Квартира</label><input class="fld" value="${esc(K.flat)}" oninput="S.intake.flat=this.value" placeholder="45"></div>
+      <div class="f" style="width:120px"><label>Дата выезда</label>${DATE('inDate',S.day,v=>{S.day=v;})}</div>
+      <div class="f" style="width:230px"><label>Время прибытия</label>
+        ${SEL('inTime',K.time,Array.from({length:11},(_,i)=>({v:10+i,l:pad(10+i)+':00',hint:'окно '+pad(9+i)+':00–'+pad(11+i)+':00'})),v=>S.intake.time=+v)}</div>
+    </div>
+    <div class="f"><label>Услуги</label><div class="row">${SERVICES.map(s=>
+      `<button type="button" class="opt" aria-pressed="${K.services.includes(s.id)}" onclick="tgSvc('${s.id}')">${svg(I.ok,13)}${s.name}</button>`).join('')}</div></div>
+    <div class="f"><label>Приборы</label>${K.devices.map((d,i)=>`<div class="dev">
+      ${SEL('dvT'+i,d.type,DEV_TYPES.map(t=>({v:t.v,l:t.v,hint:t.grsi})),v=>{S.intake.devices[i].type=v;S.intake.devices[i].grsi=DEV_TYPES.find(t=>t.v===v).grsi;})}
+      ${SEL('dvC'+i,d.carrier,['ХВС','ГВС','Тепло'],v=>S.intake.devices[i].carrier=v)}
+      <input class="fld" value="${esc(d.serial)}" oninput="S.intake.devices[${i}].serial=this.value" placeholder="Заводской №">
+      ${SEL('dvR'+i,d.room,ROOMS,v=>S.intake.devices[i].room=v)}
+      ${CHK(d.seal,'пломба УК',`tgSeal(${i})`)}
+      <button type="button" class="ib no" onclick="rmDev(${i})" ${K.devices.length<2?'disabled':''}>${svg(I.no,13)}</button>
     </div>`).join('')}
-      <button type="button" class="g" style="margin-top:4px" onclick="S.intake.devices.push({type:DEV_TYPES[0],carrier:'ХВС',serial:'',room:'Кухня',seal:true});render()">${svg(I.plus,12)}Добавить прибор</button></div>
+      <button type="button" class="g sm" style="margin-top:4px" onclick="addDev()">${svg(I.plus,12)}Добавить прибор</button></div>
     <div class="row" style="margin-top:16px;justify-content:space-between">
-      <span class="note">По прайсу для физлица <b class="mono" style="color:var(--ink)">${money(S.intake.services.reduce((a,id)=>a+SVC[id].pF,0))}</b> · оператору начислится <b class="mono" style="color:var(--ink)">${money(S.intake.services.reduce((a,id)=>a+SVC[id].rO,0))}</b></span>
-      <button class="b" ${closed?'disabled':''}>${closed?'День закрыт':'Записать заявку'}</button></div>
-  </form>`);
+      <span class="note">По прайсу ${K.ctype.toLowerCase()} <b class="mono" style="color:var(--ink)">${money(price)}</b> · оператору начислится <b class="mono" style="color:var(--ink)">${money(K.services.reduce((a,id)=>a+SVC[id].rO,0))}</b></span>
+      <button class="b" onclick="createReq()" ${closed?'disabled':''}>${closed?'День закрыт':'Записать заявку'}</button></div>
+  </div>
+  <div class="c"><h3>Последние заявки от вас</h3>
+    ${mine.length?`<table><thead><tr><th>Заявка</th><th class="num">Дата</th><th>Адрес</th><th>Клиент</th><th>Услуги</th><th class="num">Сумма</th><th>Статус</th></tr></thead><tbody>
+      ${mine.map(r=>`<tr><td class="mono">${r.id}</td><td class="num">${ru(r.date)}</td>
+        <td><b>${r.city}, ${r.street}, ${r.house}</b></td><td>${esc(r.name)}</td>
+        <td>${r.services.map(s=>SVC[s].name).join(', ')}</td><td class="num">${money(priceOf(r))}</td>
+        <td>${reqTag(r.status)}</td></tr>`).join('')}</tbody></table>`
+      :`<div class="empty">Заявок пока нет.</div>`}</div>`);
 }
-function tgSvc(id,on){
-  S.intake.services = on?[...new Set([...S.intake.services,id])]:S.intake.services.filter(x=>x!==id); render();
-}
-function createReq(e){
-  e.preventDefault();
-  if(!S.intake.services.length) return toast('Выберите хотя бы одну услугу.');
-  const f = new FormData(e.target);
-  S.requests.push({id:'R'+(++S.seq),date:S.day,city:S.city,clientType:f.get('ctype'),name:f.get('name'),
-    phone:f.get('phone'),street:f.get('street'),house:f.get('house'),flat:f.get('flat'),time:+f.get('time'),
-    services:[...S.intake.services],devices:S.intake.devices.map(d=>({...d})),
-    status:'новая',routeId:null,operator:S.user.name,verified:null});
-  S.intake = {devices:[{type:DEV_TYPES[0],carrier:'ХВС',serial:'',room:'Кухня',seal:true}],services:['wv']};
-  toast('Заявка записана на '+ru(S.day));
+const reqTag = s => `<span class="tg ${s==='выполнена'?'t-ok':s==='отменена'?'t-err':s==='перенос'?'t-warn':s==='в маршруте'?'t-cold':'t-mut'}">${s}</span>`;
+function setIn(k,v){ S.intake[k]=v; render(); }
+function tgSvc(id){ const a=S.intake.services;
+  S.intake.services = a.includes(id)?a.filter(x=>x!==id):[...a,id]; render(); }
+function tgSeal(i){ S.intake.devices[i].seal = !S.intake.devices[i].seal; render(); }
+function addDev(){ S.intake.devices.push({type:'Бетар СХВ-15',grsi:'32245-11',carrier:'ГВС',serial:'',room:'Санузел',seal:true}); render(); }
+function rmDev(i){ S.intake.devices.splice(i,1); render(); }
+function createReq(){
+  const K = S.intake;
+  if(!K.name.trim()) return toast('Укажите ФИО клиента или название организации.');
+  if(!K.phone.trim()) return toast('Укажите телефон — по нему пойдёт прозвонка маршрута.');
+  if(!K.house.trim()) return toast('Укажите номер дома.');
+  if(!K.services.length) return toast('Выберите хотя бы одну услугу.');
+  S.requests.push({id:'R'+(++S.seq),date:S.day,city:S.city,clientType:K.ctype,name:K.name,phone:K.phone,
+    street:K.street,house:K.house,flat:K.flat,time:K.time,services:[...K.services],
+    devices:K.devices.map(d=>({...d})),status:'новая',routeId:null,operator:S.me});
+  S.intake = {ctype:'Физлицо',name:'',phone:'',street:STREETS[0],house:'',flat:'',time:12,
+    services:['wv'],devices:[{type:'Бетар СХВ-15',grsi:'32245-11',carrier:'ХВС',serial:'',room:'Кухня',seal:true}]};
+  toast('Заявка записана на '+ru(S.day)+', окно '+pad(K.time-1)+':00–'+pad(K.time+1)+':00');
 }
 
 /* ---------- план ---------- */
 function viewPlan(){
   const days = Array.from({length:14},(_,i)=>iso(addDays(today,i)));
   return shell(null,`${cap()}<div class="c"><h3>План по городам на две недели</h3>
-    <p class="cap">Значения планов редактируются прямо в таблице. Красным — выход за коридор ±10%.</p>
+    <p class="cap">Планы редактируются прямо в таблице. Красным — выход за коридор ±10%.</p>
     <table><thead><tr><th>Дата</th><th>День</th><th class="num">Смена</th>
       ${CITIES.map(c=>`<th class="num">${c}</th>`).join('')}<th class="num">Итого</th><th class="num">Откл.</th></tr></thead><tbody>
     ${days.map(ds=>{const d=new Date(ds+'T00:00:00');let tp=0,tb=0;
       const cells = CITIES.map(c=>{const {p,b}=dayState(ds,c);tp+=p;tb+=b;
-        return `<td class="num"><input value="${p}" style="width:52px" onchange="setPlan('${ds}','${c}',this.value)"> <b>${b}</b></td>`}).join('');
+        return `<td class="num"><input class="fld sm mono" style="width:56px;display:inline-flex" value="${p}" onchange="setPlan('${ds}','${c}',this.value)"> <b>${b}</b></td>`}).join('');
       const dev = tp?Math.round((tb/tp-1)*100):0;
       return `<tr><td class="mono">${ru(ds)}</td><td>${WD[d.getDay()]}</td><td class="num">${crewOn(ds).length}</td>${cells}
         <td class="num"><b>${tb}/${tp}</b></td><td class="num"><span class="tg ${Math.abs(dev)>10?'t-err':'t-ok'}">${dev>0?'+':''}${dev}%</span></td></tr>`}).join('')}
     </tbody></table>
-    <p class="note" style="margin-top:12px">Рекомендация на день: поверители в смене × 25 заявок на маршрут. Приём автоматически закрывается на 110% от плана.</p></div>`);
+    <p class="note" style="margin-top:12px">Рекомендация: поверители в смене × 25 заявок на маршрут. Приём закрывается на 110% от плана.</p></div>`);
 }
 function setPlan(ds,c,v){ S.plan.find(x=>x.date===ds&&x.city===c).planned = Math.max(0,parseInt(v)||0); render(); }
 
@@ -529,121 +715,164 @@ function viewSchedule(){
   return shell(null,`${cap()}<div class="c"><h3>Смены</h3>
     <table><thead><tr><th>Сотрудник</th><th>Роль</th><th>График</th>
       ${days.map(ds=>{const d=new Date(ds+'T00:00:00');return `<th class="num" style="text-align:center">${pad(d.getDate())}<br>${WD[d.getDay()]}</th>`}).join('')}</tr></thead><tbody>
-    ${S.staff.map(p=>`<tr><td><b>${esc(p.name)}</b></td>
+    ${S.staff.filter(p=>p.role!=='supervisor').map(p=>`<tr><td><b>${esc(p.name)}</b></td>
       <td><span class="tg t-mut">${p.role==='verifier'?'поверитель':p.role==='senior'?'старший':'оператор'}</span></td>
-      <td class="mono">${p.pattern}</td>
-      ${days.map(ds=>{const ex=p.extra?.includes(ds),on=onShift(p,ds);
-        return `<td style="text-align:center;padding:6px 2px;cursor:pointer" onclick="tgExtra('${p.id}','${ds}')"
-          title="${ex?'дополнительная смена':on?'по графику':'выходной — нажмите, чтобы поставить доп. смену'}">
-          ${ex?'<b style="color:var(--warning)">+</b>':on?'<span style="color:var(--cold)">●</span>':'<span style="color:var(--border)">·</span>'}</td>`}).join('')}
+      <td>${SEL('pat'+p.id,p.pattern,['5/2','2/2'],v=>{p.pattern=v;},{sm:true})}</td>
+      ${days.map(ds=>{const ab=absentOn(p.id,ds),ex=p.extra?.includes(ds),on=onShift(p,ds);
+        return `<td style="text-align:center;padding:6px 2px;${ab?'':'cursor:pointer'}" ${ab?'':`onclick="tgExtra('${p.id}','${ds}')"`}
+          title="${ab?'согласованное отсутствие':ex?'дополнительная смена':on?'по графику':'выходной — клик ставит доп. смену'}">
+          ${ab?'<b style="color:var(--error)">О</b>':ex?'<b style="color:var(--warning)">+</b>':on?'<span style="color:var(--cold)">●</span>':'<span style="color:var(--border)">·</span>'}</td>`}).join('')}
     </tr>`).join('')}</tbody></table>
-    <p class="note" style="margin-top:12px"><span style="color:var(--cold)">●</span> по графику · <b style="color:var(--warning)">+</b> дополнительная смена · <span style="color:var(--border)">·</span> выходной</p></div>`);
+    <p class="note" style="margin-top:12px"><span style="color:var(--cold)">●</span> по графику · <b style="color:var(--warning)">+</b> доп. смена · <b style="color:var(--error)">О</b> отсутствие · <span style="color:var(--border)">·</span> выходной</p></div>`);
 }
 function tgExtra(id,ds){
-  const p = S.staff.find(x=>x.id===id);
+  const p = staffById(id);
   if(onShift(p,ds)&&!p.extra.includes(ds)) return toast('Это рабочий день по графику.');
   p.extra = p.extra.includes(ds)?p.extra.filter(x=>x!==ds):[...p.extra,ds]; render();
 }
 
+/* ---------- отсутствия ---------- */
+function viewAbsence(){
+  const sup = S.role==='supervisor';
+  const list = sup ? S.absences : S.absences.filter(a=>a.staff===S.me);
+  const pend = list.filter(a=>a.status==='на согласовании');
+  const A = S.absForm ||= {from:iso(addDays(today,3)),to:iso(addDays(today,5)),reason:''};
+  const rows = l => `<table><thead><tr>${sup?'<th>Сотрудник</th>':''}<th class="num">С</th><th class="num">По</th><th class="num">Дней</th><th>Причина</th><th>Статус</th><th>${sup?'':'Комментарий'}</th></tr></thead><tbody>
+    ${l.map(a=>{const days=Math.round((new Date(a.to)-new Date(a.from))/864e5)+1;
+      return `<tr>${sup?`<td><b>${esc(nameOf(a.staff))}</b></td>`:''}
+      <td class="num">${ru(a.from)}</td><td class="num">${ru(a.to)}</td><td class="num">${days}</td>
+      <td>${esc(a.reason)}</td>
+      <td><span class="tg ${a.status==='согласовано'?'t-ok':a.status==='отклонено'?'t-err':'t-warn'}">${a.status}</span></td>
+      <td style="text-align:right">${sup&&a.status==='на согласовании'
+        ? `<button class="ib ok" title="Согласовать" onclick="decide('${a.id}','согласовано')">${svg(I.ok,13)}</button>
+           <button class="ib no" title="Отклонить" onclick="decide('${a.id}','отклонено')">${svg(I.no,13)}</button>`
+        : `<span class="note">${esc(a.comment||'—')}</span>`}</td></tr>`}).join('')}</tbody></table>`;
+  return shell(null,`${cap()}
+  ${sup?`<div class="c"><h3>На согласовании · ${pend.length}</h3>
+    <p class="cap">Согласование убирает дни из графика и уменьшает ёмкость этих дат.</p>
+    ${pend.length?rows(pend):`<div class="empty">Новых запросов нет.</div>`}</div>`:
+   `<div class="c"><h3>Новый запрос</h3><p class="cap">Уходит руководителю операторов.</p>
+    <div class="row">
+      <div class="f" style="width:150px"><label>С какого числа</label>${DATE('abFrom',A.from,v=>{A.from=v;})}</div>
+      <div class="f" style="width:150px"><label>По какое</label>${DATE('abTo',A.to,v=>{A.to=v;})}</div>
+      <div class="f" style="flex:1;min-width:220px"><label>Причина</label>
+        <input class="fld" value="${esc(A.reason)}" oninput="S.absForm.reason=this.value" placeholder="Семейные обстоятельства"></div>
+      <button class="b" onclick="sendAbs()">Отправить запрос</button></div></div>`}
+  <div class="c"><h3>${sup?'Все запросы':'История запросов'}</h3>
+    ${list.length?rows(list):`<div class="empty">Запросов не было.</div>`}</div>`);
+}
+function decide(id,st){
+  const a = S.absences.find(x=>x.id===id); a.status=st;
+  a.comment = st==='согласовано'?'Согласовано '+ru(TODAY):'Отклонено '+ru(TODAY);
+  toast(`Запрос ${nameOf(a.staff)}: ${st}. График и ёмкость пересчитаны.`);
+}
+function sendAbs(){
+  const A = S.absForm;
+  if(!A.reason.trim()) return toast('Укажите причину — руководителю нужен контекст.');
+  S.absences.unshift({id:'A'+(++S.seq),staff:S.me,from:A.from,to:A.to,reason:A.reason,status:'на согласовании',comment:''});
+  S.absForm = {from:iso(addDays(today,3)),to:iso(addDays(today,5)),reason:''};
+  toast('Запрос отправлен руководителю на согласование.');
+}
+
 /* ---------- логистика ---------- */
-function viewLogistics(){
-  const pool = S.requests.filter(r=>r.date===S.day&&r.city===S.city&&!r.routeId)
+function poolOf(ds,city){
+  return S.requests.filter(r=>r.date===ds&&r.city===city&&!r.routeId&&r.status==='новая')
     .sort((a,b)=>a.street.localeCompare(b.street,'ru')||(+a.house)-(+b.house));
+}
+function viewLogistics(){
+  const pool = poolOf(S.day,S.city);
   const routes = S.routes.filter(r=>r.date===S.day&&r.city===S.city);
   const crew = crewOn(S.day);
   return shell(`${citySide()}
-    <div class="lbl" style="padding:16px 10px 8px">Дата</div>
-    <input type="date" value="${S.day}" onchange="S.day=this.value;render()">
-    <button class="b" style="margin-top:12px" onclick="build()" ${pool.length?'':'disabled'}>${svg(I.plus,13)}Собрать ${Math.ceil(pool.length/25)||0} маршрут(ов)</button>
-    <p class="note" style="margin-top:10px">${pool.length} заявок без маршрута. Норматив — 25 на маршрут.</p>`,
+    <button class="b" style="margin-top:14px" onclick="buildUI()" ${pool.length?'':'disabled'}>${svg(I.plus,13)}Собрать ${Math.ceil(pool.length/25)||0} маршрут(ов)</button>
+    <p class="note" style="margin-top:10px">${pool.length} заявок без маршрута. Норматив — 25 на маршрут, окно дня 9:00–21:00.</p>`,
   `${cap()}
   <div class="c"><h3>Пул заявок · ${ru(S.day)}</h3>
     <p class="cap">Сортировка по улице и номеру дома — чтобы глазами ловить соседние адреса.</p>
-    ${pool.length?`<table><thead><tr><th>№</th><th>Улица</th><th class="num">Дом</th><th>Кв.</th><th>Клиент</th><th>Тип</th><th>Услуги</th><th class="num">Окно</th></tr></thead><tbody>
+    ${pool.length?`<table><thead><tr><th>№</th><th>Улица</th><th class="num">Дом</th><th>Кв.</th><th>Клиент</th><th>Тип</th><th>Услуги</th><th class="num">Приборы</th><th class="num">Окно</th></tr></thead><tbody>
       ${pool.slice(0,50).map((r,i)=>`<tr><td class="mono">${i+1}</td><td><b>${r.street}</b></td><td class="num">${r.house}</td>
         <td class="mono">${r.flat||'—'}</td><td>${esc(r.name)}</td>
         <td><span class="tg ${r.clientType==='Юрлицо'?'t-ink':'t-mut'}">${r.clientType==='Юрлицо'?'юр':'физ'}</span></td>
-        <td>${r.services.map(s=>SVC[s].name).join(', ')}</td>
+        <td>${r.services.map(s=>SVC[s].name).join(', ')}</td><td class="num">${r.devices.length}</td>
         <td class="num">${pad(r.time-1)}:00–${pad(r.time+1)}:00</td></tr>`).join('')}</tbody></table>
       ${pool.length>50?`<p class="note" style="margin-top:10px">Показаны первые 50 из ${pool.length}.</p>`:''}`
-      :`<div class="empty">Свободных заявок нет. Выберите другой день или город.</div>`}</div>
+      :`<div class="empty">Свободных заявок нет — все разложены по маршрутам.</div>`}</div>
   ${routes.length?`<div class="c"><h3>Маршруты дня</h3><table>
-    <thead><tr><th>Маршрут</th><th class="num">Точек</th><th>Поверитель</th><th>Статус</th><th></th></tr></thead><tbody>
+    <thead><tr><th>Маршрут</th><th class="num">Точек</th><th>Поверитель</th><th class="num">Прозвонка</th><th>Статус</th><th></th></tr></thead><tbody>
     ${routes.map(rt=>`<tr><td class="mono"><b>${rt.id}</b></td><td class="num">${rt.stops.length}</td>
-      <td><select onchange="assign('${rt.id}',this.value)"><option value="">— не назначен —</option>
-        ${crew.map(v=>`<option value="${v.id}" ${rt.verifier===v.id?'selected':''}>${v.name}</option>`).join('')}</select></td>
+      <td style="width:190px">${SEL('as'+rt.id,rt.verifier||'',[{v:'',l:'— не назначен —'},...crew.map(v=>({v:v.id,l:v.name,hint:v.pattern}))],v=>{rt.verifier=v||null;},{sm:true})}</td>
+      <td class="num">${rt.stops.filter(s=>s.called).length}/${rt.stops.length}</td>
       <td>${stTag(rt.status)}</td>
-      <td style="text-align:right"><button class="g" onclick="S.openRoute='${rt.id}';go('routes')">Открыть</button></td></tr>`).join('')}
+      <td style="text-align:right"><button class="g sm" onclick="S.openRoute='${rt.id}';go('routes')">Открыть</button></td></tr>`).join('')}
     </tbody></table></div>`:''}`);
 }
-const stTag = s => `<span class="tg ${s==='выполнен'?'t-ok':s==='обзвонен'?'t-cold':'t-mut'}">${s}</span>`;
-function build(){
-  const pool = S.requests.filter(r=>r.date===S.day&&r.city===S.city&&!r.routeId)
-    .sort((a,b)=>a.street.localeCompare(b.street,'ru')||(+a.house)-(+b.house));
-  let n=0;
+const stTag = s => `<span class="tg ${s==='выполнен'?'t-ok':s==='в работе'?'t-warn':s==='обзвонен'?'t-cold':'t-mut'}">${s}</span>`;
+function build(ds,city,silent){
+  const pool = poolOf(ds,city), made=[];
   for(let i=0;i<pool.length;i+=25){
-    const chunk = pool.slice(i,i+25), id = 'M'+(++S.seq);
+    const chunk = pool.slice(i,i+25), id='M'+(++S.seq);
     chunk.forEach(r=>{r.routeId=id;r.status='в маршруте';});
-    S.routes.push({id,date:S.day,city:S.city,verifier:null,status:'черновик',
-      stops:chunk.map(r=>({req:r.id,called:null})),chat:[],duty:null});
-    n++;
+    const rt = {id,date:ds,city,verifier:null,status:'черновик',
+      stops:chunk.map(r=>({req:r.id,called:null,done:false})),chat:[],duty:null};
+    S.routes.push(rt); made.push(rt);
   }
+  return made;
+}
+function buildUI(){
+  const n = build(S.day,S.city).length;
   toast(`Собрано маршрутов: ${n}. Проверьте порядок точек и назначьте поверителей.`);
 }
-function assign(id,v){ S.routes.find(r=>r.id===id).verifier = v||null; render(); }
 
 /* ---------- маршруты ---------- */
 function viewRoutes(){
   const list = S.routes.filter(r=>r.date===S.day);
   const open = S.routes.find(r=>r.id===S.openRoute) || list[0];
-  const side = `<div class="lbl" style="padding:6px 10px 8px">Дата</div>
-    <input type="date" value="${S.day}" onchange="S.day=this.value;S.openRoute=null;render()">
+  const side = `<div class="lbl" style="padding:6px 10px 8px">Дата</div>${DATE('rtDate',S.day,v=>{S.day=v;S.openRoute=null;})}
     <div class="lbl" style="padding:16px 10px 8px">Маршруты · ${list.length}</div>
-    ${list.length?list.map(rt=>{const v=S.staff.find(x=>x.id===rt.verifier);
-      return `<button class="sb" aria-current="${open&&open.id===rt.id}" onclick="S.openRoute='${rt.id}';render()">
-        <span><span class="mono" style="font-size:12px">${rt.id}</span>
-        <span style="display:block;font-size:11px;color:var(--ink3)">${v?esc(v.name):'не назначен'} · ${rt.status}</span></span>
-        <span class="n">${rt.stops.filter(s=>s.called).length}/${rt.stops.length}</span></button>`}).join('')
+    ${list.length?list.map(rt=>`<button class="sb" aria-current="${open&&open.id===rt.id}" onclick="S.openRoute='${rt.id}';render()">
+        <span style="min-width:0"><span class="mono" style="font-size:12px">${rt.id}</span>
+        <span style="display:block;font-size:11px;color:var(--ink3);overflow:hidden;text-overflow:ellipsis">${rt.city} · ${rt.verifier?esc(nameOf(rt.verifier)):'не назначен'}</span></span>
+        <span class="n">${rt.stops.filter(s=>s.called).length}/${rt.stops.length}</span></button>`).join('')
       :`<p class="note" style="padding:8px 10px">Маршрутов нет. Соберите их в разделе «Логистика».</p>`}`;
-  return shell(side, open?`${cap()}${routeCard(open)}`:`${cap()}<div class="c"><div class="empty">Выберите дату, на которую собраны маршруты.</div></div>`);
+  return shell(side, open?`${cap()}${routeCard(open)}`:`${cap()}<div class="c"><div class="empty">На эту дату маршрутов нет.</div></div>`);
 }
 function routeCard(rt){
-  const v = S.staff.find(x=>x.id===rt.verifier), called = rt.stops.filter(s=>s.called).length;
-  const busy = new Set(rt.stops.map(s=>S.requests.find(r=>r.id===s.req)?.time));
+  const called = rt.stops.filter(s=>s.called).length, done = rt.stops.filter(s=>s.done).length;
+  const byHour = {}; rt.stops.forEach(s=>{const r=S.requests.find(x=>x.id===s.req); if(r) byHour[r.time]=s.done?'done':'busy';});
   return `<div class="g2">
   <div class="c" style="position:relative;margin-bottom:0">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
       <div><h3>${rt.id}</h3>
-        <div class="mono" style="font-size:10.5px;color:var(--ink3);margin-top:3px">${rt.city} · ${ru(rt.date)} · ${rt.stops.length} точек · ${v?esc(v.name):'поверитель не назначен'}</div></div>
+        <div class="mono" style="font-size:10.5px;color:var(--ink3);margin-top:3px">${rt.city} · ${ru(rt.date)} · ${rt.stops.length} точек · ${rt.verifier?esc(nameOf(rt.verifier)):'поверитель не назначен'}</div></div>
       ${stTag(rt.status)}</div>
-    <div class="tl">${Array.from({length:12},(_,i)=>9+i).map(h=>`<div class="${busy.has(h)?'busy':''}">${h}</div>`).join('')}</div>
+    <div class="tl">${Array.from({length:12},(_,i)=>9+i).map(h=>`<div class="${byHour[h]||''}">${h}</div>`).join('')}</div>
     <div class="stops">${rt.stops.map((s,i)=>{const r=S.requests.find(x=>x.id===s.req); if(!r) return '';
-      return `<div class="stop"><span class="n">${pad(i+1)}</span>
+      return `<div class="stop ${s.done?'fin':''}"><span class="n">${pad(i+1)}</span>
         <div><b style="color:var(--ink)">${r.street}, ${r.house}${r.flat?', кв. '+r.flat:''}</b>
-          <small>${pad(r.time-1)}:00–${pad(r.time+1)}:00 · ${esc(r.name)} · ${r.clientType==='Юрлицо'?'юр':'физ'}</small></div>
+          <small>${pad(r.time-1)}:00–${pad(r.time+1)}:00 · ${esc(r.name)} · ${r.clientType==='Юрлицо'?'юр':'физ'} · ${r.devices.length} прибор(а)</small></div>
         <div style="display:flex;gap:4px;align-items:center">
           ${s.called?`<span class="tg ${s.called==='подтверждена'?'t-ok':s.called==='перенос'?'t-warn':'t-err'}">${s.called}</span>`
-            :`<button class="ib" title="Подтверждена" onclick="callStop('${rt.id}',${i},'подтверждена')">${svg(I.ok,13)}</button>
-              <button class="ib" title="Перенос" onclick="callStop('${rt.id}',${i},'перенос')">${svg(I.fwd,13)}</button>
-              <button class="ib" title="Отказ" onclick="callStop('${rt.id}',${i},'отказ')">${svg(I.no,13)}</button>`}
-          <button class="ib" onclick="move('${rt.id}',${i},-1)" ${i?'':'disabled'}>${svg(I.up,12)}</button>
-          <button class="ib" onclick="move('${rt.id}',${i},1)" ${i<rt.stops.length-1?'':'disabled'}>${svg(I.down,12)}</button>
+            :`<button class="ib sm ok" title="Подтверждена" onclick="callStop('${rt.id}',${i},'подтверждена')">${svg(I.ok,13)}</button>
+              <button class="ib sm wr" title="Перенос" onclick="callStop('${rt.id}',${i},'перенос')">${svg(I.fwd,13)}</button>
+              <button class="ib sm no" title="Отказ" onclick="callStop('${rt.id}',${i},'отказ')">${svg(I.no,13)}</button>`}
+          <button class="ib sm" onclick="move('${rt.id}',${i},-1)" ${i?'':'disabled'}>${svg(I.up,12)}</button>
+          <button class="ib sm" onclick="move('${rt.id}',${i},1)" ${i<rt.stops.length-1?'':'disabled'}>${svg(I.down,12)}</button>
         </div></div>`}).join('')}</div>
     <div class="row" style="margin-top:14px;justify-content:space-between">
-      <span class="note">Прозвонено ${called} из ${rt.stops.length}</span>
+      <span class="note">Прозвонено ${called} из ${rt.stops.length}${done?` · выполнено ${done}`:''}</span>
       <div style="display:flex;gap:6px">
-        <button class="g" onclick="setStatus('${rt.id}','обзвонен')" ${called===rt.stops.length&&rt.status==='черновик'?'':'disabled'}>Отметить обзвоненным</button>
-        <button class="b" onclick="setStatus('${rt.id}','выполнен')" ${rt.status==='обзвонен'?'':'disabled'}>Закрыть маршрут</button></div></div>
+        <button class="g sm" onclick="setStatus('${rt.id}','обзвонен')" ${called===rt.stops.length&&rt.status==='черновик'?'':'disabled'}>Отметить обзвоненным</button>
+        <button class="b" style="height:30px;font-size:11.5px" onclick="setStatus('${rt.id}','выполнен')" ${rt.status==='обзвонен'||rt.status==='в работе'?'':'disabled'}>Закрыть маршрут</button></div></div>
     ${rt.status==='выполнен'?`<div class="stamp"><b>ПОВЕРЕНО</b><span>${rt.id}</span></div>`:''}
   </div>
   <div class="c" style="margin-bottom:0"><h3>Чат маршрута</h3>
-    <p class="cap">Дежурный: ${rt.duty?`<b style="color:var(--ink)">${esc(rt.duty)}</b>`:'<span class="tg t-warn">не взят</span>'}</p>
-    <div class="chat">${rt.chat.length?rt.chat.map(m=>`<div class="msg"><b>${esc(m.who)}</b><small>${m.t}</small><br>${esc(m.txt)}</div>`).join('')
+    <p class="cap">Дежурный: ${rt.duty?`<b style="color:var(--ink)">${esc(nameOf(rt.duty))}</b>`:'<span class="tg t-warn">не взят</span>'} · все переписки дублируются руководителю без уведомлений</p>
+    <div class="chat">${rt.chat.length?rt.chat.map(m=>`<div class="msg ${m.vf?'v':''}"><b>${esc(m.who)}</b><small>${m.t}</small><br>${esc(m.txt)}</div>`).join('')
       :`<div class="empty">Сообщений нет. Поверитель напишет сюда, если что-то пойдёт не так.</div>`}</div>
     <div class="row" style="margin-top:10px;flex-wrap:nowrap">
-      <input id="chatin" placeholder="Сообщение поверителю">
-      <button class="b" onclick="send('${rt.id}')">Отправить</button></div>
-    ${!rt.duty?`<button class="g" style="margin-top:10px" onclick="takeDuty('${rt.id}');render()">Подключиться к маршруту</button>`:''}
+      <input class="fld" id="chatin" placeholder="Сообщение поверителю">
+      <button class="b" onclick="send('${rt.id}')">${svg(I.send,14)}</button></div>
+    ${!rt.duty?`<button class="g sm" style="margin-top:10px" onclick="takeDuty('${rt.id}');render()">Подключиться к маршруту</button>`:''}
   </div></div>`;
 }
 function callStop(id,i,res){
@@ -654,118 +883,175 @@ function callStop(id,i,res){
 function move(id,i,d){ const st=S.routes.find(r=>r.id===id).stops; [st[i],st[i+d]]=[st[i+d],st[i]]; render(); }
 function setStatus(id,st){
   const rt = S.routes.find(r=>r.id===id); rt.status = st;
-  if(st==='выполнен') rt.stops.forEach(s=>{const r=S.requests.find(x=>x.id===s.req);
-    if(r&&s.called==='подтверждена'){r.status='выполнена';r.verified={verifier:rt.verifier};}});
+  if(st==='выполнен'){ rt.stops.forEach(s=>{const r=S.requests.find(x=>x.id===s.req);
+    if(r&&s.called==='подтверждена'){s.done=true;r.status='выполнена';r.verifier=rt.verifier;}}); }
   toast(st==='выполнен'?'Маршрут закрыт. Работы ушли в реестр УК и в расчёт сдельной оплаты.':'Маршрут обзвонен и готов к выдаче поверителю.');
 }
 function send(id){
   const el = document.getElementById('chatin'), t = el.value.trim(); if(!t) return;
   const rt = S.routes.find(r=>r.id===id);
-  rt.chat.push({who:S.user.name,txt:t,t:new Date().toTimeString().slice(0,5)});
-  if(!rt.duty) rt.duty = S.user.name; render();
+  rt.chat.push({who:S.user,vf:S.role==='verifier',txt:t,t:new Date().toTimeString().slice(0,5)});
+  if(!rt.duty && S.role!=='verifier') rt.duty = S.me; render();
 }
-function takeDuty(id){ S.routes.find(r=>r.id===id).duty = S.user.name; toast('Маршрут закреплён за вами. У остальных операторов кнопка погасла.'); }
+function takeDuty(id){ S.routes.find(r=>r.id===id).duty = S.me;
+  toast('Маршрут закреплён за вами. У остальных операторов кнопка погасла.'); }
 
 /* ---------- дежурство ---------- */
 function viewDuty(){
-  const list = S.routes.filter(r=>r.date===iso(today));
-  return shell(null,`${cap()}<div class="c"><h3>Маршруты на сегодня</h3>
-    ${list.length?`<table><thead><tr><th>Маршрут</th><th>Город</th><th>Поверитель</th><th class="num">Точек</th><th>Статус</th><th>Дежурный</th><th></th></tr></thead><tbody>
-      ${list.map(rt=>{const v=S.staff.find(x=>x.id===rt.verifier);
-        return `<tr><td class="mono"><b>${rt.id}</b></td><td>${rt.city}</td><td>${v?esc(v.name):'—'}</td>
-        <td class="num">${rt.stops.length}</td><td>${stTag(rt.status)}</td>
-        <td>${rt.duty?`<b>${esc(rt.duty)}</b>`:'<span class="note">свободен</span>'}</td>
-        <td style="text-align:right">${rt.duty?`<button class="g" disabled>Занято</button>`
-          :`<button class="b" onclick="takeDuty('${rt.id}');render()">Подключиться</button>`}</td></tr>`}).join('')}
+  const list = S.routes.filter(r=>r.date===TODAY);
+  const free = list.filter(r=>!r.duty).length, mine = list.filter(r=>r.duty===S.me).length;
+  return shell(null,`${cap()}
+  <div class="kpi">
+    <div><div class="v">${list.length}</div><div class="k">маршрутов сегодня</div></div>
+    <div><div class="v">${free}</div><div class="k">без дежурного</div></div>
+    <div><div class="v">${mine}</div><div class="k">закреплено за вами</div></div>
+    <div><div class="v">${list.reduce((a,r)=>a+r.chat.length,0)}</div><div class="k">сообщений в чатах</div></div></div>
+  <div class="c"><h3>Маршруты на сегодня</h3>
+    ${list.length?`<table><thead><tr><th>Маршрут</th><th>Город</th><th>Поверитель</th><th class="num">Точек</th><th class="num">Сообщ.</th><th>Статус</th><th>Дежурный</th><th></th></tr></thead><tbody>
+      ${list.map(rt=>`<tr><td class="mono"><b>${rt.id}</b></td><td>${rt.city}</td><td>${rt.verifier?esc(nameOf(rt.verifier)):'—'}</td>
+        <td class="num">${rt.stops.length}</td><td class="num">${rt.chat.length||'—'}</td><td>${stTag(rt.status)}</td>
+        <td>${rt.duty?`<b>${esc(nameOf(rt.duty))}</b>`:'<span class="note">свободен</span>'}</td>
+        <td style="text-align:right;white-space:nowrap">
+          <button class="g sm" onclick="S.openRoute='${rt.id}';go('routes')">Чат</button>
+          ${rt.duty?`<button class="g sm" disabled>Занято</button>`
+            :`<button class="b" style="height:30px;font-size:11.5px" onclick="takeDuty('${rt.id}');render()">Подключиться</button>`}</td></tr>`).join('')}
       </tbody></table>`:`<div class="empty">На сегодня маршрутов нет.</div>`}</div>`);
 }
 
 /* ---------- уведомления УК ---------- */
 function viewUK(){
-  const rows = S.requests.filter(r=>r.status==='выполнена').flatMap(r=>r.devices.map(d=>({r,d})));
-  return shell(null,`${cap()}<div class="c"><h3>Реестр для управляющих компаний</h3>
+  let rows = S.requests.filter(r=>r.status==='выполнена').flatMap(r=>r.devices.map(d=>({r,d})));
+  if(S.ukCity) rows = rows.filter(x=>x.r.city===S.ukCity);
+  if(S.ukSeal==='нет') rows = rows.filter(x=>!x.d.seal);
+  if(S.ukSeal==='есть') rows = rows.filter(x=>x.d.seal);
+  const noSeal = rows.filter(x=>!x.d.seal).length;
+  return shell(null,`${cap()}
+  <div class="kpi">
+    <div><div class="v">${rows.length}</div><div class="k">позиций в реестре</div></div>
+    <div><div class="v" ${noSeal?'style="color:var(--error)"':''}>${noSeal}</div><div class="k">без пломбы УК</div></div>
+    <div><div class="v">${new Set(rows.map(x=>x.r.city+x.r.street+x.r.house)).size}</div><div class="k">адресов</div></div>
+    <div><div class="v">${rows.filter(x=>x.d.carrier==='Тепло').length}</div><div class="k">теплосчётчиков</div></div></div>
+  <div class="c"><h3>Реестр для управляющих компаний</h3>
+    <p class="cap">Пломба УК обязательна: без отметки позиция не попадает в отчёт и подсвечивается красным.</p>
     <div class="row" style="margin-bottom:14px">
+      <div class="f" style="width:190px"><label>Город</label>${SEL('ukCity',S.ukCity,[{v:'',l:'Все города'},...CITIES],v=>S.ukCity=v)}</div>
+      <div class="f" style="width:170px"><label>Пломба УК</label>${SEL('ukSeal',S.ukSeal,[{v:'',l:'Любая'},{v:'есть',l:'Есть'},{v:'нет',l:'Отсутствует'}],v=>S.ukSeal=v)}</div>
       <button class="b" onclick="toast('Сформирован сводный отчёт за месяц: ${rows.length} позиций. В боевой версии — файл Excel.')">Сводный отчёт за месяц</button>
-      <button class="g" onclick="toast('Разовое уведомление отправлено в УК по выбранному адресу.')">Уведомить по одному клиенту</button>
-      <span class="note" style="padding-bottom:8px">${rows.length} позиций готово к выгрузке</span></div>
-    ${rows.length?`<table><thead><tr><th>Адрес</th><th>Заводской №</th><th>Тип устройства</th><th>Носитель</th>
-      <th>Помещение</th><th>Пломба УК</th><th class="num">Поверка</th><th class="num">Следующая</th><th>Сертификат</th></tr></thead><tbody>
-      ${rows.slice(0,40).map(({r,d})=>{const nx=new Date(r.date+'T00:00:00');nx.setFullYear(nx.getFullYear()+(d.carrier==='Тепло'?4:6));
+      <button class="g" onclick="toast('Разовое уведомление отправлено в УК по выбранному адресу.')">Уведомить по клиенту</button></div>
+    ${rows.length?`<table><thead><tr><th>Адрес</th><th>Заводской №</th><th>Тип устройства</th><th>ГРСИ</th><th>Носитель</th>
+      <th>Помещение</th><th>Пломба</th><th class="num">Поверка</th><th class="num">Следующая</th><th>Сертификат</th></tr></thead><tbody>
+      ${rows.slice(0,45).map(({r,d})=>{const nx=new Date(r.date+'T00:00:00');nx.setFullYear(nx.getFullYear()+(d.carrier==='Тепло'?4:6));
         return `<tr><td><b>${r.city}, ${r.street}, ${r.house}${r.flat?', кв. '+r.flat:''}</b></td>
-        <td class="mono">${d.serial}</td><td>${d.type}</td>
+        <td class="mono">${d.serial}</td><td>${d.type}</td><td class="mono">${d.grsi||'—'}</td>
         <td><span class="tg ${d.carrier==='ГВС'?'t-err':d.carrier==='ХВС'?'t-cold':'t-warn'}">${d.carrier}</span></td>
         <td>${d.room}</td><td>${d.seal?'<span class="tg t-ok">есть</span>':'<span class="tg t-err">нет</span>'}</td>
         <td class="num">${ru(r.date)}</td><td class="num">${ru(iso(nx))}</td>
         <td>${d.seal?`<a href="#" onclick="event.preventDefault();toast('Ссылка на сертификат приходит из «Аршина» после приёмки пакета.')">открыть</a>`:'<span class="note">—</span>'}</td></tr>`}).join('')}
-      </tbody></table>${rows.length>40?`<p class="note" style="margin-top:10px">Показаны первые 40 из ${rows.length}.</p>`:''}`
-      :`<div class="empty">Закройте хотя бы один маршрут — выполненные работы появятся здесь.</div>`}</div>`);
+      </tbody></table>${rows.length>45?`<p class="note" style="margin-top:10px">Показаны первые 45 из ${rows.length}.</p>`:''}`
+      :`<div class="empty">Под фильтр ничего не попало.</div>`}</div>`);
 }
 
 /* ---------- заработок ---------- */
 function viewMe(){
   const isV = S.role==='verifier';
-  const done = S.requests.filter(r=>r.status==='выполнена');
-  const sum = done.reduce((a,r)=>a+(isV?rateV(r):rateO(r)),0);
-  const td = done.filter(r=>r.date===iso(today)).reduce((a,r)=>a+(isV?rateV(r):rateO(r)),0);
+  const done = S.requests.filter(r=>r.status==='выполнена' && (isV ? r.verifier===S.me : r.operator===S.me))
+    .sort((a,b)=>b.date.localeCompare(a.date));
+  const val = r => isV?rateV(r):rateO(r);
+  const sum = done.reduce((a,r)=>a+val(r),0);
+  const td = done.filter(r=>r.date===TODAY).reduce((a,r)=>a+val(r),0);
+  const byDay = {}; done.forEach(r=>byDay[r.date]=(byDay[r.date]||0)+val(r));
+  const dates = Object.keys(byDay).sort().slice(-10);
+  const mx = Math.max(1,...dates.map(d=>byDay[d]));
   return shell(null,`${cap()}
   <div class="kpi">
     <div><div class="v">${money(td)}</div><div class="k">начислено сегодня</div></div>
     <div><div class="v">${money(sum)}</div><div class="k">за период</div></div>
     <div><div class="v">${done.length}</div><div class="k">${isV?'выполнено работ':'заявок дошло до выполнения'}</div></div>
-    <div><div class="v">${isV?crewOn(S.day).length:opsOn(S.day).length}</div><div class="k">человек в смене сегодня</div></div>
-  </div>
+    <div><div class="v">${done.length?money(sum/done.length):'—'}</div><div class="k">средний чек начисления</div></div></div>
+  <div class="c"><h3>Динамика по дням</h3><p class="cap">Последние ${dates.length} рабочих дней.</p>
+    <div class="rib">${dates.map(ds=>{const d=new Date(ds+'T00:00:00');
+      return `<button class="day" data-s="full" style="cursor:default">
+        <div class="bar"><div class="fill" style="height:${byDay[ds]/mx*88}%"></div>
+        <span class="pct">${Math.round(byDay[ds]/1000)}к</span></div>
+        <div class="dd">${pad(d.getDate())}.${pad(d.getMonth()+1)}</div><div class="wd">${WD[d.getDay()]}</div></button>`}).join('')}</div></div>
   <div class="c"><h3>Детализация</h3>
     <p class="cap">${isV?'Ставка поверителя за выполненную услугу.':'Ставка оператора за принятую заявку, дошедшую до выполнения.'}</p>
-    ${done.length?`<table><thead><tr><th>Заявка</th><th class="num">Дата</th><th>Адрес</th><th>Услуги</th><th class="num">Начислено</th></tr></thead><tbody>
-      ${done.slice(0,30).map(r=>`<tr><td class="mono">${r.id}</td><td class="num">${ru(r.date)}</td>
-        <td><b>${r.city}, ${r.street}, ${r.house}</b></td><td>${r.services.map(s=>SVC[s].name).join(', ')}</td>
-        <td class="num"><b>${money(isV?rateV(r):rateO(r))}</b></td></tr>`).join('')}</tbody></table>`
+    ${done.length?`<table><thead><tr><th>Заявка</th><th class="num">Дата</th><th>Адрес</th><th>Клиент</th><th>Услуги</th><th class="num">Сумма работ</th><th class="num">Начислено</th></tr></thead><tbody>
+      ${done.slice(0,35).map(r=>`<tr><td class="mono">${r.id}</td><td class="num">${ru(r.date)}</td>
+        <td><b>${r.city}, ${r.street}, ${r.house}</b></td><td>${esc(r.name)}</td>
+        <td>${r.services.map(s=>SVC[s].name).join(', ')}</td><td class="num">${money(priceOf(r))}</td>
+        <td class="num"><b>${money(val(r))}</b></td></tr>`).join('')}</tbody></table>
+      ${done.length>35?`<p class="note" style="margin-top:10px">Показаны первые 35 из ${done.length}.</p>`:''}`
       :`<div class="empty">Пока нечего показать. Начисление появляется после закрытия маршрута.</div>`}</div>`);
 }
 function viewPayroll(){
-  const done = S.requests.filter(r=>r.status==='выполнена'), byV={}, byO={};
-  S.routes.filter(r=>r.status==='выполнен').forEach(rt=>{
-    const v = S.staff.find(x=>x.id===rt.verifier); if(!v) return;
-    rt.stops.forEach(s=>{const r=S.requests.find(x=>x.id===s.req);
-      if(r&&r.status==='выполнена') byV[v.name]=(byV[v.name]||0)+rateV(r);});
+  const done = S.requests.filter(r=>r.status==='выполнена');
+  const byV = {}, byO = {};
+  done.forEach(r=>{
+    if(r.verifier) byV[r.verifier] = (byV[r.verifier]||0)+rateV(r);
+    if(r.operator) byO[r.operator] = (byO[r.operator]||0)+rateO(r);
   });
-  done.forEach(r=>{ if(r.operator) byO[r.operator]=(byO[r.operator]||0)+rateO(r); });
-  const t = (o,l) => Object.keys(o).length?`<table><thead><tr><th>${l}</th><th class="num">Начислено</th></tr></thead><tbody>
-    ${Object.entries(o).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<tr><td><b>${esc(k)}</b></td><td class="num">${money(v)}</td></tr>`).join('')}</tbody></table>`
+  const cnt = (o,k) => done.filter(r=>(o===byV?r.verifier:r.operator)===k).length;
+  const tbl = (o,l) => Object.keys(o).length?`<table><thead><tr><th>${l}</th><th>График</th><th class="num">Работ</th><th class="num">Начислено</th><th class="num">Средняя</th></tr></thead><tbody>
+    ${Object.entries(o).sort((a,b)=>b[1]-a[1]).map(([k,v])=>{const n=cnt(o,k);
+      return `<tr><td><b>${esc(nameOf(k))}</b></td><td class="mono">${staffById(k)?.pattern||'—'}</td>
+      <td class="num">${n}</td><td class="num"><b>${money(v)}</b></td><td class="num">${money(v/n)}</td></tr>`}).join('')}</tbody></table>`
     :`<div class="empty">Нет начислений за период.</div>`;
-  return shell(null,`${cap()}<div class="g2">
-    <div class="c"><h3>Поверители</h3><p class="cap">По закрытым маршрутам.</p>${t(byV,'Сотрудник')}</div>
-    <div class="c"><h3>Операторы</h3><p class="cap">По заявкам, дошедшим до выполнения.</p>${t(byO,'Сотрудник')}</div></div>`);
+  const tV = Object.values(byV).reduce((a,b)=>a+b,0), tO = Object.values(byO).reduce((a,b)=>a+b,0);
+  const rev = done.reduce((a,r)=>a+priceOf(r),0);
+  return shell(null,`${cap()}
+  <div class="kpi">
+    <div><div class="v">${money(rev)}</div><div class="k">выручка по выполненным</div></div>
+    <div><div class="v">${money(tV)}</div><div class="k">фонд поверителей</div></div>
+    <div><div class="v">${money(tO)}</div><div class="k">фонд операторов</div></div>
+    <div><div class="v">${Math.round((tV+tO)/rev*100)}%</div><div class="k">доля сдельной оплаты</div></div></div>
+  <div class="g2">
+    <div class="c"><h3>Поверители</h3><p class="cap">По закрытым маршрутам.</p>${tbl(byV,'Сотрудник')}</div>
+    <div class="c"><h3>Операторы</h3><p class="cap">По заявкам, дошедшим до выполнения.</p>${tbl(byO,'Сотрудник')}</div></div>`);
 }
 function viewServices(){
   return shell(null,`${cap()}<div class="c"><h3>Прайс и сдельные ставки</h3>
+    <p class="cap">Значения редактируются на месте — изменение сразу отражается в расчёте начислений.</p>
     <table><thead><tr><th>Группа</th><th>Услуга</th><th class="num">Физлицо</th><th class="num">Юрлицо</th>
-      <th class="num">Поверителю</th><th class="num">Оператору</th></tr></thead><tbody>
-      ${SERVICES.map(s=>`<tr><td><span class="tg t-mut">${s.grp}</span></td><td><b>${s.name}</b></td>
-        <td class="num">${money(s.pF)}</td><td class="num">${money(s.pU)}</td>
-        <td class="num">${money(s.rV)}</td><td class="num">${money(s.rO)}</td></tr>`).join('')}</tbody></table></div>`);
+      <th class="num">Поверителю</th><th class="num">Оператору</th><th class="num">Доля ФОТ</th></tr></thead><tbody>
+      ${SERVICES.map((s,i)=>`<tr><td><span class="tg t-mut">${s.grp}</span></td><td><b>${s.name}</b></td>
+        ${['pF','pU','rV','rO'].map(k=>`<td class="num"><input class="fld sm mono" style="width:78px;display:inline-flex" value="${s[k]}" onchange="setSvc(${i},'${k}',this.value)"></td>`).join('')}
+        <td class="num">${Math.round((s.rV+s.rO)/s.pF*100)}%</td></tr>`).join('')}</tbody></table></div>
+  <div class="c"><h3>Сотрудники</h3><p class="cap">Внутренние номера АТС и графики. Персональный номер оператора нужен для всплывающей карточки звонка.</p>
+    <table><thead><tr><th>Сотрудник</th><th>Роль</th><th>График</th><th class="mono">Вн. номер</th><th class="num">Телефон</th><th>Сегодня</th></tr></thead><tbody>
+      ${S.staff.map(p=>`<tr><td><b>${esc(p.name)}</b></td>
+        <td><span class="tg t-mut">${p.role==='verifier'?'поверитель':p.role==='senior'?'старший':p.role==='supervisor'?'руководитель':'оператор'}</span></td>
+        <td class="mono">${p.pattern}</td><td class="mono">${p.ext||'—'}</td><td class="num mono">${p.phone||'—'}</td>
+        <td>${absentOn(p.id,TODAY)?'<span class="tg t-err">отсутствие</span>':onShift(p,TODAY)?'<span class="tg t-ok">в смене</span>':'<span class="tg t-mut">выходной</span>'}</td></tr>`).join('')}
+    </tbody></table></div>`);
 }
+function setSvc(i,k,v){ SERVICES[i][k] = Math.max(0,parseInt(v)||0); render(); }
+
+/* ---------- поверитель ---------- */
 function viewMyRoute(){
-  const rt = S.routes.find(r=>r.date===iso(today)) || S.routes[0];
-  return shell(null, rt?`${cap()}${routeCard(rt)}`
+  const mine = S.routes.filter(r=>r.verifier===S.me).sort((a,b)=>b.date.localeCompare(a.date));
+  const rt = S.routes.find(r=>r.id===S.openRoute) || mine.find(r=>r.date===TODAY) || mine[0];
+  const side = `<div class="lbl" style="padding:6px 10px 8px">Мои маршруты</div>
+    ${mine.length?mine.slice(0,14).map(r=>`<button class="sb" aria-current="${rt&&rt.id===r.id}" onclick="S.openRoute='${r.id}';render()">
+      <span><span class="mono" style="font-size:12px">${ru(r.date)}</span>
+      <span style="display:block;font-size:11px;color:var(--ink3)">${r.city} · ${r.status}</span></span>
+      <span class="n">${r.stops.filter(s=>s.done).length}/${r.stops.length}</span></button>`).join('')
+    :`<p class="note" style="padding:8px 10px">Маршрутов не назначено.</p>`}`;
+  return shell(side, rt?`${cap()}${routeCard(rt)}`
     :`${cap()}<div class="c"><div class="empty">Маршрут не назначен. Соберите маршруты под ролью оператора.</div></div>`);
-}
-function viewAbsence(){
-  return shell(null,`${cap()}<form class="c" style="max-width:660px" onsubmit="event.preventDefault();toast('Запрос отправлен руководителю на согласование.')">
-    <h3>Запрос отсутствия</h3><p class="cap">До согласования дни остаются рабочими по графику.</p>
-    <div class="g3">
-      <div class="f"><label>С какого числа</label><input type="date" value="${iso(addDays(today,3))}" required></div>
-      <div class="f"><label>По какое</label><input type="date" value="${iso(addDays(today,5))}" required></div>
-      <div class="f"><label>Причина</label><input placeholder="Семейные обстоятельства" required></div></div>
-    <button class="b" style="margin-top:4px">Отправить запрос</button></form>`);
 }
 
 /* ============================================================ */
 const VIEWS = {intake:viewIntake,plan:viewPlan,schedule:viewSchedule,logistics:viewLogistics,
   routes:viewRoutes,duty:viewDuty,uk:viewUK,me:viewMe,payroll:viewPayroll,
   services:viewServices,myroute:viewMyRoute,absence:viewAbsence};
-function go(v){ S.view=v; render(); }
+function go(v){ S.view=v; S.dd=null; render(); }
 function render(){ document.getElementById('root').innerHTML = S.user?(VIEWS[S.view]||viewIntake)():viewLogin(); }
+
+if(typeof document!=='undefined' && document.addEventListener){
+  document.addEventListener('click',e=>{ if(S.dd && !e.target.closest('[data-fld]')){ S.dd=null; render(); } });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&S.dd){ S.dd=null; render(); } });
+}
 seed();
 render();
 </script>
