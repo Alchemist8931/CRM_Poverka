@@ -244,6 +244,7 @@ td b{color:var(--ink);font-weight:600}
 .stops{max-height:320px;overflow-y:auto}
 .stop{display:grid;grid-template-columns:24px 1fr auto;gap:10px;align-items:center;padding:8px 2px;border-bottom:1px solid var(--border2);font-size:12.5px}
 .stop:last-child{border-bottom:0}
+.stop.sel{background:var(--wash);border-radius:var(--r-in);box-shadow:inset 2px 0 0 var(--ink);padding-left:9px}
 .stop .n{font-size:10.5px;color:var(--ink3);font-variant-numeric:tabular-nums}
 .stop small{display:block;font-size:10.5px;color:var(--ink3);margin-top:2px;font-variant-numeric:tabular-nums}
 .stop.fin b{color:var(--ink3);text-decoration:line-through}
@@ -271,12 +272,79 @@ td b{color:var(--ink);font-weight:600}
 .login .brand{display:flex;align-items:center;gap:13px;margin-bottom:24px}
 .login .logo{width:44px;height:44px;flex-shrink:0;border-radius:var(--r);background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center}
 .login h1{font-size:19px;font-weight:600;letter-spacing:-.01em}
-.roles{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.role{padding:10px 11px;border:1px solid var(--border);border-radius:var(--r);background:var(--card);text-align:left;font-size:12.5px;transition:all .2s ease}
-.role small{display:block;font-size:10px;color:var(--ink3);margin-top:3px}
-.role:hover{border-color:var(--mark)}
-.role[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
-.role[aria-pressed="true"] small{color:var(--bg);opacity:.62}
+.login .hint{margin-top:16px;padding:11px 12px;border:1px solid var(--border2);border-radius:var(--r);background:var(--card)}
+
+/* ---------- рельса: группы по ролям ---------- */
+.rail .nav{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;padding-bottom:6px}
+.rail .nav::-webkit-scrollbar{width:0}
+.rail .nav .nb{height:36px}
+.rail .logo{margin-bottom:10px}
+.grp{display:flex;flex-direction:column;align-items:center;gap:4px;width:100%}
+.grp + .grp{margin-top:9px;padding-top:11px;position:relative}
+.grp + .grp::before{content:"";position:absolute;top:2px;left:11px;right:11px;height:1px;background:var(--border)}
+.grp + .grp::after{content:attr(data-g);position:absolute;top:-3px;left:50%;transform:translateX(-50%);
+  font-size:7.5px;font-weight:600;letter-spacing:.12em;color:var(--ink3);background:var(--bg);padding:0 4px;line-height:11px}
+
+/* ---------- шаговый обход страниц ---------- */
+.step{display:flex;align-items:center;gap:5px;padding:3px 4px;border:1px solid var(--border2);border-radius:var(--r)}
+.step span{font-size:10.5px;color:var(--ink3);font-variant-numeric:tabular-nums;min-width:44px;text-align:center}
+.ib.xs{width:24px;height:24px;border:0;border-radius:var(--r-in)}
+
+/* ---------- телефон с вызовом ---------- */
+.phone{display:flex;align-items:center;gap:6px;height:38px;padding:0 4px 0 11px;background:var(--card);
+  border:1px solid var(--border);border-radius:var(--r);transition:border-color .2s ease,box-shadow .2s ease}
+.phone:hover{border-color:var(--mark)}
+.phone:focus-within{border-color:var(--ink);box-shadow:0 0 0 3px var(--wash)}
+.phone input{flex:1;min-width:0;height:36px;border:0;background:transparent;outline:none;font-size:13px;padding:0}
+.phone .call{display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 9px;flex-shrink:0;
+  border:1px solid var(--border);border-radius:var(--r-in);background:var(--surface);color:var(--ink2);font-size:10.5px;
+  font-weight:500;letter-spacing:.06em;text-transform:uppercase;transition:all .2s ease}
+.phone .call:hover:not(:disabled){color:var(--success);border-color:var(--success)}
+.phone .call:disabled{opacity:.3;cursor:not-allowed}
+.chkbox{display:flex;align-items:center;height:38px;padding:0 11px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);transition:border-color .2s ease}
+.chkbox:hover{border-color:var(--mark)}
+
+/* ---------- мини-окно звонка ---------- */
+.callw{position:fixed;left:22px;bottom:22px;z-index:70;width:272px;background:var(--card);border:1px solid var(--border);
+  border-left:2px solid var(--success);border-radius:var(--r);box-shadow:var(--shCard);padding:14px 15px;animation:wsFade .22s ease}
+.callw .top{display:flex;align-items:center;gap:9px;margin-bottom:11px}
+.callw .dot{width:8px;height:8px;border-radius:3px;background:var(--warning);animation:wsPulse 1.4s ease-in-out infinite;flex-shrink:0}
+.callw .st{font-size:9.5px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
+.callw .sec{margin-left:auto;font-size:11.5px;color:var(--ink2);font-variant-numeric:tabular-nums}
+.callw b{font-size:13.5px;display:block}
+.callw .num{font-size:12.5px;color:var(--ink2);font-variant-numeric:tabular-nums;margin-top:2px}
+.callw .who{font-size:10.5px;color:var(--ink3);margin-top:6px;line-height:1.45}
+.callw .acts{display:flex;gap:6px;margin-top:12px}
+.callw .acts .g{flex:1;height:32px;font-size:11px}
+.callw .acts .end{border-color:var(--error);color:var(--error)}
+.callw .acts .end:hover{background:var(--error);color:var(--bg);border-color:var(--error)}
+
+/* ---------- акт: приборы и фото ---------- */
+.wrow{border:1px solid var(--border2);border-radius:var(--r);background:var(--card);padding:11px 12px;margin-bottom:8px}
+.wrow.new{border-color:var(--mark)}
+.wtop{display:grid;grid-template-columns:1.5fr 1.35fr .8fr 1.05fr .9fr auto 32px;gap:6px;align-items:center}
+.wbot{display:flex;align-items:center;gap:7px;margin-top:9px;flex-wrap:wrap}
+.wbot .lbl{margin-right:2px}
+.phw{position:relative;width:58px;height:44px;flex-shrink:0}
+.phw img{width:100%;height:100%;object-fit:cover;border:1px solid var(--border);border-radius:var(--r-in);display:block;cursor:zoom-in}
+.phw img:hover{border-color:var(--ink)}
+.phw .x{position:absolute;top:-6px;right:-6px;width:17px;height:17px;border-radius:50%;border:1px solid var(--border);
+  background:var(--card);color:var(--ink3);display:grid;place-items:center;opacity:0;transition:all .18s ease}
+.phw:hover .x{opacity:1}
+.phw .x:hover{color:var(--error);border-color:var(--error)}
+.addph{cursor:pointer}
+.nophoto{font-size:10.5px;color:var(--error)}
+.actnote{padding:10px 12px;border:1px solid var(--border2);border-left:2px solid var(--warning);border-radius:var(--r);
+  background:var(--card);font-size:12px;color:var(--ink2);line-height:1.5;margin-bottom:12px}
+.actnote b{display:block;font-size:9.5px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);margin-bottom:4px}
+
+/* ---------- просмотр фото ---------- */
+.lb{position:fixed;inset:0;z-index:110;background:rgba(0,0,0,.82);display:grid;place-items:center;padding:40px;animation:wsFade .2s ease}
+.lb img{max-width:min(880px,86vw);max-height:76vh;border-radius:var(--r);display:block;box-shadow:0 30px 70px -20px #000}
+.lb .bar{display:flex;align-items:center;gap:10px;justify-content:center;margin-top:14px;color:#E7E7E7;font-size:12px}
+.lb .bar .ib{border-color:rgba(231,231,231,.28);color:#E7E7E7}
+.lb .bar .ib:hover{border-color:#E7E7E7}
+.lb .cls{position:absolute;top:22px;right:22px}
 </style>
 </head>
 <body>
@@ -500,7 +568,11 @@ const I = {
   left:'<path d="M15 6l-6 6 6 6"/>', right:'<path d="M9 6l6 6-6 6"/>',
   up:'<path d="M12 19V5M5 12l7-7 7 7"/>', down:'<path d="M12 5v14M19 12l-7 7-7-7"/>',
   ok:'<path d="M20 6L9 17l-5-5"/>', fwd:'<path d="M5 12h14M13 6l6 6-6 6"/>', no:'<path d="M18 6L6 18M6 6l12 12"/>',
-  send:'<path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/>'
+  send:'<path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/>',
+  phone:'<path d="M21 15.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.7A2 2 0 0 1 3.1 1h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L7.1 8.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/>',
+  hang:'<path d="M2.5 10.5a16 16 0 0 1 19 0l-2.2 3a2 2 0 0 1-2.4.5 12 12 0 0 0-2.4-.9 2 2 0 0 1-1.5-1.9V9.4a14 14 0 0 0-2 0v1.8a2 2 0 0 1-1.5 1.9c-.8.2-1.6.5-2.4.9a2 2 0 0 1-2.4-.5z"/><path d="M3 21L21 3"/>',
+  cam:'<path d="M4 8h3l1.6-2.2A2 2 0 0 1 10.2 5h3.6a2 2 0 0 1 1.6.8L17 8h3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z"/><circle cx="12" cy="14" r="3.4"/>',
+  act:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/>'
 };
 const svg = (p,w=20) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:${w}px;height:${w}px;flex-shrink:0">${p}</svg>`;
 
@@ -528,17 +600,19 @@ const ROLES = {
   supervisor:{label:'Руководитель',who:'Панченко И.',id:'sv'},
   verifier:{label:'Поверитель',who:'Алимпиев И.',id:'v0'}
 };
-const NAV = {
-  operator:['intake','logistics','routes','duty','uk','me'],
-  senior:['intake','logistics','routes','duty','uk','me'],
-  supervisor:['plan','schedule','absence','logistics','routes','uk','payroll','services'],
-  verifier:['myroute','me','absence']
-};
+/* Роль на входе не выбирается: меню показывает все страницы подряд,
+   сгруппированные по ролям. Активная группа задаёт «от чьего лица» открыта страница. */
+const GROUPS = [
+  {role:'operator',  short:'ОПР', views:['intake','logistics','routes','duty','uk','me']},
+  {role:'supervisor',short:'РУК', views:['plan','schedule','absence','payroll','services']},
+  {role:'verifier',  short:'ПВР', views:['myroute','absence','me']}
+];
+const PAGES = GROUPS.flatMap(g=>g.views.map(v=>({v,role:g.role,short:g.short})));
 const TITLES = {intake:'Приём заявки',logistics:'Логистика',routes:'Маршруты',duty:'Дежурство',
   uk:'Уведомления УК',me:'Мой заработок',plan:'План набора',schedule:'График смен',
   payroll:'Сдельная оплата',services:'Услуги и ставки',myroute:'Мой маршрут',absence:'Отсутствия'};
 const CAPS = {
-  intake:'Лента ёмкости показывает загрузку выбранного города на две недели. Пунктир — граница допустимого превышения плана на 10%.',
+  intake:'Оператор фиксирует адрес, контакты и окно прибытия. Состав работ и приборы заполняет поверитель на месте — здесь их нет.',
   plan:'Календарь месяца. Выходные подсвечены, в каждом дне — набор по городам и отклонение от плана.',
   schedule:'Графики 5/2 и 2/2 плюс дополнительные смены. Клик по выходному ставит доп. смену.',
   logistics:'Пул сортируется по городу и улице. Автосборка режет его на маршруты по 25 заявок.',
@@ -548,7 +622,7 @@ const CAPS = {
   me:'Сдельная оплата по выполненным работам. Виден только собственный заработок.',
   payroll:'Начисления по всем сотрудникам за период.',
   services:'Цены для физических и юридических лиц, сдельные ставки поверителя и оператора.',
-  myroute:'Маршрут на сегодня. Позиция закрывается только с заполненной пломбой УК.',
+  myroute:'Маршрут на сегодня. По каждому адресу поверитель заполняет акт: приборы, услуга в строке прибора и фото выполненных работ.',
   absence:'Запросы на отсутствие. До согласования дни остаются рабочими по графику.'
 };
 
@@ -614,12 +688,14 @@ const SEG = (val,items,fn) => `<div class="seg">${items.map(x=>{const o=typeof x
   return `<button type="button" aria-pressed="${String(val)===String(o.v)}" onclick="${fn.replace('$v',`'${o.v}'`)}">${esc(o.l)}</button>`}).join('')}</div>`;
 
 /* ---------- состояние ---------- */
+const blankIntake = () => ({ctype:'Физлицо',name:'',phone:'',phone2:'',street:STREETS[0],house:'',
+  entrance:'',floor:'',flat:'',intercom:true,time:12,cmtOp:'',cmtVf:''});
 const S = {
-  view:'intake', user:null, role:null, pendRole:'operator', theme:'light', dd:null, ddM:null,
+  view:'intake', page:0, auth:false, user:ROLES.operator.who, role:'operator', me:ROLES.operator.id,
+  theme:'light', dd:null, ddM:null,
   city:CITIES[0], day:TODAY, staff:[], plan:[], requests:[], routes:[], absences:[], seq:1000,
-  toast:null, openRoute:null, ukCity:'', ukSeal:'', pMonth:TODAY.slice(0,7),
-  intake:{ctype:'Физлицо',name:'',phone:'',street:STREETS[0],house:'',flat:'',time:12,
-    services:['wv'],devices:[{type:'Бетар СХВ-15',grsi:'32245-11',carrier:'ХВС',serial:'',room:'Кухня',seal:true}]}
+  toast:null, openRoute:null, openStop:null, call:null, lb:null, ukCity:'', ukSeal:'', pMonth:TODAY.slice(0,7),
+  intake:blankIntake()
 };
 const staffById = id => S.staff.find(s=>s.id===id);
 const nameOf = id => staffById(id)?.name || '—';
@@ -673,7 +749,8 @@ function seed(){
         if(i<0) finishRoute(rt);
         else if(i===0){
           if(k===0) finishRoute(rt);
-          else if(k===1){ callAll(rt); rt.status='в работе'; rt.stops.forEach((s,j)=>{if(j<Math.floor(rt.stops.length*.6)) s.done=true;}); rt.duty=ops[1].id; }
+          else if(k===1){ callAll(rt); rt.status='в работе'; rt.duty=ops[1].id;
+            rt.stops.forEach((s,j)=>{ if(j<Math.floor(rt.stops.length*.6) && s.called==='подтверждена') doneStop(rt,s); }); }
           else if(k===2){ callAll(rt); rt.status='обзвонен'; rt.duty=ops[0].id; }
           else rt.stops.forEach((s,j)=>{ if(j<Math.floor(rt.stops.length*.4)) s.called='подтверждена'; });
         }
@@ -692,23 +769,56 @@ function seed(){
     if(!rt.duty) rt.duty = ops[i%ops.length].id;
   });
 }
+const CMT_OP = ['','','','Звонить только после 18:00, днём на работе','Второй перенос — уточнить актуальность',
+  'Оплата по счёту, нужна закрывающая','Юрлицо: пропуск заказывать за сутки','Клиент просит смс за час до выезда'];
+const CMT_VF = ['','','','Собака во дворе, звонить с калитки','Счётчик в нише за люком, нужен ключ',
+  'Домофон не работает — звонить на подъезд','Пожилой клиент, стучать громче','Пломба УК сорвана — снять на фото',
+  'Доступ к стояку через соседнюю квартиру'];
 function mkReq(ds,city,clients){
   const nm = rnd(clients), isU = /^(ООО|ТСЖ|ТСН)/.test(nm);
-  const svc = rr()<.7?['wv'] : rr()<.55?['wr'] : [rnd(['hv','hm','hd'])];
-  const heat = svc[0][0]==='h', nd = heat?1:rint(1,2);
+  const svc = rr()<.7?'wv' : rr()<.55?'wr' : rnd(['hv','hm','hd']);
+  const heat = svc[0]==='h';
   return {id:'R'+(++S.seq),date:ds,city,clientType:isU?'Юрлицо':'Физлицо',name:nm,
     phone:'+7 9'+rint(10,99)+' '+rint(100,999)+'-'+rint(10,99)+'-'+rint(10,99),
-    street:rnd(STREETS),house:String(rint(1,120)),flat:isU?'':String(rint(1,240)),time:rint(10,20),
-    services:svc,status:'новая',routeId:null,operator:null,
-    devices:Array.from({length:nd},(_,j)=>{const t = heat?DEV_TYPES[5]:rnd(DEV_TYPES.slice(0,5));
-      return {type:t.v,grsi:t.grsi,carrier:heat?'Тепло':(j===0?'ХВС':'ГВС'),
-        serial:rint(10,99)+'-'+rint(100000,999999),room:rnd(ROOMS),seal:rr()<.86};})};
+    phone2:rr()<.35?'+7 9'+rint(10,99)+' '+rint(100,999)+'-'+rint(10,99)+'-'+rint(10,99):'',
+    street:rnd(STREETS),house:String(rint(1,120)),entrance:String(rint(1,6)),floor:String(rint(1,16)),
+    flat:isU?'':String(rint(1,240)),intercom:rr()<.78,time:rint(10,20),
+    cmtOp:rnd(CMT_OP),cmtVf:rnd(CMT_VF),
+    services:[],devices:[],status:'новая',routeId:null,operator:null,
+    expect:{svc,heat,nd:heat?1:rint(1,2)}};
+}
+/* Фото выполненных работ в демо-данных — заглушка вместо снимка с телефона. */
+function stubPhoto(t1,t2){
+  return 'data:image/svg+xml;utf8,'+encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="480" height="360"><rect width="480" height="360" fill="#1d1d1d"/>`+
+    `<g stroke="#6b6b6b" fill="none" stroke-width="3"><circle cx="240" cy="168" r="86"/><circle cx="240" cy="168" r="62"/>`+
+    `<path d="M40 140h114M40 200h108M326 140h114M332 200h108"/></g>`+
+    `<text x="240" y="176" font-family="monospace" font-size="30" fill="#c9c9c9" text-anchor="middle">${t1}</text>`+
+    `<text x="24" y="336" font-family="monospace" font-size="20" fill="#8d8d8d">${t2}</text></svg>`);
+}
+/* Акт материализуется в момент выполнения: приборы, услуга в строке прибора, фото. */
+function actFor(r,ds){
+  const {svc,heat,nd} = r.expect || {svc:'wv',heat:false,nd:1};
+  r.devices = Array.from({length:nd},(_,j)=>{
+    const t = heat?DEV_TYPES[5]:rnd(DEV_TYPES.slice(0,5));
+    const sv = (j===1 && !heat && rr()<.3) ? 'wr' : svc;
+    const serial = rint(10,99)+'-'+rint(100000,999999);
+    return {svc:sv,type:t.v,grsi:t.grsi,carrier:heat?'Тепло':(j===0?'ХВС':'ГВС'),
+      serial,room:rnd(ROOMS),seal:rr()<.86,
+      photos:Array.from({length:rint(1,3)},(_,k)=>({src:stubPhoto(serial,ru(ds)+' · кадр '+(k+1)),
+        name:'IMG_'+rint(1000,9999)+'.jpg',t:pad(rint(9,20))+':'+pad(rint(10,59))}))};
+  });
+  r.services = [...new Set(r.devices.map(d=>d.svc))];
 }
 function callAll(rt){ rt.stops.forEach(s=>{ if(!s.called) s.called = rr()<.9?'подтверждена':(rr()<.6?'перенос':'отказ'); }); }
+function doneStop(rt,s){
+  const r = S.requests.find(x=>x.id===s.req); if(!r) return;
+  actFor(r,rt.date); s.done=true; r.status='выполнена'; r.verifier=rt.verifier;
+}
 function finishRoute(rt){
   callAll(rt); rt.status='выполнен';
   rt.stops.forEach(s=>{ const r=S.requests.find(x=>x.id===s.req); if(!r) return;
-    if(s.called==='подтверждена'){ s.done=true; r.status='выполнена'; r.verifier=rt.verifier; }
+    if(s.called==='подтверждена') doneStop(rt,s);
     else r.status = s.called==='отказ'?'отменена':'перенос'; });
 }
 
@@ -736,9 +846,18 @@ function dayTotal(ds){
   const pct = p?b/p:0;
   return {p,b,pct,s:p===0?'off':pct>1.1?'over':pct>=1?'full':pct>=.5?'fill':'free'};
 }
-const rateV = r => r.services.reduce((a,id)=>a+SVC[id].rV,0);
-const rateO = r => r.services.reduce((a,id)=>a+SVC[id].rO,0);
-const priceOf = r => r.services.reduce((a,id)=>a+(r.clientType==='Юрлицо'?SVC[id].pU:SVC[id].pF),0);
+/* Услуга теперь живёт в строке прибора: две поверки на адресе — две услуги в расчёте. */
+const worksOf = r => (r.devices||[]).map(d=>d.svc).filter(id=>SVC[id]);
+const rateV = r => worksOf(r).reduce((a,id)=>a+SVC[id].rV,0);
+const rateO = r => worksOf(r).reduce((a,id)=>a+SVC[id].rO,0);
+const priceOf = r => worksOf(r).reduce((a,id)=>a+(r.clientType==='Юрлицо'?SVC[id].pU:SVC[id].pF),0);
+function svcNames(r){
+  const w = worksOf(r); if(!w.length) return '<span class="note">по факту</span>';
+  const c = {}; w.forEach(id=>c[id]=(c[id]||0)+1);
+  return Object.entries(c).map(([id,n])=>esc(SVC[id].name)+(n>1?` <b class="mono">×${n}</b>`:'')).join(', ');
+}
+const photoCount = r => (r.devices||[]).reduce((a,d)=>a+(d.photos?.length||0),0);
+const addrOf = r => `${r.street}, ${r.house}${r.entrance?', под. '+r.entrance:''}${r.flat?', кв. '+r.flat:''}`;
 function toast(m){ S.toast=m; render(); clearTimeout(S._t); S._t=setTimeout(()=>{S.toast=null;render();},3000); }
 
 /* ============ ЭКРАНЫ ============ */
@@ -748,43 +867,51 @@ function viewLogin(){
     <div class="brand"><span class="logo">${iconAt(26)}</span><h1>CRM «Учёткин»</h1></div>
     <div class="f"><label>Логин</label><input class="fld" name="login" value="operator" required></div>
     <div class="f"><label>Пароль</label><input class="fld" name="pw" type="password" value="1234" required></div>
-    <div class="f"><label>Войти как</label><div class="roles">${Object.entries(ROLES).map(([k,v])=>
-      `<button type="button" class="role" aria-pressed="${S.pendRole===k}" onclick="S.pendRole='${k}';render()">${v.label}<small>${v.who}</small></button>`).join('')}</div></div>
     <button class="b wide" style="margin-top:14px">Войти</button>
+    <div class="hint"><div class="lbl" style="margin-bottom:5px">Режим разработки</div>
+      <p class="note">Роль не выбирается. В меню открыты все ${PAGES.length} страниц подряд, сгруппированные по ролям:
+      ${GROUPS.map(g=>ROLES[g.role].label.toLowerCase()).join(' → ')}. Стрелки в шапке или Alt + ←/→ листают их по порядку.</p></div>
   </form></div>`;
 }
 function doLogin(e){
-  e.preventDefault();
-  S.role = S.pendRole; S.me = ROLES[S.role].id; S.user = ROLES[S.role].who;
-  S.view = NAV[S.role][0]; render();
+  e.preventDefault(); S.auth = true; goPage(0);
 }
 function toggleTheme(){ S.theme = S.theme==='light'?'dark':'light';
   document.documentElement.setAttribute('data-theme',S.theme); render(); }
 
-function badgeFor(v){
+function badgeFor(v,role){
   if(v==='duty') return S.routes.filter(r=>r.date===TODAY&&!r.duty).length;
   if(v==='routes') return S.routes.filter(r=>r.date===TODAY&&r.status==='черновик').length;
-  if(v==='absence') return S.role==='supervisor'?S.absences.filter(a=>a.status==='на согласовании').length:0;
+  if(v==='absence') return role==='supervisor'?S.absences.filter(a=>a.status==='на согласовании').length:0;
+  if(v==='myroute') return S.routes.filter(r=>r.verifier===ROLES.verifier.id&&r.date===TODAY&&r.status!=='выполнен').length;
   return 0;
 }
 function shell(side,main){
   const ini = S.user.replace(/[^А-ЯA-Z]/g,'').slice(0,2);
   const crew = crewOn(S.day).length, ops = opsOn(S.day).length, need = Math.max(1,Math.ceil(crew/10));
   const now = new Date();
+  let i = -1;
   return `<div class="stage"><div class="app">
     <nav class="rail">
       <div class="logo" title="CRM «Учёткин»">${iconAt(22)}</div>
-      ${NAV[S.role].map(v=>{const b=badgeFor(v);
-        return `<button class="nb" title="${TITLES[v]}" aria-current="${S.view===v}" onclick="go('${v}')">${svg(I[v])}${b?`<span class="bdg">${b}</span>`:''}</button>`}).join('')}
+      <div class="nav">${GROUPS.map(g=>`<div class="grp" data-g="${g.short}">${g.views.map(v=>{
+        i++; const b=badgeFor(v,g.role), n=i;
+        return `<button class="nb" title="${TITLES[v]} · ${ROLES[g.role].label}" aria-current="${S.page===n}" onclick="goPage(${n})">
+          ${svg(I[v])}${b?`<span class="bdg">${b}</span>`:''}</button>`}).join('')}</div>`).join('')}</div>
       <div class="foot">
         <button class="nb" title="Переключить тему" onclick="toggleTheme()">${svg(S.theme==='light'?I.moon:I.sun,18)}</button>
-        <button class="nb" title="Выйти" onclick="S.user=null;render()">${svg(I.out,18)}</button>
+        <button class="nb" title="Выйти" onclick="S.auth=false;endCall(1);render()">${svg(I.out,18)}</button>
         <div class="ava" title="${esc(S.user)} · ${ROLES[S.role].label}">${ini}<i></i></div>
       </div>
     </nav>
     <div class="col">
       <header class="hd">
-        <div class="ttl"><span class="lbl">Учёткин /</span><b>${TITLES[S.view]}</b></div>
+        <div class="ttl"><span class="lbl">Учёткин /</span><span class="tg t-mut">${ROLES[S.role].label}</span><b>${TITLES[S.view]}</b></div>
+        <div class="step">
+          <button class="ib xs" title="Предыдущая страница · Alt+←" onclick="step(-1)">${svg(I.left,13)}</button>
+          <span class="mono">${pad(S.page+1)} / ${PAGES.length}</span>
+          <button class="ib xs" title="Следующая страница · Alt+→" onclick="step(1)">${svg(I.right,13)}</button>
+        </div>
         <div style="flex:1"></div>
         <span class="chip"><span class="dot"></span>${crew} ПОВЕРИТЕЛЕЙ</span>
         <span class="chip" ${ops<need?'style="color:var(--warning);border-color:var(--warning)"':''}>ОПЕРАТОРЫ ${ops}/${need}</span>
@@ -793,7 +920,7 @@ function shell(side,main){
       </header>
       <div class="body">${side?`<aside class="side">${side}</aside>`:''}<div class="main">${main}</div></div>
     </div>
-  </div></div>${S.toast?`<div class="toast">${esc(S.toast)}</div>`:''}`;
+  </div></div>${callWindow()}${lightbox()}${S.toast?`<div class="toast">${esc(S.toast)}</div>`:''}`;
 }
 const cap = () => `<p class="cap">${CAPS[S.view]||''}</p>`;
 
@@ -828,7 +955,6 @@ function viewIntake(){
   const st = dayState(S.day,S.city), closed = st.pct>1.1 || st.p===0;
   const left = Math.max(0,Math.ceil(st.p*1.1)-st.b);
   const K = S.intake;
-  const price = K.services.reduce((a,id)=>a+(K.ctype==='Юрлицо'?SVC[id].pU:SVC[id].pF),0);
   const mine = S.requests.filter(r=>r.operator===S.me).slice(-6).reverse();
   return shell(citySide(), `${cap()}
   <div class="c"><h3>Ёмкость · ${S.city}</h3>
@@ -838,60 +964,126 @@ function viewIntake(){
     <p class="cap">Окно прибытия формируется автоматически: час до и час после назначенного времени.</p>
     <div class="row" style="margin-bottom:14px">
       <div class="f" style="flex:none"><label>Тип клиента</label>${SEG(K.ctype,['Физлицо','Юрлицо'],"setIn('ctype',$v)")}</div>
-      <div class="f" style="flex:1;min-width:200px"><label>${K.ctype==='Юрлицо'?'Организация':'ФИО клиента'}</label>
+      <div class="f" style="flex:1;min-width:150px"><label>${K.ctype==='Юрлицо'?'Организация':'ФИО клиента'}</label>
         <input class="fld" value="${esc(K.name)}" oninput="S.intake.name=this.value" placeholder="${K.ctype==='Юрлицо'?'ООО «Стройсервис»':'Смирнова Т. А.'}"></div>
-      <div class="f" style="width:190px"><label>Телефон</label>
-        <input class="fld mono" value="${esc(K.phone)}" oninput="S.intake.phone=this.value" placeholder="+7 900 000-00-00"></div>
+      <div class="f" style="width:225px"><label>Телефон</label>
+        ${PHONE('inPhone',K.phone,'S.intake.phone=this.value','основной')}</div>
+      <div class="f" style="width:225px"><label>Доп. телефон</label>
+        ${PHONE('inPhone2',K.phone2,'S.intake.phone2=this.value','дополнительный')}</div>
     </div>
     <div class="row" style="margin-bottom:14px">
-      <div class="f" style="width:200px"><label>Улица</label>${SEL('inStreet',K.street,STREETS,v=>S.intake.street=v)}</div>
-      <div class="f" style="width:88px"><label>Дом</label><input class="fld" value="${esc(K.house)}" oninput="S.intake.house=this.value" placeholder="12"></div>
-      <div class="f" style="width:88px"><label>Квартира</label><input class="fld" value="${esc(K.flat)}" oninput="S.intake.flat=this.value" placeholder="45"></div>
-      <div class="f" style="width:130px"><label>Дата выезда</label>${DATE('inDate',S.day,v=>{S.day=v;})}</div>
-      <div class="f" style="flex:1;min-width:210px"><label>Время прибытия</label>
+      <div class="f" style="width:170px"><label>Улица</label>${SEL('inStreet',K.street,STREETS,v=>S.intake.street=v)}</div>
+      <div class="f" style="width:72px"><label>Дом</label><input class="fld" value="${esc(K.house)}" oninput="S.intake.house=this.value" placeholder="12"></div>
+      <div class="f" style="width:74px"><label>Подъезд</label><input class="fld mono" value="${esc(K.entrance)}" oninput="S.intake.entrance=this.value" placeholder="3"></div>
+      <div class="f" style="width:66px"><label>Этаж</label><input class="fld mono" value="${esc(K.floor)}" oninput="S.intake.floor=this.value" placeholder="5"></div>
+      <div class="f" style="width:76px"><label>Квартира</label><input class="fld mono" value="${esc(K.flat)}" oninput="S.intake.flat=this.value" placeholder="45"></div>
+      <div class="f" style="width:152px"><label>Домофон</label>
+        <div class="chkbox">${CHK(K.intercom,'домофон работает',"S.intake.intercom=!S.intake.intercom;render()")}</div></div>
+      <div class="f" style="width:120px"><label>Дата выезда</label>${DATE('inDate',S.day,v=>{S.day=v;})}</div>
+      <div class="f" style="flex:1;min-width:180px"><label>Время прибытия</label>
         ${SEL('inTime',K.time,Array.from({length:11},(_,i)=>({v:10+i,l:pad(10+i)+':00',hint:'окно '+pad(9+i)+':00–'+pad(11+i)+':00'})),v=>S.intake.time=+v)}</div>
     </div>
-    <div class="f"><label>Услуги</label><div class="row">${SERVICES.map(s=>
-      `<button type="button" class="opt" aria-pressed="${K.services.includes(s.id)}" onclick="tgSvc('${s.id}')">${svg(I.ok,13)}${s.name}</button>`).join('')}</div></div>
-    <div class="f"><label>Приборы</label>${K.devices.map((d,i)=>`<div class="dev">
-      ${SEL('dvT'+i,d.type,DEV_TYPES.map(t=>({v:t.v,l:t.v,hint:t.grsi})),v=>{S.intake.devices[i].type=v;S.intake.devices[i].grsi=DEV_TYPES.find(t=>t.v===v).grsi;})}
-      ${SEL('dvC'+i,d.carrier,['ХВС','ГВС','Тепло'],v=>S.intake.devices[i].carrier=v)}
-      <input class="fld" value="${esc(d.serial)}" oninput="S.intake.devices[${i}].serial=this.value" placeholder="Заводской №">
-      ${SEL('dvR'+i,d.room,ROOMS,v=>S.intake.devices[i].room=v)}
-      ${CHK(d.seal,'пломба УК',`tgSeal(${i})`)}
-      <button type="button" class="ib no" onclick="rmDev(${i})" ${K.devices.length<2?'disabled':''}>${svg(I.no,13)}</button>
-    </div>`).join('')}
-      <button type="button" class="g sm" style="margin-top:4px" onclick="addDev()">${svg(I.plus,12)}Добавить прибор</button></div>
+    <div class="g2">
+      <div class="f" style="margin-bottom:0"><label>Комментарий для операторов</label>
+        <textarea class="fld" oninput="S.intake.cmtOp=this.value" placeholder="Что важно знать при прозвонке: когда звонить, кто отвечает, как оплачивают">${esc(K.cmtOp)}</textarea></div>
+      <div class="f" style="margin-bottom:0"><label>Комментарий для поверителей</label>
+        <textarea class="fld" oninput="S.intake.cmtVf=this.value" placeholder="Что важно знать на адресе: доступ к стояку, собака, состояние пломбы">${esc(K.cmtVf)}</textarea></div>
+    </div>
     <div class="row" style="margin-top:16px;justify-content:space-between">
-      <span class="note">По прайсу ${K.ctype.toLowerCase()} <b class="mono" style="color:var(--ink)">${money(price)}</b> · оператору начислится <b class="mono" style="color:var(--ink)">${money(K.services.reduce((a,id)=>a+SVC[id].rO,0))}</b></span>
+      <span class="note">Услуги и приборы в заявке не указываются: их вносит поверитель на месте и прикладывает фото работ.
+        Сумма и начисления считаются по факту закрытия акта.</span>
       <button class="b" onclick="createReq()" ${closed?'disabled':''}>${closed?'День закрыт':'Записать заявку'}</button></div>
   </div>
   <div class="c"><h3>Последние заявки от вас</h3>
-    ${mine.length?`<table><thead><tr><th>Заявка</th><th class="num">Дата</th><th>Адрес</th><th>Клиент</th><th>Услуги</th><th class="num">Сумма</th><th>Статус</th></tr></thead><tbody>
+    ${mine.length?`<table><thead><tr><th>Заявка</th><th class="num">Дата</th><th>Адрес</th><th>Клиент</th><th>Работы по акту</th><th class="num">Сумма</th><th>Статус</th></tr></thead><tbody>
       ${mine.map(r=>`<tr><td class="mono">${r.id}</td><td class="num">${ru(r.date)}</td>
-        <td><b>${r.city}, ${r.street}, ${r.house}</b></td><td>${esc(r.name)}</td>
-        <td>${r.services.map(s=>SVC[s].name).join(', ')}</td><td class="num">${money(priceOf(r))}</td>
+        <td><b>${r.city}, ${addrOf(r)}</b></td><td>${esc(r.name)}</td>
+        <td>${svcNames(r)}</td><td class="num">${worksOf(r).length?money(priceOf(r)):'—'}</td>
         <td>${reqTag(r.status)}</td></tr>`).join('')}</tbody></table>`
       :`<div class="empty">Заявок пока нет.</div>`}</div>`);
 }
 const reqTag = s => `<span class="tg ${s==='выполнена'?'t-ok':s==='отменена'?'t-err':s==='перенос'?'t-warn':s==='в маршруте'?'t-cold':'t-mut'}">${s}</span>`;
 function setIn(k,v){ S.intake[k]=v; render(); }
-function tgSvc(id){ const a=S.intake.services; S.intake.services = a.includes(id)?a.filter(x=>x!==id):[...a,id]; render(); }
-function tgSeal(i){ S.intake.devices[i].seal = !S.intake.devices[i].seal; render(); }
-function addDev(){ S.intake.devices.push({type:'Бетар СХВ-15',grsi:'32245-11',carrier:'ГВС',serial:'',room:'Санузел',seal:true}); render(); }
-function rmDev(i){ S.intake.devices.splice(i,1); render(); }
 function createReq(){
   const K = S.intake;
   if(!K.name.trim()) return toast('Укажите ФИО клиента или название организации.');
   if(!K.phone.trim()) return toast('Укажите телефон — по нему пойдёт прозвонка маршрута.');
   if(!K.house.trim()) return toast('Укажите номер дома.');
-  if(!K.services.length) return toast('Выберите хотя бы одну услугу.');
-  S.requests.push({id:'R'+(++S.seq),date:S.day,city:S.city,clientType:K.ctype,name:K.name,phone:K.phone,
-    street:K.street,house:K.house,flat:K.flat,time:K.time,services:[...K.services],
-    devices:K.devices.map(d=>({...d})),status:'новая',routeId:null,operator:S.me});
-  S.intake = {ctype:'Физлицо',name:'',phone:'',street:STREETS[0],house:'',flat:'',time:12,
-    services:['wv'],devices:[{type:'Бетар СХВ-15',grsi:'32245-11',carrier:'ХВС',serial:'',room:'Кухня',seal:true}]};
-  toast('Заявка записана на '+ru(S.day)+', окно '+pad(K.time-1)+':00–'+pad(K.time+1)+':00');
+  S.requests.push({id:'R'+(++S.seq),date:S.day,city:S.city,clientType:K.ctype,name:K.name,
+    phone:K.phone,phone2:K.phone2,street:K.street,house:K.house,entrance:K.entrance,floor:K.floor,
+    flat:K.flat,intercom:K.intercom,time:K.time,cmtOp:K.cmtOp,cmtVf:K.cmtVf,
+    services:[],devices:[],status:'новая',routeId:null,operator:S.me});
+  S.intake = blankIntake();
+  toast('Заявка записана на '+ru(S.day)+', окно '+pad(K.time-1)+':00–'+pad(K.time+1)+':00. Состав работ заполнит поверитель.');
+}
+
+/* ---------- телефон и мини-окно вызова ---------- */
+function PHONE(id,val,oninput,kind){
+  const on = String(val||'').trim().length>4;
+  return `<div class="phone">
+    <input class="mono" id="${id}" value="${esc(val||'')}" oninput="${oninput}" placeholder="+7 900 000-00-00">
+    <button type="button" class="call" ${on?'':'disabled'} title="Позвонить клиенту"
+      onclick="startCall(document.getElementById('${id}').value,'${kind}')">${svg(I.phone,12)}Вызов</button></div>`;
+}
+function startCall(num,kind,who){
+  num = String(num||'').trim(); if(num.length<5) return toast('Телефон не заполнен — набирать нечего.');
+  S.call = {num,kind:kind||'основной',who:who||(S.intake.name.trim()||'Клиент'),st:'набор',t0:Date.now()};
+  clearInterval(S._call); S._call = setInterval(tickCall,500); render();
+}
+function tickCall(){
+  if(!S.call) return clearInterval(S._call);
+  const sec = Math.floor((Date.now()-S.call.t0)/1000);
+  if(S.call.st==='набор' && sec>=2){ S.call.st='разговор'; S.call.t0=Date.now();
+    const st=document.getElementById('callSt'), dt=document.getElementById('callDot');
+    if(st) st.textContent='разговор'; if(dt) dt.style.background='var(--success)'; return; }
+  const el = document.getElementById('callSec');
+  if(el) el.textContent = pad(Math.floor(sec/60))+':'+pad(sec%60);
+}
+function endCall(silent){
+  clearInterval(S._call);
+  const c = S.call; S.call = null;
+  if(silent) return;
+  if(!c) return render();
+  const sec = Math.floor((Date.now()-c.t0)/1000);
+  toast(c.st==='разговор'
+    ? `Звонок завершён · ${pad(Math.floor(sec/60))}:${pad(sec%60)}. В боевой версии длительность и запись прилетают из облачной АТС в карточку заявки.`
+    : 'Вызов сброшен до соединения.');
+}
+function callWindow(){
+  const c = S.call; if(!c) return '';
+  return `<div class="callw">
+    <div class="top"><span class="dot" id="callDot" ${c.st==='разговор'?'style="background:var(--success)"':''}></span>
+      <span class="st" id="callSt">${c.st}</span><span class="sec mono" id="callSec">00:00</span></div>
+    <b>${esc(c.who)}</b>
+    <div class="num mono">${esc(c.num)}</div>
+    <div class="who">${c.kind} номер · линия ${esc(staffById(S.me)?.ext||'—')} · ${esc(S.user)}</div>
+    <div class="acts">
+      <button class="g" onclick="toast('Перевод на другого оператора — в интеграции с облачной АТС.')">Перевести</button>
+      <button class="g end" onclick="endCall()">${svg(I.hang,13)}Завершить</button></div>
+  </div>`;
+}
+
+/* ---------- просмотр фото ---------- */
+function lbOpen(rid,i,k){ S.lb={rid,i,k}; render(); }
+function lbMove(d){
+  if(!S.lb) return;
+  const ps = lbPhotos(); if(!ps.length) return;
+  S.lb.k = (S.lb.k+d+ps.length)%ps.length; render();
+}
+function lbPhotos(){
+  const r = S.lb && S.requests.find(x=>x.id===S.lb.rid);
+  return r?.devices?.[S.lb.i]?.photos || [];
+}
+function lightbox(){
+  if(!S.lb) return '';
+  const ps = lbPhotos(), p = ps[S.lb.k]; if(!p){ S.lb=null; return ''; }
+  return `<div class="lb" onclick="if(event.target===this){S.lb=null;render()}">
+    <button class="ib cls" onclick="S.lb=null;render()">${svg(I.no,15)}</button>
+    <div><img src="${p.src}" alt="">
+      <div class="bar"><button class="ib" onclick="lbMove(-1)">${svg(I.left,14)}</button>
+        <span class="mono">${S.lb.k+1} / ${ps.length}</span>
+        <span style="color:#8D8D8D">${esc(p.name)} · ${esc(p.t)}</span>
+        <button class="ib" onclick="lbMove(1)">${svg(I.right,14)}</button></div></div></div>`;
 }
 
 /* ---------- ПЛАН НАБОРА · календарь месяца ---------- */
@@ -1053,12 +1245,14 @@ function viewLogistics(){
   `${cap()}
   <div class="c"><h3>Пул заявок · ${ru(S.day)}</h3>
     <p class="cap">Сортировка по улице и номеру дома — чтобы глазами ловить соседние адреса.</p>
-    ${pool.length?`<table><thead><tr><th>№</th><th>Улица</th><th class="num">Дом</th><th>Кв.</th><th>Клиент</th><th>Тип</th><th>Услуги</th><th class="num">Приборы</th><th class="num">Окно</th></tr></thead><tbody>
+    ${pool.length?`<table><thead><tr><th>№</th><th>Улица</th><th class="num">Дом</th><th class="num">Под.</th><th class="num">Эт.</th><th>Кв.</th><th>Клиент</th><th>Тип</th><th>Домофон</th><th class="num">Окно</th><th>Комментарий оператору</th></tr></thead><tbody>
       ${pool.slice(0,50).map((r,i)=>`<tr><td class="mono">${i+1}</td><td><b>${r.street}</b></td><td class="num">${r.house}</td>
+        <td class="num mono">${r.entrance||'—'}</td><td class="num mono">${r.floor||'—'}</td>
         <td class="mono">${r.flat||'—'}</td><td>${esc(r.name)}</td>
         <td><span class="tg ${r.clientType==='Юрлицо'?'t-ink':'t-mut'}">${r.clientType==='Юрлицо'?'юр':'физ'}</span></td>
-        <td>${r.services.map(s=>SVC[s].name).join(', ')}</td><td class="num">${r.devices.length}</td>
-        <td class="num">${pad(r.time-1)}:00–${pad(r.time+1)}:00</td></tr>`).join('')}</tbody></table>
+        <td>${r.intercom?'<span class="tg t-ok">работает</span>':'<span class="tg t-warn">не работает</span>'}</td>
+        <td class="num">${pad(r.time-1)}:00–${pad(r.time+1)}:00</td>
+        <td>${r.cmtOp?esc(r.cmtOp):'<span class="note">—</span>'}</td></tr>`).join('')}</tbody></table>
       ${pool.length>50?`<p class="note" style="margin-top:10px">Показаны первые 50 из ${pool.length}.</p>`:''}`
       :`<div class="empty">Свободных заявок нет — все разложены по маршрутам.</div>`}</div>
   ${routes.length?`<div class="c"><h3>Маршруты дня</h3><table>
@@ -1099,6 +1293,7 @@ function viewRoutes(){
   return shell(side, open?`${cap()}${routeCard(open)}`:`${cap()}<div class="c"><div class="empty">На эту дату маршрутов нет.</div></div>`);
 }
 function routeCard(rt){
+  const vf = S.role==='verifier';
   const called = rt.stops.filter(s=>s.called).length, done = rt.stops.filter(s=>s.done).length;
   const byHour = {}; rt.stops.forEach(s=>{const r=S.requests.find(x=>x.id===s.req); if(r) byHour[r.time]=s.done?'done':'busy';});
   return `<div class="g2">
@@ -1109,16 +1304,21 @@ function routeCard(rt){
       ${stTag(rt.status)}</div>
     <div class="tl">${Array.from({length:12},(_,i)=>9+i).map(h=>`<div class="${byHour[h]||''}">${h}</div>`).join('')}</div>
     <div class="stops">${rt.stops.map((s,i)=>{const r=S.requests.find(x=>x.id===s.req); if(!r) return '';
-      return `<div class="stop ${s.done?'fin':''}"><span class="n">${pad(i+1)}</span>
-        <div><b style="color:var(--ink)">${r.street}, ${r.house}${r.flat?', кв. '+r.flat:''}</b>
-          <small>${pad(r.time-1)}:00–${pad(r.time+1)}:00 · ${esc(r.name)} · ${r.clientType==='Юрлицо'?'юр':'физ'} · ${r.devices.length} прибор(а)</small></div>
+      const note = vf?r.cmtVf:r.cmtOp, ph = photoCount(r);
+      return `<div class="stop ${s.done?'fin':''} ${vf&&S.openStop===r.id?'sel':''}"><span class="n">${pad(i+1)}</span>
+        <div style="min-width:0"><b style="color:var(--ink)">${r.street}, ${r.house}${r.flat?', кв. '+r.flat:''}</b>
+          <small>${pad(r.time-1)}:00–${pad(r.time+1)}:00 · ${esc(r.name)} · ${r.clientType==='Юрлицо'?'юр':'физ'}
+            · под. ${r.entrance||'—'} · эт. ${r.floor||'—'} · ${r.intercom?'домофон работает':'<span style="color:var(--warning)">домофон не работает</span>'}</small>
+          <small>${r.devices.length?`${r.devices.length} приб. · ${ph} фото`:'акт не заполнен'}${note?` · <span style="color:var(--ink2)">${esc(note)}</span>`:''}</small></div>
         <div style="display:flex;gap:4px;align-items:center">
           ${s.called?`<span class="tg ${s.called==='подтверждена'?'t-ok':s.called==='перенос'?'t-warn':'t-err'}">${s.called}</span>`
+            :vf?'<span class="tg t-mut">без прозвонки</span>'
             :`<button class="ib sm ok" title="Подтверждена" onclick="callStop('${rt.id}',${i},'подтверждена')">${svg(I.ok,13)}</button>
               <button class="ib sm wr" title="Перенос" onclick="callStop('${rt.id}',${i},'перенос')">${svg(I.fwd,13)}</button>
               <button class="ib sm no" title="Отказ" onclick="callStop('${rt.id}',${i},'отказ')">${svg(I.no,13)}</button>`}
-          <button class="ib sm" onclick="move('${rt.id}',${i},-1)" ${i?'':'disabled'}>${svg(I.up,12)}</button>
-          <button class="ib sm" onclick="move('${rt.id}',${i},1)" ${i<rt.stops.length-1?'':'disabled'}>${svg(I.down,12)}</button>
+          ${vf?`<button class="g sm" onclick="S.openStop='${r.id}';render()">${svg(I.act,12)}${s.done?'Акт':'Работы'}</button>`
+            :`<button class="ib sm" title="Выше" onclick="move('${rt.id}',${i},-1)" ${i?'':'disabled'}>${svg(I.up,12)}</button>
+              <button class="ib sm" title="Ниже" onclick="move('${rt.id}',${i},1)" ${i<rt.stops.length-1?'':'disabled'}>${svg(I.down,12)}</button>`}
         </div></div>`}).join('')}</div>
     <div class="row" style="margin-top:14px;justify-content:space-between">
       <span class="note">Прозвонено ${called} из ${rt.stops.length}${done?` · выполнено ${done}`:''}</span>
@@ -1182,17 +1382,18 @@ function viewDuty(){
 
 /* ---------- уведомления УК ---------- */
 function viewUK(){
-  let rows = S.requests.filter(r=>r.status==='выполнена').flatMap(r=>r.devices.map(d=>({r,d})));
+  let rows = S.requests.filter(r=>r.status==='выполнена').flatMap(r=>r.devices.map((d,i)=>({r,d,i})));
   if(S.ukCity) rows = rows.filter(x=>x.r.city===S.ukCity);
   if(S.ukSeal==='нет') rows = rows.filter(x=>!x.d.seal);
   if(S.ukSeal==='есть') rows = rows.filter(x=>x.d.seal);
   const noSeal = rows.filter(x=>!x.d.seal).length;
+  const noPh = rows.filter(x=>!x.d.photos?.length).length;
   return shell(null,`${cap()}
   <div class="kpi">
     <div><div class="v">${rows.length}</div><div class="k">позиций в реестре</div></div>
     <div><div class="v" ${noSeal?'style="color:var(--error)"':''}>${noSeal}</div><div class="k">без пломбы УК</div></div>
     <div><div class="v">${new Set(rows.map(x=>x.r.city+x.r.street+x.r.house)).size}</div><div class="k">адресов</div></div>
-    <div><div class="v">${rows.filter(x=>x.d.carrier==='Тепло').length}</div><div class="k">теплосчётчиков</div></div></div>
+    <div><div class="v" ${noPh?'style="color:var(--warning)"':''}>${noPh}</div><div class="k">без фото работ</div></div></div>
   <div class="c"><h3>Реестр для управляющих компаний</h3>
     <p class="cap">Пломба УК обязательна: без отметки позиция не попадает в отчёт и подсвечивается красным.</p>
     <div class="row" style="margin-bottom:14px">
@@ -1200,13 +1401,15 @@ function viewUK(){
       <div class="f" style="width:170px"><label>Пломба УК</label>${SEL('ukSeal',S.ukSeal,[{v:'',l:'Любая'},{v:'есть',l:'Есть'},{v:'нет',l:'Отсутствует'}],v=>S.ukSeal=v)}</div>
       <button class="b" onclick="toast('Сформирован сводный отчёт за месяц: ${rows.length} позиций. В боевой версии — файл Excel.')">Сводный отчёт за месяц</button>
       <button class="g" onclick="toast('Разовое уведомление отправлено в УК по выбранному адресу.')">Уведомить по клиенту</button></div>
-    ${rows.length?`<table><thead><tr><th>Адрес</th><th>Заводской №</th><th>Тип устройства</th><th>ГРСИ</th><th>Носитель</th>
-      <th>Помещение</th><th>Пломба</th><th class="num">Поверка</th><th class="num">Следующая</th><th>Сертификат</th></tr></thead><tbody>
-      ${rows.slice(0,45).map(({r,d})=>{const nx=new Date(r.date+'T00:00:00');nx.setFullYear(nx.getFullYear()+(d.carrier==='Тепло'?4:6));
-        return `<tr><td><b>${r.city}, ${r.street}, ${r.house}${r.flat?', кв. '+r.flat:''}</b></td>
-        <td class="mono">${d.serial}</td><td>${d.type}</td><td class="mono">${d.grsi||'—'}</td>
+    ${rows.length?`<table><thead><tr><th>Адрес</th><th>Услуга</th><th>Заводской №</th><th>Тип устройства</th><th>Носитель</th>
+      <th>Помещение</th><th>Пломба</th><th>Фото работ</th><th class="num">Поверка</th><th class="num">Следующая</th><th>Сертификат</th></tr></thead><tbody>
+      ${rows.slice(0,45).map(({r,d,i})=>{const nx=new Date(r.date+'T00:00:00');nx.setFullYear(nx.getFullYear()+(d.carrier==='Тепло'?4:6));
+        return `<tr><td><b>${r.city}, ${addrOf(r)}</b></td>
+        <td>${SVC[d.svc]?esc(SVC[d.svc].name):'<span class="note">—</span>'}</td>
+        <td class="mono">${d.serial}</td><td>${d.type} <span class="note mono">${d.grsi||''}</span></td>
         <td><span class="tg ${d.carrier==='ГВС'?'t-err':d.carrier==='ХВС'?'t-cold':'t-warn'}">${d.carrier}</span></td>
         <td>${d.room}</td><td>${d.seal?'<span class="tg t-ok">есть</span>':'<span class="tg t-err">нет</span>'}</td>
+        <td>${d.photos?.length?`<a href="#" onclick="event.preventDefault();lbOpen('${r.id}',${i},0)">${d.photos.length} фото</a>`:'<span class="tg t-err">нет</span>'}</td>
         <td class="num">${ru(r.date)}</td><td class="num">${ru(iso(nx))}</td>
         <td>${d.seal?`<a href="#" onclick="event.preventDefault();toast('Ссылка на сертификат приходит из «Аршина» после приёмки пакета.')">открыть</a>`:'<span class="note">—</span>'}</td></tr>`}).join('')}
       </tbody></table>${rows.length>45?`<p class="note" style="margin-top:10px">Показаны первые 45 из ${rows.length}.</p>`:''}`
@@ -1240,8 +1443,8 @@ function viewMe(){
     <p class="cap">${isV?'Ставка поверителя за выполненную услугу.':'Ставка оператора за принятую заявку, дошедшую до выполнения.'}</p>
     ${done.length?`<table><thead><tr><th>Заявка</th><th class="num">Дата</th><th>Адрес</th><th>Клиент</th><th>Услуги</th><th class="num">Сумма работ</th><th class="num">Начислено</th></tr></thead><tbody>
       ${done.slice(0,35).map(r=>`<tr><td class="mono">${r.id}</td><td class="num">${ru(r.date)}</td>
-        <td><b>${r.city}, ${r.street}, ${r.house}</b></td><td>${esc(r.name)}</td>
-        <td>${r.services.map(s=>SVC[s].name).join(', ')}</td><td class="num">${money(priceOf(r))}</td>
+        <td><b>${r.city}, ${addrOf(r)}</b></td><td>${esc(r.name)}</td>
+        <td>${svcNames(r)}</td><td class="num">${money(priceOf(r))}</td>
         <td class="num"><b>${money(val(r))}</b></td></tr>`).join('')}</tbody></table>
       ${done.length>35?`<p class="note" style="margin-top:10px">Показаны первые 35 из ${done.length}.</p>`:''}`
       :`<div class="empty">Пока нечего показать. Начисление появляется после закрытия маршрута.</div>`}</div>`);
@@ -1293,25 +1496,125 @@ function viewMyRoute(){
   const mine = S.routes.filter(r=>r.verifier===S.me).sort((a,b)=>b.date.localeCompare(a.date));
   const rt = S.routes.find(r=>r.id===S.openRoute) || mine.find(r=>r.date===TODAY) || mine[0];
   const side = `<div class="lbl" style="padding:6px 10px 8px">Мои маршруты</div>
-    ${mine.length?mine.slice(0,14).map(r=>`<button class="sb" aria-current="${rt&&rt.id===r.id}" onclick="S.openRoute='${r.id}';render()">
+    ${mine.length?mine.slice(0,14).map(r=>`<button class="sb" aria-current="${rt&&rt.id===r.id}" onclick="S.openRoute='${r.id}';S.openStop=null;render()">
       <span><span class="mono" style="font-size:12px">${ru(r.date)}</span>
       <span style="display:block;font-size:11px;color:var(--ink3)">${r.city} · ${r.status}</span></span>
       <span class="n">${r.stops.filter(s=>s.done).length}/${r.stops.length}</span></button>`).join('')
     :`<p class="note" style="padding:8px 10px">Маршрутов не назначено.</p>`}`;
-  return shell(side, rt?`${cap()}${routeCard(rt)}`
-    :`${cap()}<div class="c"><div class="empty">Маршрут не назначен.</div></div>`);
+  if(!rt) return shell(side,`${cap()}<div class="c"><div class="empty">Маршрут не назначен.</div></div>`);
+  const stop = rt.stops.find(s=>s.req===S.openStop)
+    || rt.stops.find(s=>s.called==='подтверждена'&&!s.done) || rt.stops[0];
+  return shell(side, `${cap()}${routeCard(rt)}${stop?workSheet(rt,stop):''}`);
+}
+
+/* ---------- акт выполненных работ ---------- */
+function workSheet(rt,s){
+  const r = S.requests.find(x=>x.id===s.req); if(!r) return '';
+  const i0 = rt.stops.indexOf(s);
+  r.devices.forEach(d=>{ if(!d.photos) d.photos=[]; });
+  const noPh = r.devices.some(d=>!d.photos.length);
+  return `<div class="c" style="margin-top:14px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:4px">
+      <div><h3>Акт · точка ${pad(i0+1)} · ${esc(addrOf(r))}</h3>
+        <div class="mono" style="font-size:11px;color:var(--ink3);margin-top:3px">${r.id} · ${esc(r.name)} · эт. ${r.floor||'—'} · ${r.intercom?'домофон работает':'домофон не работает'} · окно ${pad(r.time-1)}:00–${pad(r.time+1)}:00</div></div>
+      <div style="display:flex;gap:6px;align-items:center">
+        ${s.done?'<span class="tg t-ok">позиция закрыта</span>':'<span class="tg t-mut">в работе</span>'}
+        <button class="g sm" onclick="startCall('${esc(r.phone)}','основной','${esc(r.name)}')">${svg(I.phone,12)}Клиент</button></div>
+    </div>
+    <p class="cap">Услуга выбирается в строке прибора. К каждому прибору — фото выполненных работ, несколько кадров.</p>
+    ${r.cmtVf?`<div class="actnote"><b>Комментарий для поверителей</b>${esc(r.cmtVf)}</div>`:''}
+    ${r.devices.map((d,i)=>`<div class="wrow ${d.photos.length?'':'new'}">
+      <div class="wtop">
+        ${SEL('wS'+i,d.svc,SERVICES.map(x=>({v:x.id,l:x.name,hint:x.grp})),v=>{d.svc=v;},{sm:true,ph:'Услуга'})}
+        ${SEL('wT'+i,d.type,DEV_TYPES.map(t=>({v:t.v,l:t.v,hint:t.grsi})),v=>{d.type=v;d.grsi=DEV_TYPES.find(t=>t.v===v).grsi;},{sm:true})}
+        ${SEL('wC'+i,d.carrier,['ХВС','ГВС','Тепло'],v=>{d.carrier=v;},{sm:true})}
+        <input class="fld sm mono" value="${esc(d.serial)}" oninput="setDev('${r.id}',${i},'serial',this.value)" placeholder="Заводской №">
+        ${SEL('wR'+i,d.room,ROOMS,v=>{d.room=v;},{sm:true})}
+        ${CHK(d.seal,'пломба УК',`setDev('${r.id}',${i},'seal',${!d.seal})`)}
+        <button class="ib sm no" title="Убрать прибор" onclick="rmDev('${r.id}',${i})">${svg(I.no,13)}</button>
+      </div>
+      <div class="wbot"><span class="lbl">Фото работ</span>
+        ${d.photos.map((p,k)=>`<span class="phw"><img src="${p.src}" alt="${esc(p.name)}" title="${esc(p.name)} · ${esc(p.t)}" onclick="lbOpen('${r.id}',${i},${k})">
+          <button class="x" title="Удалить кадр" onclick="rmPhoto('${r.id}',${i},${k})">${svg(I.no,9)}</button></span>`).join('')}
+        <input type="file" id="ph${r.id}_${i}" accept="image/*" multiple style="display:none" onchange="addPhotos('${r.id}',${i},this)">
+        <label class="g sm addph" for="ph${r.id}_${i}">${svg(I.cam,12)}Добавить фото</label>
+        ${d.photos.length?`<span class="note">${d.photos.length} кадр(ов)</span>`:'<span class="nophoto">нет фото</span>'}
+      </div></div>`).join('')}
+    <button class="g sm" onclick="addDev('${r.id}')">${svg(I.plus,12)}Добавить прибор</button>
+    <div class="row" style="margin-top:16px;justify-content:space-between">
+      <span class="note">${r.devices.length?`По прайсу ${r.clientType.toLowerCase()} <b class="mono" style="color:var(--ink)">${money(priceOf(r))}</b> · вам начислится <b class="mono" style="color:var(--ink)">${money(rateV(r))}</b> · оператору <b class="mono" style="color:var(--ink)">${money(rateO(r))}</b>${noPh?' · <span style="color:var(--error)">есть приборы без фото</span>':''}`
+        :'Приборов в акте нет. Добавьте то, что фактически обслужили на адресе.'}</span>
+      ${s.done?`<button class="g" onclick="reopenStop('${rt.id}',${i0})">Вернуть в работу</button>`
+        :`<button class="b" onclick="closeStop('${rt.id}',${i0})" ${r.devices.length?'':'disabled'}>Закрыть позицию</button>`}</div>
+  </div>`;
+}
+function setDev(rid,i,k,v){ const r=S.requests.find(x=>x.id===rid); r.devices[i][k]=v; render(); }
+function addDev(rid){
+  const r = S.requests.find(x=>x.id===rid);
+  r.devices.push({svc:'wv',type:DEV_TYPES[0].v,grsi:DEV_TYPES[0].grsi,carrier:'ХВС',serial:'',room:'Кухня',seal:false,photos:[]});
+  render();
+}
+function rmDev(rid,i){ const r=S.requests.find(x=>x.id===rid); r.devices.splice(i,1); render(); }
+function rmPhoto(rid,i,k){ const r=S.requests.find(x=>x.id===rid); r.devices[i].photos.splice(k,1); S.lb=null; render(); }
+function addPhotos(rid,i,el){
+  const list = [...el.files].slice(0,8); if(!list.length) return;
+  let left = list.length;
+  list.forEach(f=>{
+    const rd = new FileReader();
+    const done = () => { if(!--left){ el.value=''; render(); } };
+    rd.onload = () => { const r=S.requests.find(x=>x.id===rid);
+      if(r) r.devices[i].photos.push({src:rd.result,name:f.name,t:new Date().toTimeString().slice(0,5)}); done(); };
+    rd.onerror = done;
+    rd.readAsDataURL(f);
+  });
+}
+function closeStop(id,i){
+  const rt = S.routes.find(r=>r.id===id), s = rt.stops[i], r = S.requests.find(x=>x.id===s.req);
+  if(!r.devices.length) return toast('В акте нет приборов — закрывать нечего.');
+  if(r.devices.some(d=>!d.svc)) return toast('В каждой строке прибора выберите услугу.');
+  if(r.devices.some(d=>!String(d.serial).trim())) return toast('Заполните заводские номера приборов — они уходят в реестр УК.');
+  const noPh = r.devices.filter(d=>!d.photos.length).length;
+  const noSeal = r.devices.filter(d=>!d.seal).length;
+  s.done = true; s.called = s.called || 'подтверждена';
+  r.status = 'выполнена'; r.verifier = rt.verifier; r.services = [...new Set(worksOf(r))];
+  if(rt.status==='обзвонен'||rt.status==='черновик') rt.status='в работе';
+  toast(`Позиция закрыта: ${r.devices.length} прибор(ов) на ${money(priceOf(r))}, вам начислено ${money(rateV(r))}.`
+    + (noPh?` Без фото: ${noPh} — оператор увидит подсветку.`:'')
+    + (noSeal?` Без пломбы УК: ${noSeal} — в отчёт УК не пойдут.`:''));
+}
+function reopenStop(id,i){
+  const rt = S.routes.find(r=>r.id===id), s = rt.stops[i], r = S.requests.find(x=>x.id===s.req);
+  s.done = false; r.status = 'в маршруте'; r.verifier = null;
+  toast('Позиция вернулась в работу. Начисления по ней сняты до повторного закрытия.');
 }
 
 /* ============================================================ */
 const VIEWS = {intake:viewIntake,plan:viewPlan,schedule:viewSchedule,logistics:viewLogistics,
   routes:viewRoutes,duty:viewDuty,uk:viewUK,me:viewMe,payroll:viewPayroll,
   services:viewServices,myroute:viewMyRoute,absence:viewAbsence};
-function go(v){ S.view=v; S.dd=null; render(); }
-function render(){ document.getElementById('root').innerHTML = S.user?(VIEWS[S.view]||viewIntake)():viewLogin(); }
+/* Навигация идёт по индексу страницы: одна и та же страница может встречаться
+   в разных ролевых группах и показывать разное (например «Отсутствия»). */
+function goPage(n){
+  const p = PAGES[(n+PAGES.length)%PAGES.length];
+  S.page = (n+PAGES.length)%PAGES.length;
+  S.view = p.v; S.role = p.role; S.me = ROLES[p.role].id; S.user = ROLES[p.role].who;
+  S.dd = null; S.openStop = null; render();
+}
+function step(d){ goPage(S.page+d); }
+function go(v){
+  const here = PAGES.findIndex(p=>p.v===v && p.role===S.role);
+  goPage(here>=0?here:Math.max(0,PAGES.findIndex(p=>p.v===v)));
+}
+function render(){ document.getElementById('root').innerHTML = S.auth?(VIEWS[S.view]||viewIntake)():viewLogin(); }
 
 if(typeof document==='object' && document && document.addEventListener){
   document.addEventListener('click',e=>{ if(S.dd && !e.target.closest('[data-fld]')){ S.dd=null; render(); } });
-  document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&S.dd){ S.dd=null; render(); } });
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){ if(S.lb){ S.lb=null; render(); return; } if(S.dd){ S.dd=null; render(); return; } }
+    if(!S.auth) return;
+    if(S.lb && (e.key==='ArrowLeft'||e.key==='ArrowRight')){ e.preventDefault(); lbMove(e.key==='ArrowRight'?1:-1); return; }
+    if(e.altKey && (e.key==='ArrowLeft'||e.key==='ArrowRight')){ e.preventDefault(); step(e.key==='ArrowRight'?1:-1); }
+  });
 }
 seed();
 render();
