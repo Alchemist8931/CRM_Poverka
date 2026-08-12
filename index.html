@@ -180,6 +180,19 @@ textarea.fld{height:auto;padding:9px 11px;resize:vertical;min-height:76px;line-h
 
 /* ---------- лента ёмкости ---------- */
 .rib{display:flex;gap:4px;align-items:flex-end}
+.rib4{display:flex;flex-direction:column;gap:9px}
+.wk{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.wkh{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}
+.wkh .lbl{letter-spacing:.14em}
+.wkh .rg{font-size:10.5px;color:var(--ink3);font-variant-numeric:tabular-nums}
+.wkh .now{color:var(--cold)}
+.wkh .tot{margin-left:auto;font-size:10.5px;color:var(--ink3);font-variant-numeric:tabular-nums}
+.rib4 .day{min-width:0}
+.rib4 .day .bar{height:46px}
+.rib4 .day .pct{top:4px;font-size:10px}
+.rib4 .day .dd{margin-top:4px}
+.rib4 .day.past{opacity:.42}
+.rib4 .day.tdy .dd{color:var(--cold);font-weight:600}
 .day{flex:1 0 0;min-width:42px;background:none;border:0;padding:0}
 .day .bar{height:94px;border:1px solid var(--border);border-radius:var(--r);background:var(--card);position:relative;overflow:hidden;transition:all .2s ease}
 .day .fill{position:absolute;left:0;right:0;bottom:0;background:var(--ink3);opacity:.3;transition:height .3s ease}
@@ -303,6 +316,41 @@ td b{color:var(--ink);font-weight:600}
 .phone .call:disabled{opacity:.3;cursor:not-allowed}
 .chkbox{display:flex;align-items:center;height:38px;padding:0 11px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);transition:border-color .2s ease}
 .chkbox:hover{border-color:var(--mark)}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.b.long{min-width:236px}
+
+/* ---------- пульт оператора ---------- */
+.opbar{display:grid;grid-template-columns:246px 1fr;gap:14px;align-items:stretch}
+.opsw{border:1px solid var(--border);border-radius:var(--r);background:var(--card);padding:13px 14px;display:flex;flex-direction:column}
+.opsw .sw{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;padding:0;text-align:left}
+.opsw .tr{width:44px;height:24px;flex-shrink:0;border-radius:12px;background:var(--wash);border:1px solid var(--border);position:relative;transition:all .25s ease}
+.opsw .tr i{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:var(--ink3);transition:all .25s ease}
+.opsw .sw[aria-pressed="true"] .tr{background:var(--success);border-color:var(--success)}
+.opsw .sw[aria-pressed="true"] .tr i{left:22px;background:var(--bg)}
+.opsw .sw b{font-size:13px}
+.opsw .sw small{display:block;font-size:10.5px;color:var(--ink3);margin-top:2px}
+.opsw .stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:auto;padding-top:12px}
+.opsw .stats > div{border:1px solid var(--border2);border-radius:var(--r-in);padding:7px 9px}
+.opsw .stats .v{font-size:15px;font-variant-numeric:tabular-nums}
+.opsw .stats .k{font-size:8.5px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin-top:2px}
+
+.opline{border:1px solid var(--border);border-radius:var(--r);background:var(--card);padding:13px 15px;display:flex;align-items:center;gap:14px;min-height:118px}
+.opline.ring{border-color:var(--warning);box-shadow:0 0 0 3px rgba(217,119,6,.1);animation:wsBreath 1.6s ease-in-out infinite}
+.opline.live{border-color:var(--success);box-shadow:0 0 0 3px rgba(22,163,74,.09)}
+.opline .ic{width:42px;height:42px;flex-shrink:0;border-radius:var(--r);border:1px solid var(--border);display:grid;place-items:center;color:var(--ink3)}
+.opline.ring .ic{color:var(--warning);border-color:var(--warning);animation:wsPulse 1.1s ease-in-out infinite}
+.opline.live .ic{color:var(--success);border-color:var(--success)}
+.opline .info{flex:1;min-width:0}
+.opline .st{font-size:9.5px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
+.opline .no{font-size:17px;font-weight:500;font-variant-numeric:tabular-nums;margin-top:3px}
+.opline .sub{font-size:11.5px;color:var(--ink3);margin-top:3px;line-height:1.45}
+.opline .tm{font-size:23px;font-weight:500;font-variant-numeric:tabular-nums;flex-shrink:0;letter-spacing:.02em}
+.opline .acts{display:flex;flex-direction:column;gap:6px;flex-shrink:0;width:150px}
+.opline .acts .b,.opline .acts .g{height:34px;font-size:11.5px;width:100%}
+.opline .g.end{border-color:var(--error);color:var(--error)}
+.opline .g.end:hover{background:var(--error);color:var(--bg);border-color:var(--error)}
+.opline .b.ans{background:linear-gradient(180deg,var(--success),#12833C);color:#fff}
+.opline .idle{font-size:12px;color:var(--ink3);line-height:1.5}
 
 /* ---------- мини-окно звонка ---------- */
 .callw{position:fixed;left:22px;bottom:22px;z-index:70;width:272px;background:var(--card);border:1px solid var(--border);
@@ -688,14 +736,18 @@ const SEG = (val,items,fn) => `<div class="seg">${items.map(x=>{const o=typeof x
   return `<button type="button" aria-pressed="${String(val)===String(o.v)}" onclick="${fn.replace('$v',`'${o.v}'`)}">${esc(o.l)}</button>`}).join('')}</div>`;
 
 /* ---------- состояние ---------- */
-const blankIntake = () => ({ctype:'Физлицо',name:'',phone:'',phone2:'',street:STREETS[0],house:'',
-  entrance:'',floor:'',flat:'',intercom:true,time:12,cmtOp:'',cmtVf:''});
+const blankIntake = () => ({ctype:'Физлицо',name:'',inn:'',phone:'',contact:'',phone2:'',contact2:'',
+  street:STREETS[0],house:'',entrance:'',floor:'',flat:'',intercom:true,time:12,cmtOp:'',cmtVf:'',from:null});
+/* Пульт оператора: смена, входящая линия, накопленные за день минуты.
+   По этим двум счётчикам руководитель видит загрузку и решает, когда нанимать. */
+const blankOp = () => ({on:false,from:null,shiftSec:0,talkSec:0,calls:0,missed:0,
+  inc:null,live:null,acw:0,next:0});
 const S = {
   view:'intake', page:0, auth:false, user:ROLES.operator.who, role:'operator', me:ROLES.operator.id,
   theme:'light', dd:null, ddM:null,
   city:CITIES[0], day:TODAY, staff:[], plan:[], requests:[], routes:[], absences:[], seq:1000,
   toast:null, openRoute:null, openStop:null, call:null, lb:null, ukCity:'', ukSeal:'', pMonth:TODAY.slice(0,7),
-  intake:blankIntake()
+  intake:blankIntake(), op:blankOp()
 };
 const staffById = id => S.staff.find(s=>s.id===id);
 const nameOf = id => staffById(id)?.name || '—';
@@ -720,7 +772,7 @@ function seed(){
     {id:'A5',staff:'v5',from:iso(addDays(today,1)),to:iso(addDays(today,5)),reason:'Отпуск за свой счёт',status:'отклонено',comment:'Пик набора, перенесите на конец месяца'},
     {id:'A6',staff:'v0',from:iso(addDays(today,11)),to:iso(addDays(today,12)),reason:'Личные дела',status:'на согласовании',comment:''}
   ];
-  for(let i=-20;i<26;i++){
+  for(let i=-25;i<36;i++){
     const ds = iso(addDays(today,i));
     const crew = S.staff.filter(p=>p.role==='verifier'&&onShift(p,ds)).length;
     CITIES.forEach((c,ci)=>S.plan.push({date:ds,city:c,
@@ -774,17 +826,28 @@ const CMT_OP = ['','','','Звонить только после 18:00, днём
 const CMT_VF = ['','','','Собака во дворе, звонить с калитки','Счётчик в нише за люком, нужен ключ',
   'Домофон не работает — звонить на подъезд','Пожилой клиент, стучать громче','Пломба УК сорвана — снять на фото',
   'Доступ к стояку через соседнюю квартиру'];
+const CONTACTS = ['','','Муж, Сергей','Дочь, Ольга','Сын, Дмитрий','Сосед, Пётр','Секретарь, Анна',
+  'Бухгалтер, Ирина','Завхоз, Николай','Председатель, Тамара'];
 function mkReq(ds,city,clients){
   const nm = rnd(clients), isU = /^(ООО|ТСЖ|ТСН)/.test(nm);
   const svc = rr()<.7?'wv' : rr()<.55?'wr' : rnd(['hv','hm','hd']);
   const heat = svc[0]==='h';
-  return {id:'R'+(++S.seq),date:ds,city,clientType:isU?'Юрлицо':'Физлицо',name:nm,
+  const back = rint(0,6);
+  let cr = iso(addDays(new Date(ds+'T00:00:00'),-back));
+  /* Заявку на будущую дату приняли раньше — раскидываем по прошедшей неделе,
+     иначе весь будущий набор схлопнется в сегодня. */
+  if(cr>TODAY) cr = iso(addDays(today,-rint(0,6)));
+  const ph2 = rr()<.35;
+  return {id:'R'+(++S.seq),date:ds,created:cr>TODAY?TODAY:cr,city,clientType:isU?'Юрлицо':'Физлицо',name:nm,
+    inn:isU?String(rint(6600000000,6699999999)):'',
     phone:'+7 9'+rint(10,99)+' '+rint(100,999)+'-'+rint(10,99)+'-'+rint(10,99),
-    phone2:rr()<.35?'+7 9'+rint(10,99)+' '+rint(100,999)+'-'+rint(10,99)+'-'+rint(10,99):'',
+    contact:isU?'Секретарь, Анна':rnd(CONTACTS),
+    phone2:ph2?'+7 9'+rint(10,99)+' '+rint(100,999)+'-'+rint(10,99)+'-'+rint(10,99):'',
+    contact2:ph2?rnd(CONTACTS):'',
     street:rnd(STREETS),house:String(rint(1,120)),entrance:String(rint(1,6)),floor:String(rint(1,16)),
     flat:isU?'':String(rint(1,240)),intercom:rr()<.78,time:rint(10,20),
     cmtOp:rnd(CMT_OP),cmtVf:rnd(CMT_VF),
-    services:[],devices:[],status:'новая',routeId:null,operator:null,
+    services:[],devices:[],status:'создана',routeId:null,operator:null,from:null,
     expect:{svc,heat,nd:heat?1:rint(1,2)}};
 }
 /* Фото выполненных работ в демо-данных — заглушка вместо снимка с телефона. */
@@ -924,14 +987,25 @@ function shell(side,main){
 }
 const cap = () => `<p class="cap">${CAPS[S.view]||''}</p>`;
 
-/* ---------- лента ёмкости ---------- */
+/* ---------- лента ёмкости: четыре полные недели, первая — текущая ---------- */
 function ribbon(){
-  return `<div class="rib">${Array.from({length:14},(_,i)=>iso(addDays(today,i))).map(ds=>{
-    const {p,pct,s} = dayState(ds,S.city), d = new Date(ds+'T00:00:00');
-    return `<button class="day" data-s="${s}" aria-pressed="${S.day===ds}" ${s==='off'?'disabled':`onclick="S.day='${ds}';render()"`}>
-      <div class="bar"><div class="fill" style="height:${Math.min(100,pct*90.9)}%"></div>
-      <span class="pct">${p?Math.round(pct*100)+'%':'—'}</span></div>
-      <div class="dd">${pad(d.getDate())}.${pad(d.getMonth()+1)}</div><div class="wd">${WD[d.getDay()]}</div></button>`;
+  const mon = addDays(today,-((today.getDay()+6)%7));   // понедельник текущей недели
+  const weeks = Array.from({length:4},(_,w)=>Array.from({length:7},(_,i)=>iso(addDays(mon,w*7+i))));
+  return `<div class="rib4">${weeks.map((days,w)=>{
+    let wp=0, wb=0;
+    days.forEach(ds=>{const x=dayState(ds,S.city); wp+=x.p; wb+=x.b;});
+    return `<div>
+      <div class="wkh"><span class="lbl ${w===0?'now':''}">${w===0?'Текущая неделя':'Неделя +'+w}</span>
+        <span class="rg">${ru(days[0]).slice(0,5)} — ${ru(days[6]).slice(0,5)}</span>
+        <span class="tot">${wb} / ${wp}${wp?` · ${Math.round(wb/wp*100)}%`:''}</span></div>
+      <div class="wk">${days.map(ds=>{
+        const {p,pct,s} = dayState(ds,S.city), d = new Date(ds+'T00:00:00'), past = ds<TODAY;
+        return `<button class="day ${past?'past':''} ${ds===TODAY?'tdy':''}" data-s="${s}" aria-pressed="${S.day===ds}"
+          title="${ru(ds)} · набрано ${dayState(ds,S.city).b} из ${p}" ${s==='off'||past?'disabled':`onclick="S.day='${ds}';render()"`}>
+          <div class="bar"><div class="fill" style="height:${Math.min(100,pct*90.9)}%"></div>
+          <span class="pct">${p?Math.round(pct*100)+'%':'—'}</span></div>
+          <div class="dd">${pad(d.getDate())}.${pad(d.getMonth()+1)}</div><div class="wd">${WD[d.getDay()]}</div></button>`;
+      }).join('')}</div></div>`;
   }).join('')}</div>
   <div class="lg">
     <span><i style="background:var(--ink3);opacity:.3"></i>свободно</span>
@@ -954,29 +1028,44 @@ const citySide = () => `<div class="lbl" style="padding:6px 10px 8px">Город
 function viewIntake(){
   const st = dayState(S.day,S.city), closed = st.pct>1.1 || st.p===0;
   const left = Math.max(0,Math.ceil(st.p*1.1)-st.b);
-  const K = S.intake;
-  const mine = S.requests.filter(r=>r.operator===S.me).slice(-6).reverse();
+  const K = S.intake, U = K.ctype==='Юрлицо';
+  const mine = S.requests.filter(r=>r.operator===S.me && r.created===TODAY)
+    .sort((a,b)=>b.id.localeCompare(a.id));
   return shell(citySide(), `${cap()}
   <div class="c"><h3>Ёмкость · ${S.city}</h3>
-    <p class="cap">Набрано <b class="mono" style="color:var(--ink)">${st.b}</b> из <b class="mono" style="color:var(--ink)">${st.p}</b> на ${ru(S.day)}${closed?' — <span class="tg t-err">приём закрыт</span>':` · осталось <b class="mono" style="color:var(--ink)">${left}</b> с учётом +10%`}</p>
+    <p class="cap">Четыре недели вперёд, первая — текущая. На ${ru(S.day)} набрано <b class="mono" style="color:var(--ink)">${st.b}</b> из <b class="mono" style="color:var(--ink)">${st.p}</b>${closed?' — <span class="tg t-err">приём закрыт</span>':` · осталось <b class="mono" style="color:var(--ink)">${left}</b> с учётом +10%`}</p>
     ${ribbon()}</div>
+
+  <div class="c"><h3>Линия оператора</h3>
+    <p class="cap">Заявки приходят входящими звонками. Время на смене и минуты разговоров складываются за день — по ним руководитель видит загрузку и решает, когда нанимать.</p>
+    ${opConsole()}</div>
+
   <div class="c"><h3>Новая заявка</h3>
     <p class="cap">Окно прибытия формируется автоматически: час до и час после назначенного времени.</p>
-    <div class="row" style="margin-bottom:14px">
+    ${K.from?`<div class="actnote" style="border-left-color:var(--success)"><b>Из входящего звонка</b>${esc(K.from)}</div>`:''}
+    <div class="row" style="margin-bottom:14px;flex-wrap:nowrap">
       <div class="f" style="flex:none"><label>Тип клиента</label>${SEG(K.ctype,['Физлицо','Юрлицо'],"setIn('ctype',$v)")}</div>
-      <div class="f" style="flex:1;min-width:150px"><label>${K.ctype==='Юрлицо'?'Организация':'ФИО клиента'}</label>
-        <input class="fld" value="${esc(K.name)}" oninput="S.intake.name=this.value" placeholder="${K.ctype==='Юрлицо'?'ООО «Стройсервис»':'Смирнова Т. А.'}"></div>
-      <div class="f" style="width:225px"><label>Телефон</label>
+      <div class="f" style="flex:1;min-width:260px;max-width:600px"><label>${U?'Организация':'ФИО клиента'}</label>
+        <input class="fld" id="inName" value="${esc(K.name)}" oninput="S.intake.name=this.value" placeholder="${U?'ООО «Стройсервис»':'Смирнова Т. А.'}"></div>
+      ${U?`<div class="f" style="width:210px"><label>ИНН организации</label>
+        <input class="fld mono" id="inInn" value="${esc(K.inn)}" oninput="S.intake.inn=this.value.replace(/\\D/g,'')" placeholder="10 или 12 цифр" maxlength="12"></div>`:''}
+    </div>
+    <div class="g4" style="margin-bottom:14px">
+      <div class="f" style="margin-bottom:0"><label>Телефон основной</label>
         ${PHONE('inPhone',K.phone,'S.intake.phone=this.value','основной')}</div>
-      <div class="f" style="width:225px"><label>Доп. телефон</label>
+      <div class="f" style="margin-bottom:0"><label>ФИО контакта</label>
+        <input class="fld" id="inContact" value="${esc(K.contact)}" oninput="S.intake.contact=this.value" placeholder="кто отвечает"></div>
+      <div class="f" style="margin-bottom:0"><label>Телефон дополнительный</label>
         ${PHONE('inPhone2',K.phone2,'S.intake.phone2=this.value','дополнительный')}</div>
+      <div class="f" style="margin-bottom:0"><label>ФИО контакта</label>
+        <input class="fld" id="inContact2" value="${esc(K.contact2)}" oninput="S.intake.contact2=this.value" placeholder="кто отвечает"></div>
     </div>
     <div class="row" style="margin-bottom:14px">
       <div class="f" style="width:170px"><label>Улица</label>${SEL('inStreet',K.street,STREETS,v=>S.intake.street=v)}</div>
-      <div class="f" style="width:72px"><label>Дом</label><input class="fld" value="${esc(K.house)}" oninput="S.intake.house=this.value" placeholder="12"></div>
-      <div class="f" style="width:74px"><label>Подъезд</label><input class="fld mono" value="${esc(K.entrance)}" oninput="S.intake.entrance=this.value" placeholder="3"></div>
-      <div class="f" style="width:66px"><label>Этаж</label><input class="fld mono" value="${esc(K.floor)}" oninput="S.intake.floor=this.value" placeholder="5"></div>
-      <div class="f" style="width:76px"><label>Квартира</label><input class="fld mono" value="${esc(K.flat)}" oninput="S.intake.flat=this.value" placeholder="45"></div>
+      <div class="f" style="width:72px"><label>Дом</label><input class="fld" id="inHouse" value="${esc(K.house)}" oninput="S.intake.house=this.value" placeholder="12"></div>
+      <div class="f" style="width:74px"><label>Подъезд</label><input class="fld mono" id="inEnt" value="${esc(K.entrance)}" oninput="S.intake.entrance=this.value" placeholder="3"></div>
+      <div class="f" style="width:66px"><label>Этаж</label><input class="fld mono" id="inFloor" value="${esc(K.floor)}" oninput="S.intake.floor=this.value" placeholder="5"></div>
+      <div class="f" style="width:76px"><label>Квартира</label><input class="fld mono" id="inFlat" value="${esc(K.flat)}" oninput="S.intake.flat=this.value" placeholder="45"></div>
       <div class="f" style="width:152px"><label>Домофон</label>
         <div class="chkbox">${CHK(K.intercom,'домофон работает',"S.intake.intercom=!S.intake.intercom;render()")}</div></div>
       <div class="f" style="width:120px"><label>Дата выезда</label>${DATE('inDate',S.day,v=>{S.day=v;})}</div>
@@ -985,36 +1074,177 @@ function viewIntake(){
     </div>
     <div class="g2">
       <div class="f" style="margin-bottom:0"><label>Комментарий для операторов</label>
-        <textarea class="fld" oninput="S.intake.cmtOp=this.value" placeholder="Что важно знать при прозвонке: когда звонить, кто отвечает, как оплачивают">${esc(K.cmtOp)}</textarea></div>
+        <textarea class="fld" id="inCmtOp" oninput="S.intake.cmtOp=this.value" placeholder="Что важно знать при прозвонке: когда звонить, кто отвечает, как оплачивают">${esc(K.cmtOp)}</textarea></div>
       <div class="f" style="margin-bottom:0"><label>Комментарий для поверителей</label>
-        <textarea class="fld" oninput="S.intake.cmtVf=this.value" placeholder="Что важно знать на адресе: доступ к стояку, собака, состояние пломбы">${esc(K.cmtVf)}</textarea></div>
+        <textarea class="fld" id="inCmtVf" oninput="S.intake.cmtVf=this.value" placeholder="Что важно знать на адресе: доступ к стояку, собака, состояние пломбы">${esc(K.cmtVf)}</textarea></div>
     </div>
-    <div class="row" style="margin-top:16px;justify-content:space-between">
-      <span class="note">Услуги и приборы в заявке не указываются: их вносит поверитель на месте и прикладывает фото работ.
-        Сумма и начисления считаются по факту закрытия акта.</span>
-      <button class="b" onclick="createReq()" ${closed?'disabled':''}>${closed?'День закрыт':'Записать заявку'}</button></div>
+    <p class="note" style="margin:14px 0 0">Услуги и приборы в заявке не указываются: их вносит поверитель на месте и прикладывает фото работ.
+      Сумма и начисления считаются по факту закрытия акта.</p>
+    <div class="row" style="margin-top:12px;justify-content:flex-end">
+      <button class="b long" onclick="createReq()" ${closed?'disabled':''}>${closed?'День закрыт — приём остановлен':'Сохранить заявку'}</button></div>
   </div>
-  <div class="c"><h3>Последние заявки от вас</h3>
-    ${mine.length?`<table><thead><tr><th>Заявка</th><th class="num">Дата</th><th>Адрес</th><th>Клиент</th><th>Работы по акту</th><th class="num">Сумма</th><th>Статус</th></tr></thead><tbody>
-      ${mine.map(r=>`<tr><td class="mono">${r.id}</td><td class="num">${ru(r.date)}</td>
-        <td><b>${r.city}, ${addrOf(r)}</b></td><td>${esc(r.name)}</td>
-        <td>${svcNames(r)}</td><td class="num">${worksOf(r).length?money(priceOf(r)):'—'}</td>
-        <td>${reqTag(r.status)}</td></tr>`).join('')}</tbody></table>`
-      :`<div class="empty">Заявок пока нет.</div>`}</div>`);
+
+  <div class="c"><h3>Мои заявки за сегодня · ${mine.length}</h3>
+    <p class="cap">Всё, что вы обработали ${ru(TODAY)}. Дата выполнения — назначенный выезд, она меняется при переносе.</p>
+    ${mine.length?`<table><thead><tr><th>Заявка</th><th class="num">Создана</th><th class="num">Выполнение</th><th>Город</th><th>Тип</th><th>Статус</th></tr></thead><tbody>
+      ${mine.slice(0,25).map(r=>`<tr><td class="mono"><b>${r.id}</b></td><td class="num mono">${ru(r.created)}</td>
+        <td class="num mono">${r.status==='отменена'?'<span class="note">—</span>':ru(r.date)}</td>
+        <td>${r.city}</td>
+        <td><span class="tg ${r.clientType==='Юрлицо'?'t-ink':'t-mut'}">${r.clientType==='Юрлицо'?'юрлицо':'физлицо'}</span></td>
+        <td>${reqTag(r.status)}</td></tr>`).join('')}</tbody></table>
+      ${mine.length>25?`<p class="note" style="margin-top:10px">Показаны последние 25 из ${mine.length}.</p>`:''}`
+      :`<div class="empty">Сегодня вы ещё не приняли ни одной заявки.</div>`}</div>`);
 }
 const reqTag = s => `<span class="tg ${s==='выполнена'?'t-ok':s==='отменена'?'t-err':s==='перенос'?'t-warn':s==='в маршруте'?'t-cold':'t-mut'}">${s}</span>`;
 function setIn(k,v){ S.intake[k]=v; render(); }
+
+/* ============ ПУЛЬТ ОПЕРАТОРА (заготовка под облачную АТС) ============ */
+const hms = s => pad(Math.floor(s/3600))+':'+pad(Math.floor(s/60)%60)+':'+pad(s%60);
+const ms  = s => pad(Math.floor(s/60))+':'+pad(s%60);
+const shiftSec = () => S.op.shiftSec + (S.op.on&&S.op.from ? Math.floor((Date.now()-S.op.from)/1000) : 0);
+const talkSec  = () => S.op.talkSec + (S.op.live ? Math.floor((Date.now()-S.op.live.t0)/1000) : 0);
+/* Пока идёт разговор или постобработка, оператор системно на паузе — новые вызовы не приходят. */
+const opBusy = () => !!(S.op.live || S.op.acw>0);
+
+function opConsole(){
+  const O = S.op;
+  return `<div class="opbar">
+    <div class="opsw">
+      <button class="sw" role="switch" aria-pressed="${O.on}" onclick="toggleShift()">
+        <span class="tr"><i></i></span>
+        <span><b>${O.on?'На смене':'Не на смене'}</b>
+          <small>${O.on?(opBusy()?'системная пауза — вызовы не поступают':'принимает входящие'):'вызовы уходят другим операторам'}</small></span>
+      </button>
+      <div class="stats">
+        <div><div class="v mono" id="opShift">${hms(shiftSec())}</div><div class="k">на смене</div></div>
+        <div><div class="v mono" id="opTalk">${hms(talkSec())}</div><div class="k">в разговорах</div></div>
+        <div><div class="v mono" id="opCalls">${O.calls}</div><div class="k">принято</div></div>
+        <div><div class="v mono" ${O.missed?'style="color:var(--error)"':''} id="opMiss">${O.missed}</div><div class="k">пропущено</div></div>
+      </div>
+    </div>
+    ${opLine()}</div>`;
+}
+function opLine(){
+  const O = S.op;
+  if(O.live){
+    const sec = Math.floor((Date.now()-O.live.t0)/1000);
+    return `<div class="opline live">
+      <span class="ic">${svg(I.phone,20)}</span>
+      <div class="info"><div class="st">вызов принят · разговор</div>
+        <div class="no">${esc(O.live.num)}</div>
+        <div class="sub">${esc(O.live.who)} · ${esc(O.live.city)} · линия ${esc(staffById(S.me)?.ext||'—')}</div></div>
+      <div class="tm mono" id="opLive">${ms(sec)}</div>
+      <div class="acts">
+        <button class="g" onclick="toast('Перевод на старшего оператора — в интеграции с облачной АТС.')">Перевести</button>
+        <button class="g end" onclick="hangup()">${svg(I.hang,13)}Завершить</button></div></div>`;
+  }
+  if(O.acw>0){
+    return `<div class="opline">
+      <span class="ic">${svg(I.act,20)}</span>
+      <div class="info"><div class="st">постобработка</div>
+        <div class="no" style="font-size:14px;font-weight:400">Заполните заявку по звонку</div>
+        <div class="sub">Новые вызовы не поступают ещё <b class="mono" id="opAcw">${O.acw}</b> с. Сохранение заявки снимает паузу сразу.</div></div>
+      <div class="acts"><button class="g" onclick="S.op.acw=0;S.op.next=rint(5,12);render()">Готов принимать</button></div></div>`;
+  }
+  if(O.inc){
+    const sec = Math.floor((Date.now()-O.inc.t0)/1000);
+    return `<div class="opline ring">
+      <span class="ic">${svg(I.phone,20)}</span>
+      <div class="info"><div class="st">входящий вызов</div>
+        <div class="no">${esc(O.inc.num)}</div>
+        <div class="sub">${esc(O.inc.who)} · ${esc(O.inc.city)}${O.inc.prev?` · ранее заявка ${O.inc.prev}`:' · новый номер'}</div></div>
+      <div class="tm mono" id="opRing">${ms(sec)}</div>
+      <div class="acts">
+        <button class="b ans" onclick="answer()">${svg(I.phone,13)}Принять</button>
+        <button class="g end" onclick="reject()">Отклонить</button></div></div>`;
+  }
+  return `<div class="opline">
+    <span class="ic">${svg(I.phone,20)}</span>
+    <div class="info"><div class="st">${S.op.on?'линия свободна':'линия отключена'}</div>
+      <div class="idle" style="margin-top:4px">${S.op.on
+        ? 'Ждём входящий с облачной АТС. Номер подставится в заявку, известный клиент подтянется по номеру.'
+        : 'Включите смену — вызовы из очереди начнут приходить на эту линию.'}</div></div></div>`;
+}
+function toggleShift(){
+  const O = S.op;
+  if(O.on && O.live) return toast('Идёт разговор. Завершите вызов, потом снимайтесь со смены.');
+  if(O.on){ O.shiftSec = shiftSec(); O.on=false; O.from=null; O.inc=null; O.acw=0;
+    toast(`Смена закрыта: ${hms(O.shiftSec)} на линии, ${hms(O.talkSec)} в разговорах.`); }
+  else { O.on=true; O.from=Date.now(); O.next=rint(3,8); toast('Вы на смене. Входящие пойдут на вашу линию.'); }
+  render();
+}
+function ringIn(){
+  const prev = S.requests.filter(r=>r.phone).slice(-60);
+  const known = rr()<.3 && prev.length ? rnd(prev) : null;
+  S.op.inc = known
+    ? {num:known.phone,who:known.name,city:known.city,prev:known.id,t0:Date.now(),req:known}
+    : {num:'+7 9'+rint(10,99)+' '+rint(100,999)+'-'+rint(10,99)+'-'+rint(10,99),
+       who:'Номер не в базе',city:rnd(CITIES),prev:null,t0:Date.now(),req:null};
+  render();
+}
+function answer(){
+  const c = S.op.inc; if(!c) return;
+  S.op.inc = null;
+  S.op.live = {num:c.num,who:c.prev?c.who:'Клиент на линии',city:c.city,t0:Date.now(),req:c.req};
+  S.op.calls++;
+  /* Номер и город сразу уезжают в форму — оператор говорит и заполняет. */
+  S.intake.phone = c.num;
+  S.intake.from = `${c.num} · ${c.city}` + (c.prev?` · клиент ${c.who}, прошлая заявка ${c.prev}`:' · номер не в базе');
+  if(c.req){ S.intake.name=c.req.name; S.intake.ctype=c.req.clientType; S.intake.inn=c.req.inn||'';
+    S.intake.contact=c.req.contact||''; S.intake.street=c.req.street; S.intake.house=c.req.house;
+    S.intake.entrance=c.req.entrance||''; S.intake.floor=c.req.floor||''; S.intake.flat=c.req.flat||''; }
+  if(CITIES.includes(c.city)) S.city = c.city;
+  render();
+}
+function reject(){ S.op.inc=null; S.op.missed++; S.op.next=rint(4,10);
+  toast('Вызов отклонён — уходит следующему свободному оператору.'); }
+function hangup(){
+  const L = S.op.live; if(!L) return;
+  const sec = Math.floor((Date.now()-L.t0)/1000);
+  S.op.talkSec += sec; S.op.live = null; S.op.acw = 12;
+  toast(`Разговор ${ms(sec)}. Постобработка: заполните заявку — сохранение снимет паузу.`);
+}
+/* Тик раз в секунду. Числа обновляются точечно, полный render — только на смене состояния. */
+function opTick(){
+  const O = S.op;
+  if(!S.auth) return;
+  const here = S.view==='intake';
+  const set = (id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
+  if(here){ set('opShift',hms(shiftSec())); set('opTalk',hms(talkSec())); }
+  if(O.live){ if(here) set('opLive',ms(Math.floor((Date.now()-O.live.t0)/1000))); return; }
+  if(O.acw>0){ O.acw--;
+    if(O.acw<=0){ O.next=rint(5,12); if(here) render(); } else if(here) set('opAcw',O.acw);
+    return; }
+  if(O.inc){
+    const sec = Math.floor((Date.now()-O.inc.t0)/1000);
+    if(sec>=25){ O.inc=null; O.missed++; O.next=rint(6,14);
+      if(here) toast('Вызов не принят за 25 секунд — ушёл в очередь.'); return; }
+    if(here) set('opRing',ms(sec));
+    return;
+  }
+  if(!here) return;   // вызов приходит только когда оператор смотрит на линию
+  if(O.on && O.next>0 && --O.next<=0) ringIn();
+}
 function createReq(){
   const K = S.intake;
-  if(!K.name.trim()) return toast('Укажите ФИО клиента или название организации.');
+  if(!K.name.trim()) return toast(K.ctype==='Юрлицо'?'Укажите название организации.':'Укажите ФИО клиента.');
+  if(K.ctype==='Юрлицо'){
+    const inn = String(K.inn).replace(/\D/g,'');
+    if(!inn) return toast('Для юрлица ИНН обязателен — без него не выставить счёт и закрывающие.');
+    if(inn.length!==10 && inn.length!==12) return toast('ИНН — 10 цифр у организации или 12 у ИП. Сейчас '+inn.length+'.');
+  }
   if(!K.phone.trim()) return toast('Укажите телефон — по нему пойдёт прозвонка маршрута.');
   if(!K.house.trim()) return toast('Укажите номер дома.');
-  S.requests.push({id:'R'+(++S.seq),date:S.day,city:S.city,clientType:K.ctype,name:K.name,
-    phone:K.phone,phone2:K.phone2,street:K.street,house:K.house,entrance:K.entrance,floor:K.floor,
-    flat:K.flat,intercom:K.intercom,time:K.time,cmtOp:K.cmtOp,cmtVf:K.cmtVf,
-    services:[],devices:[],status:'новая',routeId:null,operator:S.me});
+  S.requests.push({id:'R'+(++S.seq),date:S.day,created:TODAY,city:S.city,clientType:K.ctype,name:K.name,
+    inn:K.ctype==='Юрлицо'?K.inn:'',phone:K.phone,contact:K.contact,phone2:K.phone2,contact2:K.contact2,
+    street:K.street,house:K.house,entrance:K.entrance,floor:K.floor,
+    flat:K.flat,intercom:K.intercom,time:K.time,cmtOp:K.cmtOp,cmtVf:K.cmtVf,from:K.from,
+    services:[],devices:[],status:'создана',routeId:null,operator:S.me});
+  const wasAcw = S.op.acw>0;
+  if(wasAcw){ S.op.acw=0; S.op.next=rint(5,12); }
   S.intake = blankIntake();
-  toast('Заявка записана на '+ru(S.day)+', окно '+pad(K.time-1)+':00–'+pad(K.time+1)+':00. Состав работ заполнит поверитель.');
+  toast('Заявка сохранена на '+ru(S.day)+', окно '+pad(K.time-1)+':00–'+pad(K.time+1)+':00.'
+    + (wasAcw?' Постобработка закрыта, линия снова принимает вызовы.':' Состав работ заполнит поверитель.'));
 }
 
 /* ---------- телефон и мини-окно вызова ---------- */
@@ -1232,7 +1462,7 @@ function sendAbs(){
 
 /* ---------- логистика ---------- */
 function poolOf(ds,city){
-  return S.requests.filter(r=>r.date===ds&&r.city===city&&!r.routeId&&r.status==='новая')
+  return S.requests.filter(r=>r.date===ds&&r.city===city&&!r.routeId&&r.status==='создана')
     .sort((a,b)=>a.street.localeCompare(b.street,'ru')||(+a.house)-(+b.house));
 }
 function viewLogistics(){
@@ -1605,7 +1835,18 @@ function go(v){
   const here = PAGES.findIndex(p=>p.v===v && p.role===S.role);
   goPage(here>=0?here:Math.max(0,PAGES.findIndex(p=>p.v===v)));
 }
-function render(){ document.getElementById('root').innerHTML = S.auth?(VIEWS[S.view]||viewIntake)():viewLogin(); }
+/* Перерисовка целиком, поэтому фокус и каретку в поле возвращаем руками:
+   входящий звонок может прийти, пока оператор печатает адрес. */
+function render(){
+  const a = document.activeElement;
+  const id = a && a.id, ss = a && a.selectionStart, se = a && a.selectionEnd;
+  document.getElementById('root').innerHTML = S.auth?(VIEWS[S.view]||viewIntake)():viewLogin();
+  if(!id) return;
+  const el = document.getElementById(id);
+  if(!el || typeof el.focus!=='function') return;
+  el.focus();
+  if(ss!=null && typeof el.setSelectionRange==='function'){ try{ el.setSelectionRange(ss,se); }catch(e){} }
+}
 
 if(typeof document==='object' && document && document.addEventListener){
   document.addEventListener('click',e=>{ if(S.dd && !e.target.closest('[data-fld]')){ S.dd=null; render(); } });
@@ -1618,6 +1859,7 @@ if(typeof document==='object' && document && document.addEventListener){
 }
 seed();
 render();
+if(typeof setInterval==='function') setInterval(opTick,1000);
 if(typeof INTRO!=='undefined' && typeof document==='object' && document.getElementById)
   INTRO.start(()=>{ S.introDone=true; });
 </script>
