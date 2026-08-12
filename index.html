@@ -416,6 +416,78 @@ td b{color:var(--ink);font-weight:600}
 .chip2 .ad small{display:block;font-size:11px;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .chip2 .ctl{display:flex;align-items:center;gap:4px;flex-shrink:0}
 
+/* ---------- календарь планирования ---------- */
+.pcell{display:flex;flex-direction:column;gap:6px;text-align:left;min-height:104px;padding:8px 9px 9px;
+  border:1px solid var(--border);border-radius:var(--r);background:var(--card);transition:all .2s ease}
+.pcell.out{opacity:.32}
+.pcell.off{background:var(--bg2)}
+.pcell:hover{border-color:var(--ink);box-shadow:var(--shSoft)}
+.pcell .h{display:flex;align-items:baseline;gap:6px}
+.pcell .dn{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+.pcell.tdy .dn{color:var(--cold)}
+.pcell .cr{margin-left:auto;font-size:10px;color:var(--ink3)}
+.pcell .pb{height:4px;border-radius:3px;background:var(--wash);position:relative;overflow:hidden}
+.pcell .pb i{position:absolute;left:0;top:0;bottom:0;background:var(--ink3);opacity:.4;border-radius:3px}
+.pcell[data-s="fill"] .pb i{background:var(--cold);opacity:.55}
+.pcell[data-s="full"] .pb i{background:var(--ink);opacity:.75}
+.pcell[data-s="over"] .pb i{background:var(--error);opacity:.7}
+.pcell .pb s{position:absolute;top:-1px;bottom:-1px;width:1px;background:var(--mark);text-decoration:none}
+.pcell .tags{display:flex;flex-wrap:wrap;gap:3px}
+.tag{display:inline-flex;align-items:center;padding:1px 6px;border:1px solid var(--border);border-radius:var(--r-in);
+  background:var(--surface);font-size:9.5px;font-style:normal;color:var(--ink2);letter-spacing:.02em;white-space:nowrap}
+.tag.more{color:var(--ink3)}
+.tag.empty{border-style:dashed;color:var(--ink3)}
+.pcell .crew{display:flex;gap:8px;margin-top:auto;align-items:center;font-size:10.5px;color:var(--ink3);font-variant-numeric:tabular-nums}
+.pcell .crew i{display:inline-flex;align-items:center;gap:3px;font-style:normal}
+.pcell .crew i.none{color:var(--warning)}
+.tgls{display:flex;flex-wrap:wrap;gap:5px;max-height:168px;overflow-y:auto;padding:1px}
+.tgl{padding:5px 10px;border:1px solid var(--border);border-radius:var(--r-in);background:var(--card);
+  color:var(--ink2);font-size:11.5px;white-space:nowrap;transition:all .18s ease}
+.tgl:hover:not(:disabled){border-color:var(--mark);color:var(--ink)}
+.tgl[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg);font-weight:500}
+.tgl.ab{opacity:.35;text-decoration:line-through;cursor:not-allowed}
+.g.end{border-color:var(--error);color:var(--error)}
+.g.end:hover{background:var(--error);color:var(--bg);border-color:var(--error)}
+
+/* ---------- конструктор маршрутов ---------- */
+.rcm{width:min(1240px,97vw)}
+.rchd{display:flex;align-items:flex-end;gap:16px;padding-bottom:14px;margin-bottom:14px;border-bottom:1px solid var(--border2)}
+.rcst{min-width:0}
+.rcst > div{font-size:12.5px}
+.rcst b{font-size:15px}
+.rcst .who{font-size:11px;color:var(--ink3);margin-top:3px;line-height:1.45;max-width:420px}
+.rchd .b{margin-left:auto;flex-shrink:0}
+.rcbody{display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:start}
+.rcmap{border:1px solid var(--border);border-radius:var(--r);background:var(--card);overflow:hidden}
+.rcmap svg{display:block;width:100%;height:auto}
+.mcity circle{fill:var(--ink3);opacity:.5}
+.mcity text{font-size:11.5px;fill:var(--ink2);font-weight:600;letter-spacing:.02em}
+.mline{fill:none;stroke:var(--ink);stroke-width:2;stroke-linejoin:round;stroke-linecap:round;opacity:.7;stroke-dasharray:6 4}
+.mline.halo{stroke:var(--card);stroke-width:5;opacity:.9;stroke-dasharray:none}
+.mlg rect{fill:var(--card);stroke:var(--border2);stroke-width:1}
+.mlg text{font-size:10.5px;fill:var(--ink3)}
+.mlg .d1{fill:var(--cold);opacity:.6}
+.mlg .d2{fill:var(--ink)}
+.mlg .d3{fill:var(--ink3);opacity:.22}
+.mp{cursor:pointer}
+.mp .hit{fill:transparent}
+.mp .dot{fill:var(--cold);opacity:.6;transition:all .15s ease}
+.mp:hover .dot{opacity:1;r:6}
+.mp.on .dot{fill:var(--ink);opacity:1}
+.mp.on text{font-size:10px;font-weight:600;fill:var(--ink)}
+.mp.taken{cursor:default}
+.mp.taken .dot{fill:var(--ink3);opacity:.22}
+.mp.taken:hover .dot{opacity:.3}
+.rclist{max-height:620px;overflow-y:auto;padding-right:2px}
+.rcr{border:1px solid var(--border);border-radius:var(--r);background:var(--card);padding:10px 11px;margin-bottom:8px}
+.rch{display:flex;align-items:center;gap:8px}
+.rch .note{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rcs{margin-top:8px;max-height:132px;overflow-y:auto}
+.rcs > div{display:flex;align-items:center;gap:7px;padding:3px 0;font-size:11.5px;color:var(--ink2);border-bottom:1px solid var(--border2)}
+.rcs > div:last-child{border-bottom:0}
+.rcs .n{color:var(--ink3);font-size:10px;flex-shrink:0}
+.rcs .a{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
 /* ---------- модальный слой ---------- */
 .mask{position:fixed;inset:0;z-index:90;padding:36px 22px;overflow-y:auto;
   background:rgba(12,12,12,.4);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);
@@ -644,6 +716,7 @@ const I = {
   routes:'<circle cx="6" cy="19" r="3"/><circle cx="18" cy="5" r="3"/><path d="M9 19h6a4 4 0 0 0 0-8H9a4 4 0 0 1 0-8h6"/>',
   support:'<path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>',
   chat:'<path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.9 8.9 0 0 1-3.8-.9L3 20.5l1.6-4.9A8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z"/>',
+  map:'<path d="M9 3L3 5.5v15L9 18l6 3 6-2.5v-15L15 6z"/><path d="M9 3v15M15 6v15"/>',
   clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   uk:'<path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16"/><path d="M15 9h4a2 2 0 0 1 2 2v10"/><path d="M9 7h2M9 11h2M9 15h2"/>',
   me:'<path d="M20 12V8H6a2 2 0 0 1 0-4h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/>',
@@ -694,8 +767,11 @@ const CITIES = LOCS.map(x=>x.n);
 const CSHORT = Object.fromEntries(LOCS.map(x=>[x.n,x.s]));
 const BIG = LOCS.filter(x=>x.big).map(x=>x.n);
 const SMALL = LOCS.filter(x=>!x.big).map(x=>x.n);
-/* Города, по которым в этот день есть план — их и видит оператор в заявке. */
-const dayCities = ds => S.plan.filter(p=>p.date===ds&&p.planned>0).map(p=>p.city);
+/* День планируется руководителем целиком: города приёма, смена поверителей,
+   смена операторов и план заявок. Всё остальное считается от этой записи. */
+const dayRec = ds => S.days.find(d=>d.date===ds);
+const dayOrNew = ds => { let d=dayRec(ds); if(!d){ d={date:ds,cities:[],crew:[],ops:[],planned:0}; S.days.push(d); } return d; };
+const dayCities = ds => dayRec(ds)?.cities || [];
 const SERVICES = [
   {id:'wv',grp:'Вода', name:'Поверка счётчика воды',  pF:900, pU:1200,rV:280, rO:45},
   {id:'wr',grp:'Вода', name:'Замена счётчика воды',   pF:2600,pU:3200,rV:750, rO:70},
@@ -721,17 +797,17 @@ const ROLES = {
    сгруппированные по ролям. Активная группа задаёт «от чьего лица» открыта страница. */
 const GROUPS = [
   {role:'operator',  short:'ОПР', views:['intake','support','me']},
-  {role:'supervisor',short:'РУК', views:['plan','schedule','absence','payroll','services']},
+  {role:'supervisor',short:'РУК', views:['plan','routes','schedule','absence','payroll','services']},
   {role:'verifier',  short:'ПВР', views:['myroute','absence','me']}
 ];
 const PAGES = GROUPS.flatMap(g=>g.views.map(v=>({v,role:g.role,short:g.short})));
 const TITLES = {intake:'Приём заявки',support:'Поддержка маршрутов',
-  me:'Мой заработок',plan:'План набора',schedule:'График смен',
+  me:'Мой заработок',plan:'Планирование дня',routes:'Сборка маршрутов',schedule:'График смен',
   payroll:'Сдельная оплата',services:'Услуги и ставки',myroute:'Мой маршрут',absence:'Отсутствия'};
 const CAPS = {
   support:'Маршруты на сегодня. Заявки стоят по шкале времени: можно открыть карточку, позвонить, передвинуть по часам или добавить в маршрут новую.',
-  plan:'Календарь месяца. Выходные подсвечены, в каждом дне — набор по городам и отклонение от плана.',
-  schedule:'Графики 5/2 и 2/2 плюс дополнительные смены. Клик по выходному ставит доп. смену.',
+  routes:'Маршруты по дням. Конструктор открывает карту области: точки — адреса заявок, порядок нажатия задаёт последовательность объезда.',
+  schedule:'Кто в смене по дням. Клик по клетке ставит или снимает сотрудника с даты — это та же смена, что в планировании.',
   me:'Сдельная оплата по выполненным работам. Виден только собственный заработок.',
   payroll:'Начисления по всем сотрудникам за период.',
   services:'Цены для физических и юридических лиц, сдельные ставки поверителя и оператора.',
@@ -811,7 +887,7 @@ const blankOp = () => ({on:false,from:null,shiftSec:0,talkSec:0,calls:0,missed:0
 const S = {
   view:'intake', page:0, auth:false, user:ROLES.operator.who, role:'operator', me:ROLES.operator.id,
   theme:'light', dd:null, ddM:null,
-  city:CITIES[0], day:TODAY, staff:[], plan:[], requests:[], routes:[], absences:[], seq:1000,
+  city:CITIES[0], day:TODAY, staff:[], days:[], requests:[], routes:[], absences:[], seq:1000,
   toast:null, openRoute:null, openStop:null, call:null, lb:null, ukCity:'', ukSeal:'', pMonth:TODAY.slice(0,7),
   mMonth:TODAY.slice(0,7), meTab:'done', modal:null, edit:null,
   intake:blankIntake(), op:blankOp()
@@ -839,20 +915,20 @@ function seed(){
     {id:'A5',staff:'v5',from:iso(addDays(today,1)),to:iso(addDays(today,5)),reason:'Отпуск за свой счёт',status:'отклонено',comment:'Пик набора, перенесите на конец месяца'},
     {id:'A6',staff:'v0',from:iso(addDays(today,11)),to:iso(addDays(today,12)),reason:'Личные дела',status:'на согласовании',comment:''}
   ];
-  /* Набор дня: либо один крупный город, либо связка из 2–4 небольших. */
+  /* День планирует руководитель: города приёма, смена поверителей и операторов, план. */
+  const vers = S.staff.filter(p=>p.role==='verifier').map(p=>p.id);
+  const opIds = S.staff.filter(p=>p.role==='operator'||p.role==='senior').map(p=>p.id);
   for(let i=-25;i<36;i++){
     const ds = iso(addDays(today,i));
-    const crew = S.staff.filter(p=>p.role==='verifier'&&onShift(p,ds)).length;
-    const cap = crew*25;
-    if(!cap) continue;
-    if(rr()<.45){
-      S.plan.push({date:ds,city:rnd(BIG),planned:cap});
-    } else {
-      const n = rint(2,4), pool = [...SMALL], picked = [];
-      for(let k=0;k<n;k++) picked.push(pool.splice(Math.floor(rr()*pool.length),1)[0]);
-      const w = picked.map(()=>.6+rr()), sum = w.reduce((a,b)=>a+b,0);
-      picked.forEach((c,k)=>S.plan.push({date:ds,city:c,planned:Math.max(6,Math.round(cap*w[k]/sum))}));
-    }
+    const wknd = [0,6].includes(new Date(ds+'T00:00:00').getDay());
+    const n = wknd?rint(4,6):rint(7,11);
+    const pool = [...vers], crew = [];
+    for(let k=0;k<n;k++) crew.push(pool.splice(Math.floor(rr()*pool.length),1)[0]);
+    const ops = opIds.filter((_,k)=>k<(wknd?2:3));
+    const cities = [];
+    if(rr()<.45) cities.push(rnd(BIG));
+    else { const sp=[...SMALL]; for(let k=0,m=rint(2,4);k<m;k++) cities.push(sp.splice(Math.floor(rr()*sp.length),1)[0]); }
+    S.days.push({date:ds,cities,crew:crew.sort(),ops,planned:crew.length*25});
   }
   const clients = ['Смирнова Т. А.','Волков Р. П.','Гареев И. М.','Дьяконова Л. С.','ООО «Стройсервис»',
     'Пшеничников А. А.','ТСЖ «Восход»','Кириллова Н. В.','Абрамов Д. Ю.','ООО «Гарант-Плюс»',
@@ -862,11 +938,12 @@ function seed(){
   for(let i=-14;i<14;i++){
     const ds = iso(addDays(today,i));
     const rate = i<0?0.98 : i===0?.95 : i===1?.8 : i<4?.5 : i<7?.25 : .06;
-    dayCities(ds).forEach(c=>{
-      const p = S.plan.find(x=>x.date===ds&&x.city===c);
-      const n = Math.round(p.planned*rate*(.85+rr()*.3));
-      for(let k=0;k<n;k++){ const r=mkReq(ds,c,clients); r.operator=ops[oi++%ops.length].id; S.requests.push(r); }
-    });
+    const cs = dayCities(ds); if(!cs.length) continue;
+    const n = Math.round(planFor(ds)*rate*(.85+rr()*.3));
+    for(let k=0;k<n;k++){
+      const r = mkReq(ds,cs[k%cs.length],clients);
+      r.operator = ops[oi++%ops.length].id; S.requests.push(r);
+    }
   }
   for(let i=-14;i<=1;i++){
     const ds = iso(addDays(today,i));
@@ -972,28 +1049,19 @@ function finishRoute(rt){
 
 /* ---------- расчёты ---------- */
 function absentOn(id,ds){ return S.absences.some(a=>a.staff===id&&a.status==='согласовано'&&ds>=a.from&&ds<=a.to); }
-function onShift(p,ds){
-  if(absentOn(p.id,ds)) return false;
-  if(p.extra?.includes(ds)) return true;
-  const d = new Date(ds+'T00:00:00');
-  if(p.pattern==='5/2') return d.getDay()>=1 && d.getDay()<=5;
-  const diff = Math.floor((d-new Date(p.anchor+'T00:00:00'))/864e5);
-  return ((diff%4)+4)%4 < 2;
-}
-const crewOn = ds => S.staff.filter(p=>p.role==='verifier'&&onShift(p,ds));
-const opsOn  = ds => S.staff.filter(p=>(p.role==='operator'||p.role==='senior')&&onShift(p,ds));
-const planFor = (ds,c) => S.plan.find(p=>p.date===ds&&p.city===c)?.planned ?? 0;
-function dayState(ds,c){
-  const p = planFor(ds,c);
-  const b = S.requests.filter(r=>r.date===ds&&r.city===c&&r.status!=='отменена').length;
-  const pct = p?b/p:0;
-  return {p,b,pct,s:p===0?'off':pct>1.1?'over':pct>=1?'full':pct>=.5?'fill':'free'};
-}
+/* Смена — это назначение руководителя на конкретную дату минус согласованные отсутствия. */
+const onShift = (p,ds) => !!dayRec(ds) && !absentOn(p.id,ds) &&
+  ((dayRec(ds).crew||[]).includes(p.id) || (dayRec(ds).ops||[]).includes(p.id));
+const crewOn = ds => (dayRec(ds)?.crew||[]).map(staffById).filter(p=>p&&!absentOn(p.id,ds));
+const opsOn  = ds => (dayRec(ds)?.ops||[]).map(staffById).filter(p=>p&&!absentOn(p.id,ds));
+const planFor = ds => dayRec(ds)?.planned ?? 0;
+const bookedOn = ds => S.requests.filter(r=>r.date===ds&&r.status!=='отменена').length;
+const bookedIn = (ds,c) => S.requests.filter(r=>r.date===ds&&r.city===c&&r.status!=='отменена').length;
 function dayTotal(ds){
-  let p=0,b=0; dayCities(ds).forEach(c=>{const d=dayState(ds,c);p+=d.p;b+=d.b;});
-  const pct = p?b/p:0;
+  const p = planFor(ds), b = bookedOn(ds), pct = p?b/p:0;
   return {p,b,pct,s:p===0?'off':pct>1.1?'over':pct>=1?'full':pct>=.5?'fill':'free'};
 }
+const dayState = dayTotal;
 /* Услуга теперь живёт в строке прибора: две поверки на адресе — две услуги в расчёте. */
 const worksOf = r => (r.devices||[]).map(d=>d.svc).filter(id=>SVC[id]);
 const rateV = r => worksOf(r).reduce((a,id)=>a+SVC[id].rV,0);
@@ -1029,6 +1097,7 @@ function toggleTheme(){ S.theme = S.theme==='light'?'dark':'light';
 
 function badgeFor(v,role){
   if(v==='support') return S.routes.filter(r=>r.date===TODAY&&r.status!=='выполнен').length;
+  if(v==='routes') return S.routes.filter(r=>r.date>=TODAY&&!r.verifier).length;
   if(v==='absence') return role==='supervisor'?S.absences.filter(a=>a.status==='на согласовании').length:0;
   if(v==='myroute') return S.routes.filter(r=>r.verifier===ROLES.verifier.id&&r.date===TODAY&&r.status!=='выполнен').length;
   return 0;
@@ -1419,109 +1488,136 @@ function lightbox(){
 }
 
 /* ---------- ПЛАН НАБОРА · календарь месяца ---------- */
+/* ============ ПЛАНИРОВАНИЕ ДНЯ (руководитель) ============ */
 function viewPlan(){
   const [Y,Mo] = S.pMonth.split('-').map(Number);
   const first = new Date(Y,Mo-1,1);
   const grid = new Date(first); grid.setDate(1-((first.getDay()+6)%7));
-  const weeks = Math.ceil(((first.getDay()+6)%7 + new Date(Y,Mo,0).getDate())/7);
-  const cells = Array.from({length:weeks*7},(_,i)=>addDays(grid,i));
-  let mp=0, mb=0;
-  cells.forEach(d=>{ if(d.getMonth()===Mo-1){ const t=dayTotal(iso(d)); mp+=t.p; mb+=t.b; }});
-  const mdev = mp?Math.round((mb/mp-1)*100):0;
+  const rows = Math.ceil(((first.getDay()+6)%7 + new Date(Y,Mo,0).getDate())/7);
+  const weeks = Array.from({length:rows},(_,w)=>Array.from({length:7},(_,i)=>iso(addDays(grid,w*7+i))));
+  const inM = ds => ds.slice(0,7)===S.pMonth;
+  let mp=0, mb=0, mdays=0;
+  weeks.flat().forEach(ds=>{ if(!inM(ds)) return; const t=dayTotal(ds); mp+=t.p; mb+=t.b; if(t.p) mdays++; });
 
-  const sel = S.day;
-  const selT = dayTotal(sel);
-  const side = `<div class="lbl" style="padding:6px 10px 8px">Выбранный день</div>
-    <div style="padding:12px;border:1px solid var(--border2);border-radius:var(--r)">
-      <div style="font-size:15px;font-weight:600">${ru(sel)}</div>
-      <div class="note" style="margin-top:3px">${WD[new Date(sel+'T00:00:00').getDay()]} · ${crewOn(sel).length} поверителей в смене</div>
-      <div style="display:flex;gap:14px;margin-top:10px">
-        <div><div class="mono" style="font-size:19px">${selT.b}</div><div class="lbl">набрано</div></div>
-        <div><div class="mono" style="font-size:19px">${selT.p}</div><div class="lbl">план</div></div></div></div>
-    <div class="lbl" style="padding:16px 10px 8px">План по городам дня</div>
-    ${dayCities(sel).length?dayCities(sel).map(c=>{const st=dayState(sel,c);
-      return `<div class="f" style="margin-bottom:8px"><label>${c} · набрано ${st.b}</label>
-        <input class="fld sm mono" value="${st.p}" onchange="setPlan('${sel}','${c}',this.value)"></div>`}).join('')
-     :`<p class="note" style="padding:0 2px 8px">На этот день выездов не запланировано.</p>`}
-    <div class="f" style="margin-bottom:8px"><label>Добавить город</label>
-      ${SEL('addCity',' ',CITIES.filter(c=>!dayCities(sel).includes(c)),v=>setPlan(sel,v,30),{sm:true,ph:'Выберите город'})}</div>
-    <button class="g sm" style="width:100%;margin-top:2px" onclick="autoPlan('${sel}')">Рассчитать по смене</button>
-    <p class="note" style="margin-top:10px">Рекомендация: ${crewOn(sel).length} поверителей × 25 заявок = <b style="color:var(--ink)">${crewOn(sel).length*25}</b> на день, поровну между городами дня.</p>`;
-
-  return shell(side, `${cap()}
-  <div class="c">
-    <div class="ptop">
+  return shell(null,`
+  <div class="row" style="margin-bottom:14px;align-items:center">
+    <div class="ptop" style="margin:0">
       <button class="ib" onclick="pMonth(-1)">${svg(I.left,14)}</button>
-      <b>${MN[Mo-1]} ${Y}</b>
+      <b style="min-width:150px;text-align:center">${MN[Mo-1]} ${Y}</b>
       <button class="ib" onclick="pMonth(1)">${svg(I.right,14)}</button>
-      <button class="g sm" onclick="S.pMonth='${TODAY.slice(0,7)}';render()">Текущий месяц</button>
-      <div style="flex:1"></div>
-      <span class="note">За месяц набрано <b style="color:var(--ink)" class="mono">${mb}</b> из <b style="color:var(--ink)" class="mono">${mp}</b></span>
-      <span class="tg ${Math.abs(mdev)>10?'t-err':'t-ok'}">${mdev>0?'+':''}${mdev}%</span>
+      <button class="g sm" onclick="S.pMonth='${TODAY.slice(0,7)}';render()">Текущий месяц</button></div>
+    <div style="flex:1"></div>
+    <span class="note">Рабочих дней <b class="mono" style="color:var(--ink)">${mdays}</b> ·
+      план <b class="mono" style="color:var(--ink)">${mp}</b> · набрано <b class="mono" style="color:var(--ink)">${mb}</b></span>
+  </div>
+  <div class="c">
+    <div class="rib4">
+      <div class="wk wkd">${['пн','вт','ср','чт','пт','сб','вс'].map(d=>`<span>${d}</span>`).join('')}</div>
+      ${weeks.map((days,w)=>{
+        let wp=0, wc=0;
+        days.forEach(ds=>{ if(!inM(ds)) return; wp+=planFor(ds); wc+=crewOn(ds).length; });
+        return `<div>
+          <div class="wkh"><span class="lbl">Неделя ${w+1}</span>
+            <span class="rg">${ru(days[0]).slice(0,5)} — ${ru(days[6]).slice(0,5)}</span>
+            <span class="tot">план ${wp} · смен ${wc}</span></div>
+          <div class="wk">${days.map(ds=>dayCell(ds,inM(ds))).join('')}</div></div>`}).join('')}
     </div>
-    <div class="phead">${['пн','вт','ср','чт','пт','сб','вс'].map(d=>`<span>${d}</span>`).join('')}</div>
-    <div class="pgrid">${cells.map(d=>{
-      const ds=iso(d), out=d.getMonth()!==Mo-1, wknd=d.getDay()===0||d.getDay()===6;
-      const t=dayTotal(ds), dev=t.p?Math.round((t.pct-1)*100):0;
-      const cs=dayCities(ds).map(c=>{const x=dayState(ds,c);return `${CSHORT[c]||c} ${x.b}/${x.p}`}).join(' · ');
-      return `<button class="pd ${out?'out':''} ${wknd?'wknd':''} ${ds===TODAY?'tdy':''}" data-s="${t.s}"
-        aria-pressed="${S.day===ds}" onclick="S.day='${ds}';render()">
-        <span class="h"><span class="dn">${pad(d.getDate())}</span>
-          ${t.p?`<span class="cr">${crewOn(ds).length} пов.</span>`:''}</span>
-        ${t.p?`<span class="big">${t.b}<span style="color:var(--ink3);font-weight:400">/${t.p}</span>
-            <em style="color:${Math.abs(dev)>10?'var(--error)':'var(--ink3)'}">${dev>0?'+':''}${dev}%</em></span>
-          <span class="pb"><i style="width:${Math.min(100,t.pct*90.9)}%"></i><s style="left:90.9%"></s></span>
-          <span class="cs">${cs}</span>`
-        :`<span class="off">выходной</span>`}
-      </button>`}).join('')}</div>
-    <div class="lg" style="margin-top:14px">
-      <span><i style="background:var(--ink3);opacity:.4"></i>свободно</span>
-      <span><i style="background:var(--cold);opacity:.55"></i>заполняется</span>
-      <span><i style="background:var(--ink);opacity:.75"></i>план набран</span>
-      <span><i style="background:var(--error);opacity:.7"></i>сверх 110%</span>
-      <span><i style="background:var(--bg2);border:1px solid var(--border)"></i>выходной день</span></div>
+    <p class="note" style="margin-top:12px">Клик по дню открывает карточку: города приёма, смена поверителей и операторов, план заявок.
+      Пустой день считается выходным — операторы не смогут записать на него заявку.</p>
   </div>`);
+}
+function dayCell(ds,inM){
+  const d = new Date(ds+'T00:00:00');
+  const rec = dayRec(ds), t = dayTotal(ds);
+  const crew = crewOn(ds).length, ops = opsOn(ds).length;
+  const cs = rec?.cities||[];
+  return `<button class="pcell ${inM?'':'out'} ${ds===TODAY?'tdy':''} ${t.p?'':'off'}" data-s="${t.s}"
+    onclick="editDay('${ds}')" title="${ru(ds)} — настроить день">
+    <span class="h"><span class="dn">${pad(d.getDate())}</span>
+      ${t.p?`<span class="cr mono">${t.b}/${t.p}</span>`:'<span class="cr">выходной</span>'}</span>
+    ${t.p?`<span class="pb"><i style="width:${Math.min(100,t.pct*90.9)}%"></i><s style="left:90.9%"></s></span>`:''}
+    <span class="tags">${cs.length?cs.slice(0,2).map(c=>`<i class="tag">${esc(CSHORT[c]||c)}</i>`).join('')
+      +(cs.length>2?`<i class="tag more">+${cs.length-2}</i>`:'')
+      :'<i class="tag empty">город не задан</i>'}</span>
+    <span class="crew">${crew?`<i>${svg(I.myroute,11)}${crew}</i>`:''}${ops?`<i>${svg(I.support,11)}${ops}</i>`:''}
+      ${rec&&!crew&&!ops?'<i class="none">смена не назначена</i>':''}</span>
+  </button>`;
 }
 function pMonth(n){ const [y,m]=S.pMonth.split('-').map(Number); const d=new Date(y,m-1+n,1);
   S.pMonth = `${d.getFullYear()}-${pad(d.getMonth()+1)}`; render(); }
-function setPlan(ds,c,v){
-  let p = S.plan.find(x=>x.date===ds&&x.city===c);
-  if(!p){ p={date:ds,city:c,planned:0}; S.plan.push(p); }
-  p.planned = Math.max(0,parseInt(v)||0); render();
-}
-function autoPlan(ds){
-  const total = crewOn(ds).length*25, cs = dayCities(ds);
-  if(!cs.length) return toast('Сначала добавьте хотя бы один город на этот день.');
-  cs.forEach(c=>setPlanSilent(ds,c,Math.round(total/cs.length)));
-  toast(`План на ${ru(ds)} пересчитан: ${total} заявок на ${cs.length} город(ов).`);
+function editDay(ds){ dayOrNew(ds); S.modal={k:'day',date:ds}; render(); }
+function tgDay(ds,field,val){
+  const d = dayOrNew(ds), a = d[field];
+  d[field] = a.includes(val) ? a.filter(x=>x!==val) : [...a,val];
+  if(field==='crew' && !d.planned) d.planned = d.crew.length*25;
   render();
 }
-function setPlanSilent(ds,c,v){
-  let p = S.plan.find(x=>x.date===ds&&x.city===c);
-  if(!p){ p={date:ds,city:c,planned:0}; S.plan.push(p); }
-  p.planned = v;
+function setDayPlan(ds,v){ dayOrNew(ds).planned = Math.max(0,parseInt(v)||0); render(); }
+function clearDay(ds){
+  const d = dayOrNew(ds);
+  const booked = bookedOn(ds);
+  if(booked) return toast(`На ${ru(ds)} уже записано ${booked} заявок — сначала перенесите их.`);
+  d.cities=[]; d.crew=[]; d.ops=[]; d.planned=0;
+  toast(`${ru(ds)} снят с работы: приём закрыт, смены сняты.`); render();
+}
+function dayModal(ds){
+  const d = dayOrNew(ds), t = dayTotal(ds);
+  const vers = S.staff.filter(p=>p.role==='verifier');
+  const ops = S.staff.filter(p=>p.role==='operator'||p.role==='senior');
+  const wd = WD[new Date(ds+'T00:00:00').getDay()];
+  return `<div class="mask" onclick="if(event.target===this)closeModal()">
+    <div class="modal" style="width:min(900px,96vw)">
+      <div class="mhd"><h3>${ru(ds)} · ${wd}</h3>
+        <span class="note">${t.p?`план ${t.p}, записано ${t.b}`:'день не запланирован'}</span>
+        <button class="ib" onclick="closeModal()">${svg(I.no,15)}</button></div>
+
+      <div class="f"><label>Города приёма · ${d.cities.length}</label>
+        <p class="note" style="margin:0 0 8px">Оператор сможет записать заявку только в эти города.</p>
+        <div class="tgls">${CITIES.map(c=>`<button class="tgl" aria-pressed="${d.cities.includes(c)}"
+          onclick="tgDay('${ds}','cities','${c}')">${esc(c)}</button>`).join('')}</div></div>
+
+      <div class="g2" style="margin-top:14px">
+        <div class="f" style="margin-bottom:0"><label>Поверители на дату · ${d.crew.length}</label>
+          <div class="tgls">${vers.map(p=>{const ab=absentOn(p.id,ds);
+            return `<button class="tgl ${ab?'ab':''}" aria-pressed="${d.crew.includes(p.id)}" ${ab?'disabled':''}
+              title="${ab?'согласованное отсутствие':p.name}" onclick="tgDay('${ds}','crew','${p.id}')">${esc(p.name)}</button>`}).join('')}</div></div>
+        <div class="f" style="margin-bottom:0"><label>Операторы на дату · ${d.ops.length}</label>
+          <div class="tgls">${ops.map(p=>{const ab=absentOn(p.id,ds);
+            return `<button class="tgl ${ab?'ab':''}" aria-pressed="${d.ops.includes(p.id)}" ${ab?'disabled':''}
+              title="${ab?'согласованное отсутствие':p.name}" onclick="tgDay('${ds}','ops','${p.id}')">${esc(p.name)}</button>`}).join('')}</div></div>
+      </div>
+
+      <div class="row" style="margin-top:16px;align-items:flex-end">
+        <div class="f" style="width:150px;margin-bottom:0"><label>План заявок на день</label>
+          <input class="fld mono" id="dPlan" value="${d.planned}" onchange="setDayPlan('${ds}',this.value)"></div>
+        <button class="g" onclick="setDayPlan('${ds}',${d.crew.length*25})">По смене: ${d.crew.length} × 25 = ${d.crew.length*25}</button>
+        <span class="note" style="flex:1">Приём закрывается при превышении плана на 10% — это ${Math.ceil(d.planned*1.1)} заявок.</span>
+        <button class="g end" onclick="clearDay('${ds}')">Сделать выходным</button>
+        <button class="b" onclick="closeModal()">Готово</button>
+      </div>
+    </div></div>`;
 }
 
 /* ---------- график ---------- */
 function viewSchedule(){
   const days = Array.from({length:14},(_,i)=>iso(addDays(today,i)));
-  return shell(null,`${cap()}<div class="c"><h3>Смены</h3>
-    <table><thead><tr><th>Сотрудник</th><th>Роль</th><th>График</th>
-      ${days.map(ds=>{const d=new Date(ds+'T00:00:00');return `<th class="num" style="text-align:center">${pad(d.getDate())}<br>${WD[d.getDay()]}</th>`}).join('')}</tr></thead><tbody>
-    ${S.staff.filter(p=>p.role!=='supervisor').map(p=>`<tr><td><b>${esc(p.name)}</b></td>
-      <td><span class="tg t-mut">${p.role==='verifier'?'поверитель':p.role==='senior'?'старший':'оператор'}</span></td>
-      <td>${SEL('pat'+p.id,p.pattern,['5/2','2/2'],v=>{p.pattern=v;},{sm:true})}</td>
-      ${days.map(ds=>{const ab=absentOn(p.id,ds),ex=p.extra?.includes(ds),on=onShift(p,ds);
-        return `<td style="text-align:center;padding:6px 2px;${ab?'':'cursor:pointer'}" ${ab?'':`onclick="tgExtra('${p.id}','${ds}')"`}
-          title="${ab?'согласованное отсутствие':ex?'дополнительная смена':on?'по графику':'выходной — клик ставит доп. смену'}">
-          ${ab?'<b style="color:var(--error)">О</b>':ex?'<b style="color:var(--warning)">+</b>':on?'<span style="color:var(--cold)">●</span>':'<span style="color:var(--border)">·</span>'}</td>`}).join('')}
-    </tr>`).join('')}</tbody></table>
-    <p class="note" style="margin-top:12px"><span style="color:var(--cold)">●</span> по графику · <b style="color:var(--warning)">+</b> доп. смена · <b style="color:var(--error)">О</b> отсутствие · <span style="color:var(--border)">·</span> выходной</p></div>`);
-}
-function tgExtra(id,ds){
-  const p = staffById(id);
-  if(onShift(p,ds)&&!p.extra.includes(ds)) return toast('Это рабочий день по графику.');
-  p.extra = p.extra.includes(ds)?p.extra.filter(x=>x!==ds):[...p.extra,ds]; render();
+  const cnt = p => days.filter(ds=>onShift(p,ds)).length;
+  return shell(null,`${cap()}<div class="c"><h3>Смены на две недели</h3>
+    <table><thead><tr><th>Сотрудник</th><th>Роль</th><th class="num">Смен</th>
+      ${days.map(ds=>{const d=new Date(ds+'T00:00:00');
+        return `<th class="num" style="text-align:center;${ds===TODAY?'color:var(--cold)':''}">${pad(d.getDate())}<br>${WD[d.getDay()]}</th>`}).join('')}</tr></thead><tbody>
+    ${S.staff.filter(p=>p.role!=='supervisor').map(p=>{
+      const isV = p.role==='verifier', field = isV?'crew':'ops';
+      return `<tr><td><b>${esc(p.name)}</b></td>
+      <td><span class="tg t-mut">${isV?'поверитель':p.role==='senior'?'старший':'оператор'}</span></td>
+      <td class="num mono">${cnt(p)}</td>
+      ${days.map(ds=>{const ab=absentOn(p.id,ds), on=(dayRec(ds)?.[field]||[]).includes(p.id);
+        return `<td style="text-align:center;padding:6px 2px;${ab?'':'cursor:pointer'}" ${ab?'':`onclick="tgDay('${ds}','${field}','${p.id}')"`}
+          title="${ab?'согласованное отсутствие':on?'в смене — клик снимает':'выходной — клик ставит в смену'}">
+          ${ab?'<b style="color:var(--error)">О</b>':on?'<span style="color:var(--cold)">●</span>':'<span style="color:var(--border)">·</span>'}</td>`}).join('')}
+    </tr>`}).join('')}</tbody></table>
+    <p class="note" style="margin-top:12px"><span style="color:var(--cold)">●</span> в смене · <b style="color:var(--error)">О</b> согласованное отсутствие · <span style="color:var(--border)">·</span> выходной.
+      Это та же смена, что в планировании дня — правки видны в обоих местах.</p></div>`);
 }
 
 /* ---------- отсутствия ---------- */
@@ -1693,6 +1789,8 @@ function saveReq(){
 function closeModal(){ S.modal=null; S.edit=null; render(); }
 function modalLayer(){
   if(!S.modal) return '';
+  if(S.modal.k==='day') return dayModal(S.modal.date);
+  if(S.modal.k==='rc') return rcModal();
   if(S.modal.k==='chat'){
     const rt = S.routes.find(r=>r.id===S.modal.id); if(!rt){ S.modal=null; return ''; }
     return `<div class="mask" onclick="if(event.target===this)closeModal()">
@@ -1723,6 +1821,205 @@ function chatPanel(rt){
     <div class="row" style="margin-top:10px;flex-wrap:nowrap">
       <input class="fld" id="chatin" placeholder="Сообщение поверителю">
       <button class="b" onclick="send('${rt.id}')">${svg(I.send,14)}</button></div>`;
+}
+
+/* ============ СБОРКА МАРШРУТОВ (руководитель) ============ */
+/* Карта: окно 7° долготы × 3.8° широты ≈ 423 × 422 км, поэтому кадр квадратный. */
+const GEO = {
+  'Екатеринбург':[60.61,56.84],'Нижний Тагил':[59.97,57.92],'Каменск-Уральский':[61.93,56.41],
+  'Первоуральск':[59.94,56.91],'Верхняя Пышма':[60.58,56.97],'Берёзовский':[60.81,56.91],
+  'Ревда':[59.91,56.80],'Полевской':[60.19,56.49],'Асбест':[61.46,57.01],'Заречный':[61.33,56.81],
+  'Сухой Лог':[62.03,56.91],'Богданович':[62.05,56.78],'Арамиль':[60.83,56.70],'Среднеуральск':[60.47,56.99],
+  'Дегтярск':[60.09,56.70],'Верхняя Салда':[60.55,58.05],'Невьянск':[60.22,57.49],'Кировград':[60.06,57.43],
+  'Реж':[61.39,57.37],'Артёмовский':[61.89,57.34],'Алапаевск':[61.70,57.85],'Серов':[60.58,59.60],
+  'Краснотурьинск':[60.19,59.77],'Качканар':[59.49,58.70],'Кушва':[59.76,58.28],'Нижняя Тура':[59.81,58.63],
+  'Красноуфимск':[57.77,56.61],'Ирбит':[63.07,57.68],'Талица':[63.72,57.01],'Новоуральск':[60.09,57.25]
+};
+const MV = {lon0:57.2,lon1:64.2,lat0:56.2,lat1:60.0,size:600};
+const mLon = lon => (lon-MV.lon0)/(MV.lon1-MV.lon0)*MV.size;
+const mLat = lat => (MV.lat1-lat)/(MV.lat1-MV.lat0)*MV.size;
+const OBLAST = [[58.9,61.6],[61.5,61.4],[63.0,60.6],[64.0,59.9],[64.6,59.0],[65.6,58.4],[66.2,57.6],
+  [65.2,57.0],[64.3,56.9],[63.6,56.3],[62.6,56.0],[61.7,56.1],[60.7,56.1],[59.9,56.3],[59.0,56.4],
+  [58.2,56.4],[57.5,56.7],[57.3,57.3],[57.6,58.0],[58.2,58.7],[58.6,59.4],[58.5,60.3]];
+const oblastPath = 'M '+OBLAST.map(([lon,lat])=>`${mLon(lon).toFixed(1)} ${mLat(lat).toFixed(1)}`).join(' L ')+' Z';
+const clampM = v => Math.max(16,Math.min(MV.size-16,v));
+
+/* Адреса внутри города раскладываются подсолнухом: детерминированно и без свалки в точке. */
+function rcPoints(ds){
+  const all = S.requests.filter(r=>r.date===ds && r.status!=='отменена')
+    .sort((a,b)=>a.id.localeCompare(b.id));
+  const byCity = {};
+  all.forEach(r=>{ (byCity[r.city] ||= []).push(r); });
+  const pts = [], clusters = [];
+  Object.entries(byCity).forEach(([city,list])=>{
+    const g = GEO[city]; if(!g) return;
+    const cx = mLon(g[0]), cy = mLat(g[1]);
+    const R = 20 + Math.sqrt(list.length)*4.4;
+    clusters.push({city,cx,cy,R,n:list.length});
+    list.forEach((r,k)=>{
+      const rad = R*Math.sqrt((k+.5)/list.length), a = k*2.399963;
+      pts.push({r,city,x:clampM(cx+rad*Math.cos(a)),y:clampM(cy+rad*Math.sin(a)),taken:!!r.routeId});
+    });
+  });
+  return {pts,clusters};
+}
+function openRC(ds){
+  S.rc = {date:ds||iso(addDays(today,1)), sel:[], made:[]};
+  S.modal = {k:'rc'}; render();
+}
+function rcDate(v){ S.rc.date = v; S.rc.sel = []; render(); }
+function rcPick(id){
+  const r = S.requests.find(x=>x.id===id);
+  if(!r || r.routeId) return;
+  const i = S.rc.sel.indexOf(id);
+  if(i>=0) S.rc.sel.splice(i,1); else S.rc.sel.push(id);
+  render();
+}
+function rcCreate(){
+  const sel = S.rc.sel;
+  if(sel.length<2) return toast('Выберите на карте хотя бы две точки — маршрут строится по последовательности.');
+  const reqs = sel.map(id=>S.requests.find(x=>x.id===id)).filter(Boolean);
+  const cities = [...new Set(reqs.map(r=>r.city))];
+  const rt = {id:'M'+(++S.seq),date:S.rc.date,city:cities[0],cities,verifier:null,status:'черновик',
+    stops:reqs.map(r=>({req:r.id,called:null,done:false})),chat:[],duty:null};
+  reqs.forEach(r=>{ r.routeId = rt.id; r.status = 'в маршруте'; });
+  S.routes.push(rt); S.rc.made.unshift(rt.id); S.rc.sel = [];
+  toast(`${rt.id}: ${reqs.length} адресов, ${cities.join(' · ')}. Назначьте поверителя справа.`);
+}
+function rcAssign(id,v){
+  const rt = S.routes.find(r=>r.id===id); if(!rt) return;
+  rt.verifier = v||null;
+  if(rt.verifier && rt.status==='черновик') rt.status='обзвонен';
+}
+function rcDrop(rid,reqId){
+  const rt = S.routes.find(r=>r.id===rid); if(!rt) return;
+  const j = rt.stops.findIndex(s=>s.req===reqId); if(j<0) return;
+  rt.stops.splice(j,1);
+  const r = S.requests.find(x=>x.id===reqId);
+  if(r){ r.routeId=null; r.status='создана'; }
+  if(!rt.stops.length) return rcDisband(rid);
+  toast(`${reqId} исключена из ${rid} и вернулась в свободные.`); render();
+}
+function rcDisband(id){
+  const rt = S.routes.find(r=>r.id===id); if(!rt) return;
+  rt.stops.forEach(s=>{ const r=S.requests.find(x=>x.id===s.req);
+    if(r){ r.routeId=null; r.status='создана'; } });
+  S.routes = S.routes.filter(r=>r.id!==id);
+  if(S.rc) S.rc.made = S.rc.made.filter(x=>x!==id);
+  toast(`${id} расформирован, адреса вернулись в свободные.`); render();
+}
+function closeRC(){ S.rc=null; S.modal=null; render(); }
+function rcModal(){
+  const C = S.rc; if(!C) return '';
+  const ds = C.date;
+  const {pts,clusters} = rcPoints(ds);
+  const crew = crewOn(ds);
+  const free = pts.filter(p=>!p.taken).length;
+  const selPts = C.sel.map(id=>pts.find(p=>p.r.id===id)).filter(Boolean);
+  const line = selPts.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const made = C.made.map(id=>S.routes.find(r=>r.id===id)).filter(Boolean);
+  const cs = dayCities(ds);
+  return `<div class="mask" onclick="if(event.target===this)closeRC()">
+    <div class="modal rcm">
+      <div class="mhd"><h3>Конструктор маршрутов</h3>
+        <span class="note">Выбирайте точки по порядку — между ними протянется связь. Закрытие окна не отменяет созданные маршруты.</span>
+        <button class="ib" onclick="closeRC()">${svg(I.no,15)}</button></div>
+
+      <div class="rchd">
+        <div class="f" style="width:150px;margin:0"><label>Дата выезда</label>${DATE('rcDate',ds,v=>rcDate(v))}</div>
+        <div class="rcst">
+          <div><b class="mono">${crew.length}</b> поверителей в смене</div>
+          <div class="who">${crew.length?crew.map(p=>esc(p.name)).join(' · '):'<span style="color:var(--warning)">смена не назначена — задайте её в планировании</span>'}</div>
+        </div>
+        <div class="rcst">
+          <div><b class="mono">${free}</b> свободных из ${pts.length} заявок${cs.length?` · ${cs.map(c=>esc(c)).join(' · ')}`:''}</div>
+          <div class="who">${C.sel.length?`выбрано ${C.sel.length} — идут в маршрут в порядке нажатия`:'точка = адрес заявки, повторный клик снимает выбор'}</div>
+        </div>
+        <button class="b" onclick="rcCreate()" ${C.sel.length>1?'':'disabled'}>Создать маршрут${C.sel.length>1?` · ${C.sel.length}`:''}</button>
+      </div>
+
+      <div class="rcbody">
+        <div class="rcmap">
+          <svg viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Карта Свердловской области">
+            <defs><pattern id="mg" width="40" height="40" patternUnits="userSpaceOnUse">
+              <path d="M40 0H0v40" fill="none" stroke="var(--gridA)" stroke-width="1"/></pattern></defs>
+            <rect width="600" height="600" fill="url(#mg)"/>
+            <path d="${oblastPath}" fill="var(--wash)" stroke="var(--mark)" stroke-width="1.5" stroke-linejoin="round"/>
+            ${(()=>{ /* подписи городов не должны наезжать друг на друга */
+              const placed = [];
+              return clusters.slice().sort((a,b)=>a.cy-b.cy).map(c=>{
+                let ly = c.cy - c.R - 7;
+                const w = 7*(c.city.length+4);
+                while(placed.some(q=>Math.abs(q.x-c.cx)<(q.w+w)/2 && Math.abs(q.y-ly)<13)) ly -= 13;
+                placed.push({x:c.cx,y:ly,w});
+                return `<g class="mcity"><circle cx="${c.cx.toFixed(1)}" cy="${c.cy.toFixed(1)}" r="2.5"/>
+                  <text x="${c.cx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle">${esc(c.city)} · ${c.n}</text></g>`;
+              }).join('');
+            })()}
+            ${line?`<polyline points="${line}" class="mline halo"/><polyline points="${line}" class="mline"/>`:''}
+            ${pts.map(p=>{const k=C.sel.indexOf(p.r.id);
+              return `<g class="mp ${p.taken?'taken':''} ${k>=0?'on':''}" ${p.taken?'':`onclick="rcPick('${p.r.id}')"`}>
+                <title>${esc(p.r.city)}, ${esc(addrOf(p.r))} · ${pad(p.r.time-1)}:00–${pad(p.r.time+1)}:00${p.taken?' · уже в маршруте '+p.r.routeId:''}</title>
+                <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="9" class="hit"/>
+                <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${k>=0?5.5:4}" class="dot"/>
+                ${k>=0?`<text x="${p.x.toFixed(1)}" y="${(p.y-9).toFixed(1)}" text-anchor="middle">${k+1}</text>`:''}</g>`}).join('')}
+            <g class="mlg" transform="translate(12,12)">
+              <rect x="0" y="0" width="330" height="26" rx="6"/>
+              <circle cx="16" cy="13" r="4" class="d1"/><text x="26" y="17">свободна</text>
+              <circle cx="106" cy="13" r="5" class="d2"/><text x="116" y="17">в маршруте этой сессии</text>
+              <circle cx="262" cy="13" r="4" class="d3"/><text x="272" y="17">занята</text></g>
+          </svg>
+        </div>
+        <div class="rclist">
+          <div class="lbl" style="margin-bottom:8px">Маршруты этой сессии · ${made.length}</div>
+          ${made.length?made.map(rt=>`<div class="rcr">
+            <div class="rch"><b class="mono">${rt.id}</b>
+              <span class="note">${rt.stops.length} адр. · ${(rt.cities||[rt.city]).join(' · ')}</span>
+              <button class="ib sm no" title="Расформировать" onclick="rcDisband('${rt.id}')">${svg(I.no,12)}</button></div>
+            <div class="f" style="margin:8px 0 0">
+              ${SEL('rv'+rt.id,rt.verifier||'',[{v:'',l:'— поверитель не назначен —'},
+                ...crew.map(p=>({v:p.id,l:p.name,hint:S.routes.filter(x=>x.date===ds&&x.verifier===p.id).length+' марш.'}))],
+                v=>rcAssign(rt.id,v),{sm:true})}</div>
+            <div class="rcs">${rt.stops.map((s,i)=>{const r=S.requests.find(x=>x.id===s.req); if(!r) return '';
+              return `<div><span class="n mono">${pad(i+1)}</span>
+                <span class="a">${esc(r.city)}, ${esc(r.street)}, ${r.house}</span>
+                <button class="ib sm no" title="Исключить адрес" onclick="rcDrop('${rt.id}','${r.id}')">${svg(I.no,10)}</button></div>`}).join('')}</div>
+          </div>`).join('')
+          :`<p class="note">Маршрутов пока нет. Отметьте точки на карте и нажмите «Создать маршрут».</p>`}
+        </div>
+      </div>
+    </div></div>`;
+}
+
+/* ---------- список маршрутов ---------- */
+function viewRoutes(){
+  const from = iso(addDays(today,-3));
+  const list = S.routes.filter(r=>r.date>=from).sort((a,b)=>a.date.localeCompare(b.date)||a.id.localeCompare(b.id));
+  const older = S.routes.length - list.length;
+  const byDay = {}; list.forEach(rt=>(byDay[rt.date] ||= []).push(rt));
+  return shell(null,`${cap()}
+  <div class="row" style="margin-bottom:14px;align-items:center">
+    <button class="b long" onclick="openRC('${iso(addDays(today,1))}')">${svg(I.plus,13)}Создать маршрут</button>
+    <span class="note" style="flex:1">Маршрутов на ближайшие дни: <b class="mono" style="color:var(--ink)">${list.length}</b>${older?` · в архиве ещё ${older}`:''}</span>
+  </div>
+  ${Object.keys(byDay).length?Object.entries(byDay).map(([ds,rts])=>{
+    const crew = crewOn(ds), noV = rts.filter(r=>!r.verifier).length;
+    return `<div class="c"><div style="display:flex;align-items:baseline;gap:10px;margin-bottom:10px">
+      <h3>${ru(ds)} · ${WD[new Date(ds+'T00:00:00').getDay()]}</h3>
+      <span class="note">${rts.length} маршрут(ов) · ${rts.reduce((a,r)=>a+r.stops.length,0)} адресов · в смене ${crew.length} поверителей${noV?` · <span style="color:var(--warning)">без поверителя ${noV}</span>`:''}</span>
+      <div style="flex:1"></div>
+      <button class="g sm" onclick="openRC('${ds}')">${svg(I.map,12)}Открыть карту дня</button></div>
+    <table><thead><tr><th>Маршрут</th><th>Города</th><th class="num">Адресов</th><th>Поверитель</th><th>Статус</th><th></th></tr></thead><tbody>
+      ${rts.map(rt=>`<tr><td class="mono"><b>${rt.id}</b></td>
+        <td>${(rt.cities||[rt.city]).map(c=>`<span class="tag">${esc(c)}</span>`).join(' ')}</td>
+        <td class="num">${rt.stops.length}</td>
+        <td style="width:210px">${SEL('rr'+rt.id,rt.verifier||'',[{v:'',l:'— не назначен —'},
+          ...crew.map(p=>({v:p.id,l:p.name,hint:S.routes.filter(x=>x.date===ds&&x.verifier===p.id).length+' марш.'}))],
+          v=>rcAssign(rt.id,v),{sm:true})}</td>
+        <td>${stTag(rt.status)}</td>
+        <td style="text-align:right"><button class="g sm" onclick="rcDisband('${rt.id}')" ${rt.status==='выполнен'?'disabled':''}>Расформировать</button></td></tr>`).join('')}
+    </tbody></table></div>`}).join('')
+  :`<div class="c"><div class="empty">Маршрутов на ближайшие дни нет. Соберите первый на карте.</div></div>`}`);
 }
 
 function build(ds,city){
@@ -1885,9 +2182,9 @@ function viewPayroll(){
     if(r.verifier){ byV[r.verifier]=(byV[r.verifier]||0)+rateV(r); cV[r.verifier]=(cV[r.verifier]||0)+1; }
     if(r.operator){ byO[r.operator]=(byO[r.operator]||0)+rateO(r); cO[r.operator]=(cO[r.operator]||0)+1; }
   });
-  const tbl = (o,cnt,l) => Object.keys(o).length?`<table><thead><tr><th>${l}</th><th>График</th><th class="num">Работ</th><th class="num">Начислено</th><th class="num">Средняя</th></tr></thead><tbody>
+  const tbl = (o,cnt,l) => Object.keys(o).length?`<table><thead><tr><th>${l}</th><th>Вн. номер</th><th class="num">Работ</th><th class="num">Начислено</th><th class="num">Средняя</th></tr></thead><tbody>
     ${Object.entries(o).sort((a,b)=>b[1]-a[1]).map(([k,v])=>
-      `<tr><td><b>${esc(nameOf(k))}</b></td><td class="mono">${staffById(k)?.pattern||'—'}</td>
+      `<tr><td><b>${esc(nameOf(k))}</b></td><td class="mono">${staffById(k)?.ext||'—'}</td>
       <td class="num">${cnt[k]}</td><td class="num"><b>${money(v)}</b></td><td class="num">${money(v/cnt[k])}</td></tr>`).join('')}</tbody></table>`
     :`<div class="empty">Нет начислений за период.</div>`;
   const tV = Object.values(byV).reduce((a,b)=>a+b,0), tO = Object.values(byO).reduce((a,b)=>a+b,0);
@@ -1910,11 +2207,12 @@ function viewServices(){
       ${SERVICES.map((s,i)=>`<tr><td><span class="tg t-mut">${s.grp}</span></td><td><b>${s.name}</b></td>
         ${['pF','pU','rV','rO'].map(k=>`<td class="num"><input class="fld sm mono" style="width:80px;display:inline-flex;text-align:right" value="${s[k]}" onchange="setSvc(${i},'${k}',this.value)"></td>`).join('')}
         <td class="num">${Math.round((s.rV+s.rO)/s.pF*100)}%</td></tr>`).join('')}</tbody></table></div>
-  <div class="c"><h3>Сотрудники</h3><p class="cap">Внутренние номера АТС и графики. Персональный номер оператора нужен для всплывающей карточки звонка.</p>
-    <table><thead><tr><th>Сотрудник</th><th>Роль</th><th>График</th><th>Вн. номер</th><th class="num">Телефон</th><th>Сегодня</th></tr></thead><tbody>
+  <div class="c"><h3>Сотрудники</h3><p class="cap">Внутренние номера АТС и загрузка. Персональный номер оператора нужен для всплывающей карточки звонка.</p>
+    <table><thead><tr><th>Сотрудник</th><th>Роль</th><th class="num">Смен за 14 дней</th><th>Вн. номер</th><th class="num">Телефон</th><th>Сегодня</th></tr></thead><tbody>
       ${S.staff.map(p=>`<tr><td><b>${esc(p.name)}</b></td>
         <td><span class="tg t-mut">${p.role==='verifier'?'поверитель':p.role==='senior'?'старший':p.role==='supervisor'?'руководитель':'оператор'}</span></td>
-        <td class="mono">${p.pattern}</td><td class="mono">${p.ext||'—'}</td><td class="num mono">${p.phone||'—'}</td>
+        <td class="num mono">${Array.from({length:14},(_,i)=>iso(addDays(today,i))).filter(ds=>onShift(p,ds)).length}</td>
+        <td class="mono">${p.ext||'—'}</td><td class="num mono">${p.phone||'—'}</td>
         <td>${absentOn(p.id,TODAY)?'<span class="tg t-err">отсутствие</span>':onShift(p,TODAY)?'<span class="tg t-ok">в смене</span>':'<span class="tg t-mut">выходной</span>'}</td></tr>`).join('')}
     </tbody></table></div>`);
 }
@@ -2019,7 +2317,7 @@ function reopenStop(id,i){
 
 /* ============================================================ */
 const VIEWS = {intake:viewIntake,support:viewSupport,me:viewMe,
-  plan:viewPlan,schedule:viewSchedule,payroll:viewPayroll,
+  plan:viewPlan,routes:viewRoutes,schedule:viewSchedule,payroll:viewPayroll,
   services:viewServices,myroute:viewMyRoute,absence:viewAbsence};
 /* Навигация идёт по индексу страницы: одна и та же страница может встречаться
    в разных ролевых группах и показывать разное (например «Отсутствия»). */
