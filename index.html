@@ -388,6 +388,46 @@ td b{color:var(--ink);font-weight:600}
   background:var(--card);font-size:12px;color:var(--ink2);line-height:1.5;margin-bottom:12px}
 .actnote b{display:block;font-size:9.5px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);margin-bottom:4px}
 
+/* ---------- поддержка маршрутов: шкала дня ---------- */
+.rrow{display:flex;align-items:center;gap:4px}
+.rrow .sb{flex:1;min-width:0}
+.rrow .ib{flex-shrink:0;position:relative}
+.rrow .ib .cnt{position:absolute;top:-4px;right:-4px;min-width:14px;height:14px;padding:0 3px;border-radius:5px;
+  background:var(--ink);color:var(--bg);font-size:8.5px;font-weight:600;display:grid;place-items:center}
+.tlg{display:flex;flex-direction:column;margin-top:4px}
+.tlh{display:grid;grid-template-columns:64px 1fr;gap:10px;align-items:stretch;min-height:42px}
+.tlh .hh{position:relative;padding:8px 12px 0 0;font-size:11.5px;color:var(--ink3);text-align:right;font-variant-numeric:tabular-nums}
+.tlh .hh i{position:absolute;right:0;top:14px;bottom:-1px;width:1px;background:var(--border)}
+.tlh:last-child .hh i{display:none}
+.tlh.now .hh{color:var(--cold);font-weight:600}
+.tlh.now .hh i{background:var(--cold);width:1.5px}
+.tlh .lane{display:flex;flex-wrap:wrap;gap:6px;padding:6px 0 8px;border-top:1px dashed var(--border2);align-items:center}
+.tlh:first-child .lane{border-top:0}
+.tlh .lane.empty{padding:4px 0}
+.tlh .lane .none{font-size:10.5px;color:var(--border);letter-spacing:.05em}
+.chip2{display:flex;align-items:center;gap:9px;padding:6px 8px 6px 10px;border:1px solid var(--border);
+  border-radius:var(--r);background:var(--card);min-width:300px;transition:border-color .2s ease,box-shadow .2s ease}
+.chip2:hover{border-color:var(--mark);box-shadow:var(--shSoft)}
+.chip2.fin{opacity:.55}
+.chip2.fin .ad b{text-decoration:line-through}
+.chip2 .rt{font-size:9.5px;color:var(--ink3);flex-shrink:0}
+.chip2 .ad{min-width:0;flex:1}
+.chip2 .ad b{display:block;font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip2 .ad small{display:block;font-size:11px;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip2 .ctl{display:flex;align-items:center;gap:4px;flex-shrink:0}
+
+/* ---------- модальный слой ---------- */
+.mask{position:fixed;inset:0;z-index:90;padding:36px 22px;overflow-y:auto;
+  background:rgba(12,12,12,.4);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);
+  display:flex;justify-content:center;align-items:flex-start;animation:wsFade .2s ease}
+[data-theme="dark"] .mask{background:rgba(0,0,0,.6)}
+.modal{width:min(1120px,96vw);background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+  box-shadow:0 40px 90px -30px rgba(0,0,0,.55);padding:18px 20px 20px;animation:wsPop .2s ease}
+.mhd{display:flex;align-items:center;gap:12px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border2)}
+.mhd h3{font-size:15px}
+.mhd .note{flex:1}
+.mhd .ib{flex-shrink:0}
+
 /* ---------- просмотр фото ---------- */
 .lb{position:fixed;inset:0;z-index:110;background:rgba(0,0,0,.82);display:grid;place-items:center;padding:40px;animation:wsFade .2s ease}
 .lb img{max-width:min(880px,86vw);max-height:76vh;border-radius:var(--r);display:block;box-shadow:0 30px 70px -20px #000}
@@ -602,7 +642,9 @@ const I = {
   schedule:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>',
   logistics:'<path d="M3 6.5l6-3 6 3 6-3v14l-6 3-6-3-6 3z"/><path d="M9 3.5v14M15 6.5v14"/>',
   routes:'<circle cx="6" cy="19" r="3"/><circle cx="18" cy="5" r="3"/><path d="M9 19h6a4 4 0 0 0 0-8H9a4 4 0 0 1 0-8h6"/>',
-  duty:'<path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>',
+  support:'<path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>',
+  chat:'<path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.9 8.9 0 0 1-3.8-.9L3 20.5l1.6-4.9A8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   uk:'<path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16"/><path d="M15 9h4a2 2 0 0 1 2 2v10"/><path d="M9 7h2M9 11h2M9 15h2"/>',
   me:'<path d="M20 12V8H6a2 2 0 0 1 0-4h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/>',
   payroll:'<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>',
@@ -678,21 +720,18 @@ const ROLES = {
 /* Роль на входе не выбирается: меню показывает все страницы подряд,
    сгруппированные по ролям. Активная группа задаёт «от чьего лица» открыта страница. */
 const GROUPS = [
-  {role:'operator',  short:'ОПР', views:['intake','logistics','routes','duty','uk','me']},
+  {role:'operator',  short:'ОПР', views:['intake','support','me']},
   {role:'supervisor',short:'РУК', views:['plan','schedule','absence','payroll','services']},
   {role:'verifier',  short:'ПВР', views:['myroute','absence','me']}
 ];
 const PAGES = GROUPS.flatMap(g=>g.views.map(v=>({v,role:g.role,short:g.short})));
-const TITLES = {intake:'Приём заявки',logistics:'Логистика',routes:'Маршруты',duty:'Дежурство',
-  uk:'Уведомления УК',me:'Мой заработок',plan:'План набора',schedule:'График смен',
+const TITLES = {intake:'Приём заявки',support:'Поддержка маршрутов',
+  me:'Мой заработок',plan:'План набора',schedule:'График смен',
   payroll:'Сдельная оплата',services:'Услуги и ставки',myroute:'Мой маршрут',absence:'Отсутствия'};
 const CAPS = {
+  support:'Маршруты на сегодня. Заявки стоят по шкале времени: можно открыть карточку, позвонить, передвинуть по часам или добавить в маршрут новую.',
   plan:'Календарь месяца. Выходные подсвечены, в каждом дне — набор по городам и отклонение от плана.',
   schedule:'Графики 5/2 и 2/2 плюс дополнительные смены. Клик по выходному ставит доп. смену.',
-  logistics:'Пул сортируется по городу и улице. Автосборка режет его на маршруты по 25 заявок.',
-  routes:'Маршрут уходит поверителю только после прозвонки. Окно прибытия — два часа: час до и час после назначенного времени.',
-  duty:'Маршруты сегодняшнего дня. Вопрос поверителя берёт один оператор — у остальных кнопка гаснет.',
-  uk:'Разовое уведомление по клиенту или сводный отчёт за месяц. Пломба УК обязательна.',
   me:'Сдельная оплата по выполненным работам. Виден только собственный заработок.',
   payroll:'Начисления по всем сотрудникам за период.',
   services:'Цены для физических и юридических лиц, сдельные ставки поверителя и оператора.',
@@ -774,6 +813,7 @@ const S = {
   theme:'light', dd:null, ddM:null,
   city:CITIES[0], day:TODAY, staff:[], plan:[], requests:[], routes:[], absences:[], seq:1000,
   toast:null, openRoute:null, openStop:null, call:null, lb:null, ukCity:'', ukSeal:'', pMonth:TODAY.slice(0,7),
+  mMonth:TODAY.slice(0,7), meTab:'done', modal:null, edit:null,
   intake:blankIntake(), op:blankOp()
 };
 const staffById = id => S.staff.find(s=>s.id===id);
@@ -845,6 +885,15 @@ function seed(){
       });
     });
   }
+  /* Свежие звонки этого дня: приняты, но в маршрут ещё не поставлены. */
+  dayCities(TODAY).forEach(c=>{
+    for(let k=0;k<rint(2,4);k++){
+      const r = mkReq(TODAY,c,clients);
+      r.created = TODAY; r.operator = ops[oi++%ops.length].id;
+      r.time = rint(12,20); r.routeId = null; r.status = 'создана';
+      S.requests.push(r);
+    }
+  });
   const chats = [
     [['v','Не открывают, Крауля 12 кв. 45. Жду 5 минут'],['o','Созвонилась, спускается — она в магазине была']],
     [['v','На Сурикова 8 пломбы УК нет. Снимать счётчик?'],['o','Нет, фиксируй в акте отсутствие пломбы и ставь свою'],['v','Принято']],
@@ -979,8 +1028,7 @@ function toggleTheme(){ S.theme = S.theme==='light'?'dark':'light';
   document.documentElement.setAttribute('data-theme',S.theme); render(); }
 
 function badgeFor(v,role){
-  if(v==='duty') return S.routes.filter(r=>r.date===TODAY&&!r.duty).length;
-  if(v==='routes') return S.routes.filter(r=>r.date===TODAY&&r.status==='черновик').length;
+  if(v==='support') return S.routes.filter(r=>r.date===TODAY&&r.status!=='выполнен').length;
   if(v==='absence') return role==='supervisor'?S.absences.filter(a=>a.status==='на согласовании').length:0;
   if(v==='myroute') return S.routes.filter(r=>r.verifier===ROLES.verifier.id&&r.date===TODAY&&r.status!=='выполнен').length;
   return 0;
@@ -1019,7 +1067,7 @@ function shell(side,main){
       </header>
       <div class="body">${side?`<aside class="side">${side}</aside>`:''}<div class="main">${main}</div></div>
     </div>
-  </div></div>${callWindow()}${lightbox()}${S.toast?`<div class="toast">${esc(S.toast)}</div>`:''}`;
+  </div></div>${modalLayer()}${callWindow()}${lightbox()}${S.toast?`<div class="toast">${esc(S.toast)}</div>`:''}`;
 }
 const cap = () => `<p class="cap">${CAPS[S.view]||''}</p>`;
 
@@ -1062,24 +1110,56 @@ function pickDay(ds){
   if(cs.length && !cs.includes(S.intake.city)) S.intake.city = cs[0];
   render();
 }
-const citySide = () => { const cs = dayCities(S.day);
-  if(cs.length && !cs.includes(S.city)) S.city = cs[0];
-  return `<div class="lbl" style="padding:6px 10px 8px">Города дня</div>
-  ${cs.length?cs.map(c=>{const st=dayState(S.day,c);
-    return `<button class="sb" aria-current="${S.city===c}" onclick="S.city='${c}';render()"><span>${c}</span><span class="n">${st.b}/${st.p}</span></button>`}).join('')
-   :`<p class="note" style="padding:8px 10px">Выходной — выездов нет.</p>`}
-  <div class="lbl" style="padding:16px 10px 8px">Дата</div>${DATE('sideDate',S.day,v=>{S.day=v;})}
-  <div style="margin-top:12px;padding:11px 12px;border:1px solid var(--border2);border-radius:var(--r)">
-    <div class="note">В смене на ${ru(S.day)}</div>
-    <div style="display:flex;gap:14px;margin-top:6px">
-      <div><div class="mono" style="font-size:17px">${crewOn(S.day).length}</div><div class="lbl">поверителей</div></div>
-      <div><div class="mono" style="font-size:17px">${opsOn(S.day).length}</div><div class="lbl">операторов</div></div></div></div>`; };
+
+/* ---------- форма заявки ----------
+   Один и тот же набор полей работает и на первой странице, и в модальной
+   карточке из поддержки маршрутов: K — объект, T — путь к нему в состоянии. */
+function reqForm(K,T,p,day,onDay){
+  const U = K.ctype==='Юрлицо';
+  const cs = dayCities(day);
+  if(cs.length && !cs.includes(K.city)) K.city = cs[0];
+  return `<div class="row" style="margin:2px 0 14px;flex-wrap:nowrap">
+      <div class="f" style="flex:none"><label>Тип клиента</label>${SEG(K.ctype,['Физлицо','Юрлицо'],`setF('${T}','ctype',$v)`)}</div>
+      <div class="f" style="flex:1;min-width:240px;max-width:700px"><label>${U?'Организация':'ФИО клиента'}</label>
+        <input class="fld" id="${p}Name" value="${esc(K.name)}" oninput="${T}.name=this.value" placeholder="${U?'ООО «Стройсервис»':'Смирнова Т. А.'}"></div>
+      ${U?`<div class="f" style="width:210px"><label>ИНН организации</label>
+        <input class="fld mono" id="${p}Inn" value="${esc(K.inn)}" oninput="${T}.inn=this.value.replace(/\\D/g,'')" placeholder="10 или 12 цифр" maxlength="12"></div>`:''}
+    </div>
+    <div class="g4" style="margin-bottom:14px">
+      <div class="f" style="margin-bottom:0"><label>Телефон основной</label>${PHONE(p+'Phone',K.phone,'phone','основной',T)}</div>
+      <div class="f" style="margin-bottom:0"><label>ФИО контакта</label>
+        <input class="fld" id="${p}Contact" value="${esc(K.contact)}" oninput="${T}.contact=this.value" placeholder="кто отвечает"></div>
+      <div class="f" style="margin-bottom:0"><label>Телефон дополнительный</label>${PHONE(p+'Phone2',K.phone2,'phone2','дополнительный',T)}</div>
+      <div class="f" style="margin-bottom:0"><label>ФИО контакта</label>
+        <input class="fld" id="${p}Contact2" value="${esc(K.contact2)}" oninput="${T}.contact2=this.value" placeholder="кто отвечает"></div>
+    </div>
+    <div class="row" style="margin-bottom:14px;flex-wrap:nowrap">
+      <div class="f" style="width:186px"><label>Город</label>
+        ${cs.length?SEL(p+'City',K.city,cs.map(c=>({v:c,l:c,hint:dayState(day,c).b+'/'+dayState(day,c).p})),v=>K.city=v)
+          :`<div class="fld" style="color:var(--ink3)">выходной день</div>`}</div>
+      <div class="f" style="flex:1;min-width:170px"><label>Улица</label>${SEL(p+'Street',K.street,STREETS,v=>K.street=v)}</div>
+      <div class="f" style="width:50px"><label>дом</label><input class="fld mono" id="${p}House" value="${esc(K.house)}" oninput="${T}.house=this.value" placeholder="12"></div>
+      <div class="f" style="width:50px"><label>под.</label><input class="fld mono" id="${p}Ent" value="${esc(K.entrance)}" oninput="${T}.entrance=this.value" placeholder="3"></div>
+      <div class="f" style="width:50px"><label>эт.</label><input class="fld mono" id="${p}Floor" value="${esc(K.floor)}" oninput="${T}.floor=this.value" placeholder="5"></div>
+      <div class="f" style="width:50px"><label>кв.</label><input class="fld mono" id="${p}Flat" value="${esc(K.flat)}" oninput="${T}.flat=this.value" placeholder="45"></div>
+      <div class="f" style="width:76px"><label>Домофон</label>
+        <div class="chkbox">${CHK(K.intercom,K.intercom?'вкл.':'выкл.',`${T}.intercom=!${T}.intercom;render()`)}</div></div>
+      <div class="f" style="width:120px"><label>Дата выезда</label>${DATE(p+'Date',day,onDay)}</div>
+      <div class="f" style="width:150px"><label>Время прибытия</label>
+        ${SEL(p+'Time',K.time,Array.from({length:11},(_,i)=>({v:10+i,l:pad(10+i)+':00',hint:'окно '+pad(9+i)+':00–'+pad(11+i)+':00'})),v=>K.time=+v)}</div>
+    </div>
+    <div class="g2">
+      <div class="f" style="margin-bottom:0"><label>Комментарий для операторов</label>
+        <textarea class="fld" id="${p}CmtOp" oninput="${T}.cmtOp=this.value" placeholder="Что важно знать при прозвонке: когда звонить, кто отвечает, как оплачивают">${esc(K.cmtOp)}</textarea></div>
+      <div class="f" style="margin-bottom:0"><label>Комментарий для поверителей</label>
+        <textarea class="fld" id="${p}CmtVf" oninput="${T}.cmtVf=this.value" placeholder="Что важно знать на адресе: доступ к стояку, собака, состояние пломбы">${esc(K.cmtVf)}</textarea></div>
+    </div>`;
+}
+function setF(path,k,v){ (path==='S.edit'?S.edit:S.intake)[k]=v; render(); }
 
 /* ---------- приём заявки ---------- */
 function viewIntake(){
-  const cs = dayCities(S.day);
-  const K = S.intake, U = K.ctype==='Юрлицо';
-  if(cs.length && !cs.includes(K.city)) K.city = cs[0];
+  const K = S.intake;
   const t = dayTotal(S.day), closed = t.pct>1.1 || t.p===0;
   const mine = S.requests.filter(r=>r.operator===S.me && r.created===TODAY)
     .sort((a,b)=>b.id.localeCompare(a.id));
@@ -1091,42 +1171,7 @@ function viewIntake(){
     ${opConsole()}</div>
 
   <div class="c"><h3>Новая заявка</h3>
-    <div class="row" style="margin:2px 0 14px;flex-wrap:nowrap">
-      <div class="f" style="flex:none"><label>Тип клиента</label>${SEG(K.ctype,['Физлицо','Юрлицо'],"setIn('ctype',$v)")}</div>
-      <div class="f" style="flex:1;min-width:260px;max-width:700px"><label>${U?'Организация':'ФИО клиента'}</label>
-        <input class="fld" id="inName" value="${esc(K.name)}" oninput="S.intake.name=this.value" placeholder="${U?'ООО «Стройсервис»':'Смирнова Т. А.'}"></div>
-      ${U?`<div class="f" style="width:210px"><label>ИНН организации</label>
-        <input class="fld mono" id="inInn" value="${esc(K.inn)}" oninput="S.intake.inn=this.value.replace(/\\D/g,'')" placeholder="10 или 12 цифр" maxlength="12"></div>`:''}
-    </div>
-    <div class="g4" style="margin-bottom:14px">
-      <div class="f" style="margin-bottom:0"><label>Телефон основной</label>${PHONE('inPhone',K.phone,'phone','основной')}</div>
-      <div class="f" style="margin-bottom:0"><label>ФИО контакта</label>
-        <input class="fld" id="inContact" value="${esc(K.contact)}" oninput="S.intake.contact=this.value" placeholder="кто отвечает"></div>
-      <div class="f" style="margin-bottom:0"><label>Телефон дополнительный</label>${PHONE('inPhone2',K.phone2,'phone2','дополнительный')}</div>
-      <div class="f" style="margin-bottom:0"><label>ФИО контакта</label>
-        <input class="fld" id="inContact2" value="${esc(K.contact2)}" oninput="S.intake.contact2=this.value" placeholder="кто отвечает"></div>
-    </div>
-    <div class="row" style="margin-bottom:14px;flex-wrap:nowrap">
-      <div class="f" style="width:186px"><label>Город</label>
-        ${cs.length?SEL('inCity',K.city,cs.map(c=>({v:c,l:c,hint:dayState(S.day,c).b+'/'+dayState(S.day,c).p})),v=>S.intake.city=v)
-          :`<div class="fld" style="color:var(--ink3)">выходной день</div>`}</div>
-      <div class="f" style="flex:1;min-width:170px"><label>Улица</label>${SEL('inStreet',K.street,STREETS,v=>S.intake.street=v)}</div>
-      <div class="f" style="width:50px"><label>дом</label><input class="fld mono" id="inHouse" value="${esc(K.house)}" oninput="S.intake.house=this.value" placeholder="12"></div>
-      <div class="f" style="width:50px"><label>под.</label><input class="fld mono" id="inEnt" value="${esc(K.entrance)}" oninput="S.intake.entrance=this.value" placeholder="3"></div>
-      <div class="f" style="width:50px"><label>эт.</label><input class="fld mono" id="inFloor" value="${esc(K.floor)}" oninput="S.intake.floor=this.value" placeholder="5"></div>
-      <div class="f" style="width:50px"><label>кв.</label><input class="fld mono" id="inFlat" value="${esc(K.flat)}" oninput="S.intake.flat=this.value" placeholder="45"></div>
-      <div class="f" style="width:76px"><label>Домофон</label>
-        <div class="chkbox">${CHK(K.intercom,K.intercom?'вкл.':'выкл.',"S.intake.intercom=!S.intake.intercom;render()")}</div></div>
-      <div class="f" style="width:120px"><label>Дата выезда</label>${DATE('inDate',S.day,v=>{pickDay(v);})}</div>
-      <div class="f" style="width:150px"><label>Время прибытия</label>
-        ${SEL('inTime',K.time,Array.from({length:11},(_,i)=>({v:10+i,l:pad(10+i)+':00',hint:'окно '+pad(9+i)+':00–'+pad(11+i)+':00'})),v=>S.intake.time=+v)}</div>
-    </div>
-    <div class="g2">
-      <div class="f" style="margin-bottom:0"><label>Комментарий для операторов</label>
-        <textarea class="fld" id="inCmtOp" oninput="S.intake.cmtOp=this.value" placeholder="Что важно знать при прозвонке: когда звонить, кто отвечает, как оплачивают">${esc(K.cmtOp)}</textarea></div>
-      <div class="f" style="margin-bottom:0"><label>Комментарий для поверителей</label>
-        <textarea class="fld" id="inCmtVf" oninput="S.intake.cmtVf=this.value" placeholder="Что важно знать на адресе: доступ к стояку, собака, состояние пломбы">${esc(K.cmtVf)}</textarea></div>
-    </div>
+    ${reqForm(K,'S.intake','in',S.day,v=>{pickDay(v);})}
     <div class="row" style="margin-top:14px;justify-content:flex-end">
       <button class="b long" onclick="createReq()" ${closed?'disabled':''}>${closed?'День закрыт — приём остановлен':'Сохранить заявку'}</button></div>
   </div>
@@ -1264,16 +1309,16 @@ function createReq(){
   if(!K.phone.trim()) return toast('Укажите телефон — по нему пойдёт прозвонка маршрута.');
   if(digitsOf(K.phone).length!==10) return toast('Телефон неполный: нужно 10 цифр после +7.');
   if(K.phone2 && digitsOf(K.phone2).length!==10) return toast('Дополнительный телефон неполный: нужно 10 цифр после +7.');
-  if(!K.city) return toast('В этот день бригада не выезжает — выберите другую дату.');
+  const city = K.city || dayCities(S.day)[0];
+  if(!city) return toast('В этот день бригада не выезжает — выберите другую дату.');
   if(!K.house.trim()) return toast('Укажите номер дома.');
-  S.requests.push({id:'R'+(++S.seq),date:S.day,created:TODAY,city:K.city,clientType:K.ctype,name:K.name,
+  S.requests.push({id:'R'+(++S.seq),date:S.day,created:TODAY,city,clientType:K.ctype,name:K.name,
     inn:K.ctype==='Юрлицо'?K.inn:'',phone:K.phone,contact:K.contact,phone2:K.phone2,contact2:K.contact2,
     street:K.street,house:K.house,entrance:K.entrance,floor:K.floor,
     flat:K.flat,intercom:K.intercom,time:K.time,cmtOp:K.cmtOp,cmtVf:K.cmtVf,
     services:[],devices:[],status:'создана',routeId:null,operator:S.me});
   const wasAcw = S.op.acw>0;
   if(wasAcw){ S.op.acw=0; S.op.next=rint(5,12); }
-  const city = K.city;
   S.intake = blankIntake(); S.intake.city = city;
   toast('Заявка сохранена: '+city+', '+ru(S.day)+', окно '+pad(K.time-1)+':00–'+pad(K.time+1)+':00.'
     + (wasAcw?' Постобработка закрыта, линия снова принимает вызовы.':''));
@@ -1291,23 +1336,24 @@ function fmtPhone(v){
   if(d.length>8) s += '-'+d.slice(8,10);
   return s;
 }
-function phoneIn(el,k){
-  const prev = S.intake[k]||'';
+function phoneIn(el,k,T){
+  const O = (T==='S.edit')?S.edit:S.intake;
+  const prev = O[k]||'';
   let d = digitsOf(el.value);
   /* Backspace съел разделитель, а не цифру — убираем цифру сами, иначе каретка встанет колом. */
   if(el.value.length < prev.length && d === digitsOf(prev)) d = d.slice(0,-1);
   const out = fmtPhone(d);
-  S.intake[k] = out; el.value = out;
+  O[k] = out; el.value = out;
   const end = out.length;
   if(typeof el.setSelectionRange==='function'){ try{ el.setSelectionRange(end,end); }catch(e){} }
   const btn = el.parentElement.querySelector('.call');
   if(btn) btn.disabled = d.length<10;
 }
-function PHONE(id,val,key,kind){
+function PHONE(id,val,key,kind,T){
   const full = digitsOf(val).length===10;
   return `<div class="phone">
     <input class="mono" id="${id}" value="${esc(val||'')}" inputmode="tel" maxlength="18"
-      oninput="phoneIn(this,'${key}')" placeholder="+7 (___) ___-__-__">
+      oninput="phoneIn(this,'${key}','${T||'S.intake'}')" placeholder="+7 (___) ___-__-__">
     <button type="button" class="call" ${full?'':'disabled'} title="Позвонить клиенту"
       onclick="startCall(document.getElementById('${id}').value,'${kind}')">${svg(I.phone,12)}Вызов</button></div>`;
 }
@@ -1526,36 +1572,159 @@ function poolOf(ds,city){
   return S.requests.filter(r=>r.date===ds&&r.city===city&&!r.routeId&&r.status==='создана')
     .sort((a,b)=>a.street.localeCompare(b.street,'ru')||(+a.house)-(+b.house));
 }
-function viewLogistics(){
-  const pool = poolOf(S.day,S.city);
-  const routes = S.routes.filter(r=>r.date===S.day&&r.city===S.city);
-  const crew = crewOn(S.day);
-  return shell(`${citySide()}
-    <button class="b" style="margin-top:14px" onclick="buildUI()" ${pool.length?'':'disabled'}>${svg(I.plus,13)}Собрать ${Math.ceil(pool.length/25)||0} маршрут(ов)</button>
-    <p class="note" style="margin-top:10px">${pool.length} заявок без маршрута. Норматив — 25 на маршрут, окно дня 9:00–21:00.</p>`,
-  `${cap()}
-  <div class="c"><h3>Пул заявок · ${ru(S.day)}</h3>
-    <p class="cap">Сортировка по улице и номеру дома — чтобы глазами ловить соседние адреса.</p>
-    ${pool.length?`<table><thead><tr><th>№</th><th>Улица</th><th class="num">Дом</th><th class="num">Под.</th><th class="num">Эт.</th><th>Кв.</th><th>Клиент</th><th>Тип</th><th>Домофон</th><th class="num">Окно</th><th>Комментарий оператору</th></tr></thead><tbody>
-      ${pool.slice(0,50).map((r,i)=>`<tr><td class="mono">${i+1}</td><td><b>${r.street}</b></td><td class="num">${r.house}</td>
-        <td class="num mono">${r.entrance||'—'}</td><td class="num mono">${r.floor||'—'}</td>
-        <td class="mono">${r.flat||'—'}</td><td>${esc(r.name)}</td>
-        <td><span class="tg ${r.clientType==='Юрлицо'?'t-ink':'t-mut'}">${r.clientType==='Юрлицо'?'юр':'физ'}</span></td>
-        <td>${r.intercom?'<span class="tg t-ok">работает</span>':'<span class="tg t-warn">не работает</span>'}</td>
-        <td class="num">${pad(r.time-1)}:00–${pad(r.time+1)}:00</td>
-        <td>${r.cmtOp?esc(r.cmtOp):'<span class="note">—</span>'}</td></tr>`).join('')}</tbody></table>
-      ${pool.length>50?`<p class="note" style="margin-top:10px">Показаны первые 50 из ${pool.length}.</p>`:''}`
-      :`<div class="empty">Свободных заявок нет — все разложены по маршрутам.</div>`}</div>
-  ${routes.length?`<div class="c"><h3>Маршруты дня</h3><table>
-    <thead><tr><th>Маршрут</th><th class="num">Точек</th><th>Поверитель</th><th class="num">Прозвонка</th><th>Статус</th><th></th></tr></thead><tbody>
-    ${routes.map(rt=>`<tr><td class="mono"><b>${rt.id}</b></td><td class="num">${rt.stops.length}</td>
-      <td style="width:190px">${SEL('as'+rt.id,rt.verifier||'',[{v:'',l:'— не назначен —'},...crew.map(v=>({v:v.id,l:v.name,hint:v.pattern}))],v=>{rt.verifier=v||null;},{sm:true})}</td>
-      <td class="num">${rt.stops.filter(s=>s.called).length}/${rt.stops.length}</td>
-      <td>${stTag(rt.status)}</td>
-      <td style="text-align:right"><button class="g sm" onclick="S.openRoute='${rt.id}';go('routes')">Открыть</button></td></tr>`).join('')}
-    </tbody></table></div>`:''}`);
-}
+/* ============ ПОДДЕРЖКА МАРШРУТОВ ============ */
+const HOURS = Array.from({length:13},(_,i)=>9+i);   // рабочее окно дня 9:00–21:00
 const stTag = s => `<span class="tg ${s==='выполнен'?'t-ok':s==='в работе'?'t-warn':s==='обзвонен'?'t-cold':'t-mut'}">${s}</span>`;
+const routesToday = () => S.routes.filter(r=>r.date===TODAY);
+
+function viewSupport(){
+  const list = routesToday();
+  const sel = list.find(r=>r.id===S.openRoute) || null;   // null = все маршруты дня
+  const shown = sel?[sel]:list;
+  /* Точка на шкале знает свой маршрут: в общем режиме без этого не понять, кому писать. */
+  const stops = shown.flatMap(rt=>rt.stops.map((s,i)=>({rt,s,i,r:S.requests.find(x=>x.id===s.req)})))
+    .filter(x=>x.r);
+  const all = list.reduce((a,r)=>a+r.stops.length,0);
+  const called = stops.filter(x=>x.s.called).length, done = stops.filter(x=>x.s.done).length;
+  const free = S.requests.filter(r=>r.date===TODAY && !r.routeId && r.status==='создана');
+  const side = `<div class="lbl" style="padding:6px 10px 8px">Маршруты · ${ru(TODAY)}</div>
+    <button class="sb" aria-current="${!sel}" onclick="S.openRoute=null;render()">
+      <span>Все маршруты</span><span class="n">${all}</span></button>
+    ${list.map(rt=>`<div class="rrow ${sel&&sel.id===rt.id?'on':''}">
+      <button class="sb" aria-current="${sel&&sel.id===rt.id}" onclick="S.openRoute='${rt.id}';render()">
+        <span style="min-width:0"><span class="mono" style="font-size:12px">${rt.id}</span>
+        <span style="display:block;font-size:11px;color:var(--ink3);overflow:hidden;text-overflow:ellipsis">${rt.city} · ${rt.verifier?esc(nameOf(rt.verifier)):'не назначен'}</span></span>
+        <span class="n">${rt.stops.filter(s=>s.done).length}/${rt.stops.length}</span></button>
+      <button class="ib sm" title="Чат маршрута ${rt.id}" onclick="S.modal={k:'chat',id:'${rt.id}'};render()">
+        ${svg(I.chat,14)}${rt.chat.length?`<span class="cnt">${rt.chat.length}</span>`:''}</button>
+    </div>`).join('')}
+    ${list.length?'':`<p class="note" style="padding:8px 10px">На сегодня маршрутов нет.</p>`}`;
+
+  return shell(side, `${cap()}
+  <div class="c">
+    <div style="display:flex;align-items:flex-start;gap:12px">
+      <div style="flex:1;min-width:0">
+        <h3>${sel?`${sel.id} · ${sel.city}`:`Все маршруты дня · ${list.length}`}</h3>
+        <div class="mono" style="font-size:11px;color:var(--ink3);margin-top:3px">
+          ${sel?`${sel.verifier?esc(nameOf(sel.verifier)):'поверитель не назначен'} · ${sel.stops.length} точек · прозвонено ${called} · выполнено ${done}`
+              :`${all} точек · прозвонено ${called} · выполнено ${done}`}</div>
+      </div>
+      ${sel?`${stTag(sel.status)}
+        <button class="g sm" onclick="S.modal={k:'chat',id:'${sel.id}'};render()">${svg(I.chat,12)}Чат маршрута${sel.chat.length?' · '+sel.chat.length:''}</button>`
+        :`<span class="note" style="max-width:340px">Общий режим тяжёлый: на шкале сразу ${all} заявок. Для работы удобнее выбрать маршрут слева.</span>`}
+    </div></div>
+
+  <div class="c"><h3>Шкала дня</h3>
+    <p class="cap">Стрелки сдвигают заявку на час — окно прибытия пересчитывается автоматически.</p>
+    <div class="tlg">${HOURS.map(h=>{
+      const inHour = stops.filter(x=>x.r.time===h);
+      const now = new Date().getHours()===h;
+      return `<div class="tlh ${now?'now':''}">
+        <div class="hh"><span class="mono">${pad(h)}:00</span><i></i></div>
+        <div class="lane ${inHour.length?'':'empty'}">${inHour.length?inHour.map(x=>chip(x)).join('')
+          :'<span class="none">свободно</span>'}</div></div>`}).join('')}</div>
+  </div>
+
+  <div class="c"><h3>Заявки без маршрута · ${free.length}</h3>
+    <p class="cap">Созданные сегодня и ещё не поставленные в маршрут. Добавляются в маршрут дня по городу.</p>
+    ${free.length?`<table><thead><tr><th>Заявка</th><th>Город</th><th>Адрес</th><th>Клиент</th><th class="num">Окно</th><th>В маршрут</th></tr></thead><tbody>
+      ${free.slice(0,12).map(r=>{const fit=list.filter(rt=>rt.city===r.city);
+        return `<tr><td class="mono">${r.id}</td><td>${r.city}</td><td><b>${esc(addrOf(r))}</b></td>
+        <td>${esc(r.name)}</td><td class="num mono">${pad(r.time-1)}:00–${pad(r.time+1)}:00</td>
+        <td style="width:240px">${fit.length
+          ? fit.map(rt=>`<button class="g sm" style="margin:0 4px 4px 0" onclick="addToRoute('${rt.id}','${r.id}')">${rt.id}</button>`).join('')
+          : '<span class="note">нет маршрута по этому городу</span>'}</td></tr>`}).join('')}</tbody></table>
+      ${free.length>12?`<p class="note" style="margin-top:10px">Показаны первые 12 из ${free.length}.</p>`:''}`
+      :`<div class="empty">Все сегодняшние заявки разложены по маршрутам.</div>`}</div>`);
+}
+/* Миниатюра заявки на шкале: город, улица и две кнопки — открыть и позвонить. */
+function chip({rt,s,i,r}){
+  return `<div class="chip2 ${s.done?'fin':''}">
+    <span class="mono rt">${rt.id}</span>
+    <div class="ad"><b>${esc(r.city)}</b><small>${esc(r.street)}, ${r.house}${r.flat?', кв. '+r.flat:''}</small></div>
+    ${s.called?`<span class="tg ${s.called==='подтверждена'?'t-ok':s.called==='перенос'?'t-warn':'t-err'}">${s.called}</span>`:''}
+    <div class="ctl">
+      <button class="ib sm" title="На час раньше" onclick="shiftReq('${r.id}',-1)" ${r.time<=10?'disabled':''}>${svg(I.up,12)}</button>
+      <button class="ib sm" title="На час позже" onclick="shiftReq('${r.id}',1)" ${r.time>=20?'disabled':''}>${svg(I.down,12)}</button>
+      <button class="g sm" onclick="openReq('${r.id}')">Открыть</button>
+      <button class="ib sm ok" title="Позвонить ${esc(r.phone)}" onclick="startCall('${esc(r.phone)}','основной','${esc(r.name)}')">${svg(I.phone,13)}</button>
+    </div></div>`;
+}
+function shiftReq(id,d){
+  const r = S.requests.find(x=>x.id===id);
+  const t = r.time + d;
+  if(t<10 || t>20) return;
+  r.time = t; render();
+  toast(`${r.id}: окно сдвинуто на ${pad(t-1)}:00–${pad(t+1)}:00. Поверитель увидит изменение в маршруте.`);
+}
+function addToRoute(rid,reqId){
+  const rt = S.routes.find(r=>r.id===rid), r = S.requests.find(x=>x.id===reqId);
+  if(!rt||!r) return;
+  r.routeId = rt.id; r.status = 'в маршруте';
+  rt.stops.push({req:r.id,called:null,done:false});
+  rt.stops.sort((a,b)=>{const A=S.requests.find(x=>x.id===a.req),B=S.requests.find(x=>x.id===b.req);
+    return (A?.time||0)-(B?.time||0);});
+  toast(`${r.id} добавлена в ${rt.id} на ${pad(r.time-1)}:00–${pad(r.time+1)}:00.`);
+}
+/* Карточка заявки правится поверх страницы: копия, чтобы «Отмена» ничего не портила. */
+function openReq(id){
+  const r = S.requests.find(x=>x.id===id); if(!r) return;
+  S.edit = {...r, day:r.date};
+  S.modal = {k:'req',id};
+  render();
+}
+function saveReq(){
+  const K = S.edit, r = S.requests.find(x=>x.id===S.modal.id);
+  if(!r) return;
+  if(!K.name.trim()) return toast('Имя клиента или организация не заполнены.');
+  if(K.ctype==='Юрлицо' && ![10,12].includes(String(K.inn).replace(/\D/g,'').length))
+    return toast('ИНН — 10 цифр у организации или 12 у ИП.');
+  if(digitsOf(K.phone).length!==10) return toast('Телефон неполный: нужно 10 цифр после +7.');
+  if(!K.house.trim()) return toast('Укажите номер дома.');
+  ['ctype','name','inn','phone','contact','phone2','contact2','city','street','house',
+   'entrance','floor','flat','intercom','time','cmtOp','cmtVf'].forEach(k=>r[k]=K[k]);
+  const moved = r.date!==K.day;
+  if(moved){ r.date = K.day; r.routeId = null; r.status = 'создана';
+    S.routes.forEach(rt=>{ const j=rt.stops.findIndex(s=>s.req===r.id); if(j>=0) rt.stops.splice(j,1); }); }
+  S.modal = null; S.edit = null;
+  toast(moved ? `${r.id} перенесена на ${ru(r.date)} и снята с маршрута — поставьте её в маршрут той даты.`
+              : `${r.id} обновлена.`);
+}
+function closeModal(){ S.modal=null; S.edit=null; render(); }
+function modalLayer(){
+  if(!S.modal) return '';
+  if(S.modal.k==='chat'){
+    const rt = S.routes.find(r=>r.id===S.modal.id); if(!rt){ S.modal=null; return ''; }
+    return `<div class="mask" onclick="if(event.target===this)closeModal()">
+      <div class="modal" style="width:min(620px,94vw)">
+        <div class="mhd"><h3>Чат маршрута ${rt.id}</h3>
+          <span class="note">${rt.city} · ${rt.verifier?esc(nameOf(rt.verifier)):'поверитель не назначен'}</span>
+          <button class="ib" onclick="closeModal()">${svg(I.no,15)}</button></div>
+        ${chatPanel(rt)}
+      </div></div>`;
+  }
+  const K = S.edit; if(!K){ S.modal=null; return ''; }
+  const r = S.requests.find(x=>x.id===S.modal.id);
+  return `<div class="mask" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <div class="mhd"><h3>Заявка ${S.modal.id}</h3>
+        <span class="note">${reqTag(r.status)} · создана ${ru(r.created)}${r.routeId?' · маршрут '+r.routeId:''}</span>
+        <button class="ib" onclick="closeModal()">${svg(I.no,15)}</button></div>
+      ${reqForm(K,'S.edit','ed',K.day,v=>{K.day=v;})}
+      <div class="row" style="margin-top:14px;justify-content:flex-end">
+        <button class="g" onclick="closeModal()">Отмена</button>
+        <button class="b long" onclick="saveReq()">Сохранить изменения</button></div>
+    </div></div>`;
+}
+function chatPanel(rt){
+  return `<p class="cap">Переписка дублируется руководителю без уведомлений.</p>
+    <div class="chat">${rt.chat.length?rt.chat.map(m=>`<div class="msg ${m.vf?'v':''}"><b>${esc(m.who)}</b><small>${m.t}</small><br>${esc(m.txt)}</div>`).join('')
+      :`<div class="empty">Сообщений нет. Поверитель напишет сюда, если что-то пойдёт не так.</div>`}</div>
+    <div class="row" style="margin-top:10px;flex-wrap:nowrap">
+      <input class="fld" id="chatin" placeholder="Сообщение поверителю">
+      <button class="b" onclick="send('${rt.id}')">${svg(I.send,14)}</button></div>`;
+}
+
 function build(ds,city){
   const pool = poolOf(ds,city), made=[];
   for(let i=0;i<pool.length;i+=25){
@@ -1567,22 +1736,7 @@ function build(ds,city){
   }
   return made;
 }
-function buildUI(){ const n=build(S.day,S.city).length;
-  toast(`Собрано маршрутов: ${n}. Проверьте порядок точек и назначьте поверителей.`); }
 
-/* ---------- маршруты ---------- */
-function viewRoutes(){
-  const list = S.routes.filter(r=>r.date===S.day);
-  const open = S.routes.find(r=>r.id===S.openRoute) || list[0];
-  const side = `<div class="lbl" style="padding:6px 10px 8px">Дата</div>${DATE('rtDate',S.day,v=>{S.day=v;S.openRoute=null;})}
-    <div class="lbl" style="padding:16px 10px 8px">Маршруты · ${list.length}</div>
-    ${list.length?list.map(rt=>`<button class="sb" aria-current="${open&&open.id===rt.id}" onclick="S.openRoute='${rt.id}';render()">
-        <span style="min-width:0"><span class="mono" style="font-size:12px">${rt.id}</span>
-        <span style="display:block;font-size:11px;color:var(--ink3);overflow:hidden;text-overflow:ellipsis">${rt.city} · ${rt.verifier?esc(nameOf(rt.verifier)):'не назначен'}</span></span>
-        <span class="n">${rt.stops.filter(s=>s.called).length}/${rt.stops.length}</span></button>`).join('')
-      :`<p class="note" style="padding:8px 10px">Маршрутов нет. Соберите их в разделе «Логистика».</p>`}`;
-  return shell(side, open?`${cap()}${routeCard(open)}`:`${cap()}<div class="c"><div class="empty">На эту дату маршрутов нет.</div></div>`);
-}
 function routeCard(rt){
   const vf = S.role==='verifier';
   const called = rt.stops.filter(s=>s.called).length, done = rt.stops.filter(s=>s.done).length;
@@ -1619,13 +1773,7 @@ function routeCard(rt){
     ${rt.status==='выполнен'?`<div class="stamp"><b>ПОВЕРЕНО</b><span>${rt.id}</span></div>`:''}
   </div>
   <div class="c" style="margin-bottom:0"><h3>Чат маршрута</h3>
-    <p class="cap">Дежурный: ${rt.duty?`<b style="color:var(--ink)">${esc(nameOf(rt.duty))}</b>`:'<span class="tg t-warn">не взят</span>'} · все переписки дублируются руководителю без уведомлений</p>
-    <div class="chat">${rt.chat.length?rt.chat.map(m=>`<div class="msg ${m.vf?'v':''}"><b>${esc(m.who)}</b><small>${m.t}</small><br>${esc(m.txt)}</div>`).join('')
-      :`<div class="empty">Сообщений нет. Поверитель напишет сюда, если что-то пойдёт не так.</div>`}</div>
-    <div class="row" style="margin-top:10px;flex-wrap:nowrap">
-      <input class="fld" id="chatin" placeholder="Сообщение поверителю">
-      <button class="b" onclick="send('${rt.id}')">${svg(I.send,14)}</button></div>
-    ${!rt.duty?`<button class="g sm" style="margin-top:10px" onclick="takeDuty('${rt.id}');render()">Подключиться к маршруту</button>`:''}
+    ${chatPanel(rt)}
   </div></div>`;
 }
 function callStop(id,i,res){
@@ -1644,103 +1792,92 @@ function send(id){
   const el = document.getElementById('chatin'), t = el.value.trim(); if(!t) return;
   const rt = S.routes.find(r=>r.id===id);
   rt.chat.push({who:S.user,vf:S.role==='verifier',txt:t,t:new Date().toTimeString().slice(0,5)});
-  if(!rt.duty && S.role!=='verifier') rt.duty = S.me; render();
-}
-function takeDuty(id){ S.routes.find(r=>r.id===id).duty = S.me;
-  toast('Маршрут закреплён за вами. У остальных операторов кнопка погасла.'); }
-
-/* ---------- дежурство ---------- */
-function viewDuty(){
-  const list = S.routes.filter(r=>r.date===TODAY);
-  const free = list.filter(r=>!r.duty).length, mine = list.filter(r=>r.duty===S.me).length;
-  return shell(null,`${cap()}
-  <div class="kpi">
-    <div><div class="v">${list.length}</div><div class="k">маршрутов сегодня</div></div>
-    <div><div class="v">${free}</div><div class="k">без дежурного</div></div>
-    <div><div class="v">${mine}</div><div class="k">закреплено за вами</div></div>
-    <div><div class="v">${list.reduce((a,r)=>a+r.chat.length,0)}</div><div class="k">сообщений в чатах</div></div></div>
-  <div class="c"><h3>Маршруты на сегодня</h3>
-    ${list.length?`<table><thead><tr><th>Маршрут</th><th>Город</th><th>Поверитель</th><th class="num">Точек</th><th class="num">Сообщ.</th><th>Статус</th><th>Дежурный</th><th></th></tr></thead><tbody>
-      ${list.map(rt=>`<tr><td class="mono"><b>${rt.id}</b></td><td>${rt.city}</td><td>${rt.verifier?esc(nameOf(rt.verifier)):'—'}</td>
-        <td class="num">${rt.stops.length}</td><td class="num">${rt.chat.length||'—'}</td><td>${stTag(rt.status)}</td>
-        <td>${rt.duty?`<b>${esc(nameOf(rt.duty))}</b>`:'<span class="note">свободен</span>'}</td>
-        <td style="text-align:right;white-space:nowrap">
-          <button class="g sm" onclick="S.openRoute='${rt.id}';go('routes')">Чат</button>
-          ${rt.duty?`<button class="g sm" disabled>Занято</button>`
-            :`<button class="b sm" onclick="takeDuty('${rt.id}');render()">Подключиться</button>`}</td></tr>`).join('')}
-      </tbody></table>`:`<div class="empty">На сегодня маршрутов нет.</div>`}</div>`);
-}
-
-/* ---------- уведомления УК ---------- */
-function viewUK(){
-  let rows = S.requests.filter(r=>r.status==='выполнена').flatMap(r=>r.devices.map((d,i)=>({r,d,i})));
-  if(S.ukCity) rows = rows.filter(x=>x.r.city===S.ukCity);
-  if(S.ukSeal==='нет') rows = rows.filter(x=>!x.d.seal);
-  if(S.ukSeal==='есть') rows = rows.filter(x=>x.d.seal);
-  const noSeal = rows.filter(x=>!x.d.seal).length;
-  const noPh = rows.filter(x=>!x.d.photos?.length).length;
-  return shell(null,`${cap()}
-  <div class="kpi">
-    <div><div class="v">${rows.length}</div><div class="k">позиций в реестре</div></div>
-    <div><div class="v" ${noSeal?'style="color:var(--error)"':''}>${noSeal}</div><div class="k">без пломбы УК</div></div>
-    <div><div class="v">${new Set(rows.map(x=>x.r.city+x.r.street+x.r.house)).size}</div><div class="k">адресов</div></div>
-    <div><div class="v" ${noPh?'style="color:var(--warning)"':''}>${noPh}</div><div class="k">без фото работ</div></div></div>
-  <div class="c"><h3>Реестр для управляющих компаний</h3>
-    <p class="cap">Пломба УК обязательна: без отметки позиция не попадает в отчёт и подсвечивается красным.</p>
-    <div class="row" style="margin-bottom:14px">
-      <div class="f" style="width:220px"><label>Город</label>${SEL('ukCity',S.ukCity,[{v:'',l:'Все города'},
-        ...[...new Set(S.requests.filter(r=>r.status==='выполнена').map(r=>r.city))].sort((a,b)=>a.localeCompare(b,'ru'))],v=>S.ukCity=v)}</div>
-      <div class="f" style="width:170px"><label>Пломба УК</label>${SEL('ukSeal',S.ukSeal,[{v:'',l:'Любая'},{v:'есть',l:'Есть'},{v:'нет',l:'Отсутствует'}],v=>S.ukSeal=v)}</div>
-      <button class="b" onclick="toast('Сформирован сводный отчёт за месяц: ${rows.length} позиций. В боевой версии — файл Excel.')">Сводный отчёт за месяц</button>
-      <button class="g" onclick="toast('Разовое уведомление отправлено в УК по выбранному адресу.')">Уведомить по клиенту</button></div>
-    ${rows.length?`<table><thead><tr><th>Адрес</th><th>Услуга</th><th>Заводской №</th><th>Тип устройства</th><th>Носитель</th>
-      <th>Помещение</th><th>Пломба</th><th>Фото работ</th><th class="num">Поверка</th><th class="num">Следующая</th><th>Сертификат</th></tr></thead><tbody>
-      ${rows.slice(0,45).map(({r,d,i})=>{const nx=new Date(r.date+'T00:00:00');nx.setFullYear(nx.getFullYear()+(d.carrier==='Тепло'?4:6));
-        return `<tr><td><b>${r.city}, ${addrOf(r)}</b></td>
-        <td>${SVC[d.svc]?esc(SVC[d.svc].name):'<span class="note">—</span>'}</td>
-        <td class="mono">${d.serial}</td><td>${d.type} <span class="note mono">${d.grsi||''}</span></td>
-        <td><span class="tg ${d.carrier==='ГВС'?'t-err':d.carrier==='ХВС'?'t-cold':'t-warn'}">${d.carrier}</span></td>
-        <td>${d.room}</td><td>${d.seal?'<span class="tg t-ok">есть</span>':'<span class="tg t-err">нет</span>'}</td>
-        <td>${d.photos?.length?`<a href="#" onclick="event.preventDefault();lbOpen('${r.id}',${i},0)">${d.photos.length} фото</a>`:'<span class="tg t-err">нет</span>'}</td>
-        <td class="num">${ru(r.date)}</td><td class="num">${ru(iso(nx))}</td>
-        <td>${d.seal?`<a href="#" onclick="event.preventDefault();toast('Ссылка на сертификат приходит из «Аршина» после приёмки пакета.')">открыть</a>`:'<span class="note">—</span>'}</td></tr>`}).join('')}
-      </tbody></table>${rows.length>45?`<p class="note" style="margin-top:10px">Показаны первые 45 из ${rows.length}.</p>`:''}`
-      :`<div class="empty">Под фильтр ничего не попало.</div>`}</div>`);
+  render();
 }
 
 /* ---------- заработок ---------- */
 function viewMe(){
   const isV = S.role==='verifier';
-  const done = S.requests.filter(r=>r.status==='выполнена' && (isV ? r.verifier===S.me : r.operator===S.me))
-    .sort((a,b)=>b.date.localeCompare(a.date));
   const val = r => isV?rateV(r):rateO(r);
-  const sum = done.reduce((a,r)=>a+val(r),0);
+  const mine = r => isV ? r.verifier===S.me : r.operator===S.me;
+  const [Y,Mo] = S.mMonth.split('-').map(Number);
+  const inMonth = ds => ds.slice(0,7)===S.mMonth;
+
+  const done = S.requests.filter(r=>r.status==='выполнена' && mine(r));
+  const mDone = done.filter(r=>inMonth(r.date)).sort((a,b)=>b.date.localeCompare(a.date));
+  const sum = mDone.reduce((a,r)=>a+val(r),0);
   const td = done.filter(r=>r.date===TODAY).reduce((a,r)=>a+val(r),0);
-  const byDay = {}; done.forEach(r=>byDay[r.date]=(byDay[r.date]||0)+val(r));
-  const dates = Object.keys(byDay).sort().slice(-12);
-  const mx = Math.max(1,...dates.map(d=>byDay[d]));
+  /* Обработано, но до выполнения ещё не дошло: начисления нет, а работа сделана. */
+  const wip = S.requests.filter(r=>mine(r) && ['создана','в маршруте','перенос'].includes(r.status))
+    .sort((a,b)=>a.date.localeCompare(b.date));
+
+  const byDay = {}; mDone.forEach(r=>byDay[r.date]=(byDay[r.date]||0)+val(r));
+  const mx = Math.max(1,...Object.values(byDay));
+  const first = new Date(Y,Mo-1,1);
+  const grid = new Date(first); grid.setDate(1-((first.getDay()+6)%7));
+  const rows = Math.ceil(((first.getDay()+6)%7 + new Date(Y,Mo,0).getDate())/7);
+  const weeks = Array.from({length:rows},(_,w)=>Array.from({length:7},(_,i)=>iso(addDays(grid,w*7+i))));
+  const tab = S.meTab||'done';
+
   return shell(null,`${cap()}
+  <div class="row" style="margin-bottom:14px;align-items:center">
+    ${SEG(tab,[{v:'done',l:'Начислено'},{v:'wip',l:`В работе · ${wip.length}`}],"S.meTab=$v;render()")}
+    <div style="flex:1"></div>
+    ${tab==='done'?`<div class="ptop" style="margin:0">
+      <button class="ib" onclick="mMonth(-1)">${svg(I.left,14)}</button>
+      <b style="min-width:150px;text-align:center">${MN[Mo-1]} ${Y}</b>
+      <button class="ib" onclick="mMonth(1)">${svg(I.right,14)}</button>
+      <button class="g sm" onclick="S.mMonth='${TODAY.slice(0,7)}';render()">Текущий месяц</button></div>`
+     :`<span class="note">Здесь все даты: заявка ждёт выезда и может уехать в следующий месяц.</span>`}
+  </div>
+  ${tab==='wip'?`
+  <div class="kpi">
+    <div><div class="v">${wip.length}</div><div class="k">заявок в работе</div></div>
+    <div><div class="v">${wip.filter(r=>r.status==='создана').length}</div><div class="k">ждут маршрута</div></div>
+    <div><div class="v">${wip.filter(r=>r.status==='в маршруте').length}</div><div class="k">в маршруте</div></div>
+    <div><div class="v" ${wip.filter(r=>r.status==='перенос').length?'style="color:var(--warning)"':''}>${wip.filter(r=>r.status==='перенос').length}</div><div class="k">перенесены</div></div></div>
+  <div class="c"><h3>Обработано, но ещё не выполнено</h3>
+    <p class="cap">Начисление появится, когда поверитель закроет акт. Здесь видно, что именно ещё в пути.</p>
+    ${wip.length?`<table><thead><tr><th>Заявка</th><th class="num">Создана</th><th class="num">Выезд</th><th>Город</th><th>Адрес</th><th>Клиент</th><th>Маршрут</th><th>Статус</th></tr></thead><tbody>
+      ${wip.slice(0,40).map(r=>`<tr><td class="mono">${r.id}</td><td class="num mono">${ru(r.created||r.date)}</td>
+        <td class="num mono">${ru(r.date)}</td><td>${r.city}</td><td><b>${esc(addrOf(r))}</b></td>
+        <td>${esc(r.name)}</td><td class="mono">${r.routeId||'<span class="note">—</span>'}</td>
+        <td>${reqTag(r.status)}</td></tr>`).join('')}</tbody></table>
+      ${wip.length>40?`<p class="note" style="margin-top:10px">Показаны первые 40 из ${wip.length}.</p>`:''}`
+      :`<div class="empty">Всё, что вы обработали, уже дошло до выполнения.</div>`}</div>`
+  :`
   <div class="kpi">
     <div><div class="v">${money(td)}</div><div class="k">начислено сегодня</div></div>
-    <div><div class="v">${money(sum)}</div><div class="k">за период</div></div>
-    <div><div class="v">${done.length}</div><div class="k">${isV?'выполнено работ':'заявок дошло до выполнения'}</div></div>
-    <div><div class="v">${done.length?money(sum/done.length):'—'}</div><div class="k">средний чек начисления</div></div></div>
-  <div class="c"><h3>Динамика по дням</h3><p class="cap">Последние ${dates.length} рабочих дней.</p>
-    <div class="rib">${dates.map(ds=>{const d=new Date(ds+'T00:00:00');
-      return `<button class="day" data-s="full" style="cursor:default">
-        <div class="bar"><div class="fill" style="height:${byDay[ds]/mx*88}%"></div>
-        <span class="pct">${Math.round(byDay[ds]/1000)}к</span></div>
-        <div class="dd">${pad(d.getDate())}.${pad(d.getMonth()+1)}</div><div class="wd">${WD[d.getDay()]}</div></button>`}).join('')}</div></div>
-  <div class="c"><h3>Детализация</h3>
+    <div><div class="v">${money(sum)}</div><div class="k">за ${MN[Mo-1]}</div></div>
+    <div><div class="v">${mDone.length}</div><div class="k">${isV?'выполнено работ':'заявок дошло до выполнения'}</div></div>
+    <div><div class="v">${mDone.length?money(sum/mDone.length):'—'}</div><div class="k">средний чек начисления</div></div></div>
+  <div class="c"><h3>По неделям · ${MN[Mo-1]} ${Y}</h3>
+    <div class="rib4">
+      <div class="wk wkd">${['пн','вт','ср','чт','пт','сб','вс'].map(d=>`<span>${d}</span>`).join('')}</div>
+      ${weeks.map((days,w)=>{const ws=days.reduce((a,ds)=>a+(byDay[ds]||0),0);
+        return `<div>
+          <div class="wkh"><span class="lbl">Неделя ${w+1}</span>
+            <span class="rg">${ru(days[0]).slice(0,5)} — ${ru(days[6]).slice(0,5)}</span>
+            <span class="tot">${money(ws)}</span></div>
+          <div class="wk">${days.map(ds=>{const d=new Date(ds+'T00:00:00'), out=d.getMonth()!==Mo-1, v=byDay[ds]||0;
+            return `<button class="day ${out?'past':''} ${ds===TODAY?'tdy':''}" data-s="${v?'full':'free'}" style="cursor:default">
+              <div class="bar"><div class="fill" style="height:${v/mx*90}%"></div>
+              <span class="pct">${v?(v>=1000?Math.round(v/1000)+'к':v):'—'}</span></div>
+              <div class="dd">${pad(d.getDate())}.${pad(d.getMonth()+1)}</div>
+              <div class="cts">${v?money(v):'—'}</div></button>`}).join('')}</div></div>`}).join('')}
+    </div></div>
+  <div class="c"><h3>Детализация · ${MN[Mo-1]}</h3>
     <p class="cap">${isV?'Ставка поверителя за выполненную услугу.':'Ставка оператора за принятую заявку, дошедшую до выполнения.'}</p>
-    ${done.length?`<table><thead><tr><th>Заявка</th><th class="num">Дата</th><th>Адрес</th><th>Клиент</th><th>Услуги</th><th class="num">Сумма работ</th><th class="num">Начислено</th></tr></thead><tbody>
-      ${done.slice(0,35).map(r=>`<tr><td class="mono">${r.id}</td><td class="num">${ru(r.date)}</td>
-        <td><b>${r.city}, ${addrOf(r)}</b></td><td>${esc(r.name)}</td>
+    ${mDone.length?`<table><thead><tr><th>Заявка</th><th class="num">Дата</th><th>Город</th><th>Адрес</th><th>Клиент</th><th>Услуги</th><th class="num">Сумма работ</th><th class="num">Начислено</th></tr></thead><tbody>
+      ${mDone.slice(0,35).map(r=>`<tr><td class="mono">${r.id}</td><td class="num">${ru(r.date)}</td>
+        <td>${r.city}</td><td><b>${esc(addrOf(r))}</b></td><td>${esc(r.name)}</td>
         <td>${svcNames(r)}</td><td class="num">${money(priceOf(r))}</td>
         <td class="num"><b>${money(val(r))}</b></td></tr>`).join('')}</tbody></table>
-      ${done.length>35?`<p class="note" style="margin-top:10px">Показаны первые 35 из ${done.length}.</p>`:''}`
-      :`<div class="empty">Пока нечего показать. Начисление появляется после закрытия маршрута.</div>`}</div>`);
+      ${mDone.length>35?`<p class="note" style="margin-top:10px">Показаны первые 35 из ${mDone.length}.</p>`:''}`
+      :`<div class="empty">За этот месяц начислений нет.</div>`}</div>`}`);
 }
+function mMonth(n){ const [y,m]=S.mMonth.split('-').map(Number); const d=new Date(y,m-1+n,1);
+  S.mMonth = `${d.getFullYear()}-${pad(d.getMonth()+1)}`; render(); }
 function viewPayroll(){
   const done = S.requests.filter(r=>r.status==='выполнена');
   const byV = {}, byO = {}, cV = {}, cO = {};
@@ -1881,8 +2018,8 @@ function reopenStop(id,i){
 }
 
 /* ============================================================ */
-const VIEWS = {intake:viewIntake,plan:viewPlan,schedule:viewSchedule,logistics:viewLogistics,
-  routes:viewRoutes,duty:viewDuty,uk:viewUK,me:viewMe,payroll:viewPayroll,
+const VIEWS = {intake:viewIntake,support:viewSupport,me:viewMe,
+  plan:viewPlan,schedule:viewSchedule,payroll:viewPayroll,
   services:viewServices,myroute:viewMyRoute,absence:viewAbsence};
 /* Навигация идёт по индексу страницы: одна и та же страница может встречаться
    в разных ролевых группах и показывать разное (например «Отсутствия»). */
@@ -1890,7 +2027,11 @@ function goPage(n){
   const p = PAGES[(n+PAGES.length)%PAGES.length];
   S.page = (n+PAGES.length)%PAGES.length;
   S.view = p.v; S.role = p.role; S.me = ROLES[p.role].id; S.user = ROLES[p.role].who;
-  S.dd = null; S.openStop = null; render();
+  S.dd = null; S.openStop = null; S.modal = null; S.edit = null;
+  /* Открываем конкретный маршрут: общий режим на 200 точек тяжело перерисовывать. */
+  if(p.v==='support') S.openRoute = routesToday()[0]?.id || null;
+  if(p.v==='myroute') S.openRoute = null;
+  render();
 }
 function step(d){ goPage(S.page+d); }
 function go(v){
@@ -1913,7 +2054,11 @@ function render(){
 if(typeof document==='object' && document && document.addEventListener){
   document.addEventListener('click',e=>{ if(S.dd && !e.target.closest('[data-fld]')){ S.dd=null; render(); } });
   document.addEventListener('keydown',e=>{
-    if(e.key==='Escape'){ if(S.lb){ S.lb=null; render(); return; } if(S.dd){ S.dd=null; render(); return; } }
+    if(e.key==='Escape'){
+      if(S.dd){ S.dd=null; render(); return; }
+      if(S.lb){ S.lb=null; render(); return; }
+      if(S.modal){ closeModal(); return; }
+    }
     if(!S.auth) return;
     if(S.lb && (e.key==='ArrowLeft'||e.key==='ArrowRight')){ e.preventDefault(); lbMove(e.key==='ArrowRight'?1:-1); return; }
     if(e.altKey && (e.key==='ArrowLeft'||e.key==='ArrowRight')){ e.preventDefault(); step(e.key==='ArrowRight'?1:-1); }
