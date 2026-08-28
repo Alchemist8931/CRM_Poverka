@@ -198,6 +198,18 @@ textarea.fld{height:auto;padding:9px 11px;resize:vertical;min-height:76px;line-h
 .rib4 .day .cts{font-size:9.5px;color:var(--ink3);margin-top:2px;line-height:1.3;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap;letter-spacing:.02em}
 .rib4 .day[aria-pressed="true"] .cts{color:var(--ink2)}
+/* горизонтальная ячейка дня: узкая шкала слева, дата/процент/города справа */
+.rib4.ribh .day{display:flex;align-items:stretch;gap:8px;height:74px;padding:4px 6px 4px 4px;text-align:left;border-radius:var(--r)}
+.rib4.ribh .day .bar{flex:0 0 23%;min-width:13px;height:auto}
+.rib4.ribh .day .inf{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:3px}
+.rib4.ribh .day .dt{display:flex;align-items:baseline;gap:6px}
+.rib4.ribh .day .dd{margin-top:0;font-size:11.5px}
+.rib4.ribh .day .pct{position:static;margin-left:auto;font-size:10px;color:var(--ink3);flex-shrink:0}
+.rib4.ribh .day .cts{margin-top:0;white-space:normal;word-break:break-word;text-overflow:clip;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;max-height:2.6em}
+.rib4.ribh .day[aria-pressed="true"]{box-shadow:0 0 0 1px var(--ink)}
+.rib4.ribh .day[aria-pressed="true"] .bar{box-shadow:none}
+.rib4.ribh .day[aria-pressed="true"] .pct{color:var(--ink2)}
 .day{flex:1 0 0;min-width:42px;background:none;border:0;padding:0}
 .day .bar{height:94px;border:1px solid var(--border);border-radius:var(--r);background:var(--card);position:relative;overflow:hidden;transition:all .2s ease}
 .day .fill{position:absolute;left:0;right:0;bottom:0;background:var(--ink3);opacity:.3;transition:height .3s ease}
@@ -401,10 +413,14 @@ td b{color:var(--ink);font-weight:600}
 .tlh:last-child .hh i{display:none}
 .tlh.now .hh{color:var(--cold);font-weight:600}
 .tlh.now .hh i{background:var(--cold);width:1.5px}
-.tlh .lane{display:flex;flex-wrap:wrap;gap:6px;padding:6px 0 8px;border-top:1px dashed var(--border2);align-items:center}
+/* дорожка часа — колонка: одна заявка в строку, карточки во всю ширину */
+.tlh .lane{display:flex;flex-direction:column;align-items:stretch;gap:6px;padding:6px 0 8px;border-top:1px dashed var(--border2)}
 .tlh:first-child .lane{border-top:0}
 .tlh .lane.empty{padding:4px 0}
 .tlh .lane .none{font-size:10.5px;color:var(--border);letter-spacing:.05em}
+.tlh .lane .chip2{width:100%;min-width:0}
+/* фиксированный слот тега — теги и кнопки соседних карточек встают в колонку */
+.tlh .lane .chip2 .tg{min-width:112px;justify-content:center}
 .chip2{display:flex;align-items:center;gap:9px;padding:6px 8px 6px 10px;border:1px solid var(--border);
   border-radius:var(--r);background:var(--card);min-width:300px;transition:border-color .2s ease,box-shadow .2s ease}
 .chip2:hover{border-color:var(--mark);box-shadow:var(--shSoft)}
@@ -1144,7 +1160,7 @@ const cap = () => `<p class="cap">${CAPS[S.view]||''}</p>`;
 function ribbon(){
   const mon = addDays(today,-((today.getDay()+6)%7));   // понедельник текущей недели
   const weeks = Array.from({length:4},(_,w)=>Array.from({length:7},(_,i)=>iso(addDays(mon,w*7+i))));
-  return `<div class="rib4">
+  return `<div class="rib4 ribh">
     <div class="wk wkd">${['пн','вт','ср','чт','пт','сб','вс'].map(d=>`<span>${d}</span>`).join('')}</div>
     ${weeks.map((days,w)=>{
     let wp=0, wb=0;
@@ -1159,10 +1175,10 @@ function ribbon(){
         const tip = cs.length?cs.map(c=>{const x=dayState(ds,c);return `${c} ${x.b}/${x.p}`}).join(' · '):'выходной';
         return `<button class="day ${past?'past':''} ${ds===TODAY?'tdy':''}" data-s="${s}" aria-pressed="${S.day===ds}"
           title="${ru(ds)} · ${b} из ${p} · ${tip}" ${s==='off'||past?'disabled':`onclick="pickDay('${ds}')"`}>
-          <div class="bar"><div class="fill" style="height:${Math.min(100,pct*90.9)}%"></div>
-          <span class="pct">${p?Math.round(pct*100)+'%':'—'}</span></div>
-          <div class="dd">${pad(d.getDate())}.${pad(d.getMonth()+1)}</div>
-          <div class="cts">${cs.length?(cs.length===1?esc(cs[0]):cs.map(c=>CSHORT[c]||c).join(' · ')):'—'}</div></button>`;
+          <div class="bar"><div class="fill" style="height:${Math.min(100,pct*90.9)}%"></div></div>
+          <div class="inf"><div class="dt"><span class="dd">${pad(d.getDate())}.${pad(d.getMonth()+1)}</span>
+            <span class="pct">${p?Math.round(pct*100)+'%':'—'}</span></div>
+          <div class="cts">${cs.length?(cs.length===1?esc(cs[0]):cs.map(c=>CSHORT[c]||c).join(' · ')):'—'}</div></div></button>`;
       }).join('')}</div></div>`;
   }).join('')}</div>
   <div class="lg">
