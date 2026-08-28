@@ -951,9 +951,10 @@ function seed(){
     'Мезенцева О. И.','Хайруллин Т. Р.','ТСН «Малышева 84»','Гончарова Е. В.','Поляков С. Н.'];
   const ops = S.staff.filter(s=>s.role==='operator'||s.role==='senior');
   let oi = 0;
-  for(let i=-14;i<14;i++){
+  /* Набор идёт на две недели вперёд: ближние дни почти закрыты, дальние ещё добираются. */
+  for(let i=-14;i<=14;i++){
     const ds = iso(addDays(today,i));
-    const rate = i<0?0.98 : i===0?.95 : i===1?.8 : i<4?.5 : i<7?.25 : .06;
+    const rate = i<0?0.98 : i===0?.95 : i<=2?.88 : i<=5?.78 : i<=8?.66 : i<=11?.54 : .44;
     const cs = dayCities(ds); if(!cs.length) continue;
     const n = Math.round(planFor(ds)*rate*(.85+rr()*.3));
     for(let k=0;k<n;k++){
@@ -961,12 +962,13 @@ function seed(){
       r.operator = ops[oi++%ops.length].id; S.requests.push(r);
     }
   }
-  for(let i=-14;i<=1;i++){
+  /* Маршруты собраны на несколько дней вперёд; на дальние дни поверитель ещё не назначен. */
+  for(let i=-14;i<=5;i++){
     const ds = iso(addDays(today,i));
     dayCities(ds).forEach(c=>{
       const crew = crewOn(ds);
       build(ds,c).forEach((rt,k)=>{
-        rt.verifier = crew.length ? crew[(k+i+19)%crew.length].id : null;
+        rt.verifier = (crew.length && i<=3) ? crew[(k+i+19)%crew.length].id : null;
         if(i<0) finishRoute(rt);
         else if(i===0){
           if(k===0) finishRoute(rt);
@@ -975,6 +977,8 @@ function seed(){
           else if(k===2){ callAll(rt); rt.status='обзвонен'; rt.duty=ops[0].id; }
           else rt.stops.forEach((s,j)=>{ if(j<Math.floor(rt.stops.length*.4)) s.called='подтверждена'; });
         }
+        /* Ближайшие дни уже частично прозвонены, дальние ждут своей очереди. */
+        else if(i<=2) rt.stops.forEach((s,j)=>{ if(j<Math.floor(rt.stops.length*(i===1?.45:.15))) s.called='подтверждена'; });
       });
     });
   }
@@ -1077,7 +1081,13 @@ function dayTotal(ds){
   const p = planFor(ds), b = bookedOn(ds), pct = p?b/p:0;
   return {p,b,pct,s:p===0?'off':pct>1.1?'over':pct>=1?'full':pct>=.5?'fill':'free'};
 }
-const dayState = dayTotal;
+/* Разрез дня по городу: план дня делится между городами приёма поровну. */
+function dayState(ds,c){
+  const cs = dayCities(ds);
+  if(!c || !cs.length) return dayTotal(ds);
+  const p = Math.round(planFor(ds)/cs.length), b = bookedIn(ds,c), pct = p?b/p:0;
+  return {p,b,pct,s:p===0?'off':pct>1.1?'over':pct>=1?'full':pct>=.5?'fill':'free'};
+}
 /* Услуга теперь живёт в строке прибора: две поверки на адресе — две услуги в расчёте. */
 const worksOf = r => (r.devices||[]).map(d=>d.svc).filter(id=>SVC[id]);
 const rateV = r => worksOf(r).reduce((a,id)=>a+SVC[id].rV,0);
