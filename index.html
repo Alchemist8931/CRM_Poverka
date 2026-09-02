@@ -207,6 +207,9 @@ textarea.fld{height:auto;padding:9px 11px;resize:vertical;min-height:76px;line-h
 .rib4.ribh .day .pct{position:static;margin-left:auto;font-size:10px;color:var(--ink3);flex-shrink:0}
 .rib4.ribh .day .cts{margin-top:0;white-space:normal;word-break:break-word;text-overflow:clip;
   display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;max-height:2.6em}
+/* Дата ушла под маршруты: приём по ней оператору закрыт. */
+.rib4.ribh .day.lk .bar{border-style:dashed;border-color:var(--ink3)}
+.rib4.ribh .day.lk .dd{color:var(--ink3)}
 .rib4.ribh .day[aria-pressed="true"]{box-shadow:0 0 0 1px var(--ink)}
 .rib4.ribh .day[aria-pressed="true"] .bar{box-shadow:none}
 .rib4.ribh .day[aria-pressed="true"] .pct{color:var(--ink2)}
@@ -384,7 +387,7 @@ td b{color:var(--ink);font-weight:600}
 /* ---------- акт: приборы и фото ---------- */
 .wrow{border:1px solid var(--border2);border-radius:var(--r);background:var(--card);padding:11px 12px;margin-bottom:8px}
 .wrow.new{border-color:var(--mark)}
-.wtop{display:grid;grid-template-columns:1.5fr 1.35fr .8fr 1.05fr .9fr auto 32px;gap:6px;align-items:center}
+.wtop{display:grid;grid-template-columns:1.4fr 1.2fr .75fr 1fr 1fr .85fr auto 32px;gap:6px;align-items:center}
 .wbot{display:flex;align-items:center;gap:7px;margin-top:9px;flex-wrap:wrap}
 .wbot .lbl{margin-right:2px}
 .phw{position:relative;width:58px;height:44px;flex-shrink:0}
@@ -786,7 +789,9 @@ const SMALL = LOCS.filter(x=>!x.big).map(x=>x.n);
 /* День планируется руководителем целиком: города приёма, смена поверителей,
    смена операторов и план заявок. Всё остальное считается от этой записи. */
 const dayRec = ds => S.days.find(d=>d.date===ds);
-const dayOrNew = ds => { let d=dayRec(ds); if(!d){ d={date:ds,cities:[],crew:[],ops:[],planned:0}; S.days.push(d); } return d; };
+const dayOrNew = ds => { let d=dayRec(ds); if(!d){ d={date:ds,cities:[],crew:[],ops:[],caps:{}}; S.days.push(d); } if(!d.caps) d.caps={}; return d; };
+/* План приёма задаётся по каждому городу дня отдельно; план дня — их сумма. */
+const capOf = (ds,c) => (dayRec(ds)?.caps||{})[c] ?? 0;
 const dayCities = ds => dayRec(ds)?.cities || [];
 const SERVICES = [
   {id:'wv',grp:'Вода', name:'Поверка счётчика воды',  pF:900, pU:1200,rV:280, rO:45},
@@ -822,7 +827,7 @@ const TITLES = {intake:'Приём заявки',support:'Поддержка м�
   payroll:'Сдельная оплата',services:'Услуги и ставки',myroute:'Мой маршрут',absence:'Отсутствия'};
 const CAPS = {
   support:'Маршруты на сегодня. Заявки стоят по шкале времени: можно открыть карточку, позвонить, передвинуть по часам или добавить в маршрут новую.',
-  routes:'Маршруты по дням. Конструктор открывает карту области: точки — адреса заявок, порядок нажатия задаёт последовательность объезда.',
+  routes:'Маршруты по дням. Конструктор открывает карту области: точки — адреса заявок, порядок нажатия задаёт последовательность объезда. Как только дата ушла под маршруты, приём по ней закрывается — добавить адрес может только руководитель.',
   schedule:'Кто в смене по дням. Клик по клетке ставит или снимает сотрудника с даты — это та же смена, что в планировании.',
   me:'Сдельная оплата по выполненным работам. Виден только собственный заработок.',
   payroll:'Начисления по всем сотрудникам за период.',
@@ -904,7 +909,7 @@ const S = {
   view:'intake', page:0, auth:false, user:ROLES.operator.who, role:'operator', me:ROLES.operator.id,
   theme:'light', dd:null, ddM:null,
   city:CITIES[0], day:TODAY, staff:[], days:[], requests:[], routes:[], absences:[], seq:1000,
-  toast:null, openRoute:null, openStop:null, call:null, lb:null, ukCity:'', ukSeal:'', pMonth:TODAY.slice(0,7),
+  toast:null, openRoute:null, openStop:null, call:null, lb:null, ukCity:'', ukSeal:'', pMonth:TODAY.slice(0,7), planTab:'day',
   mMonth:TODAY.slice(0,7), meTab:'done', modal:null, edit:null,
   intake:blankIntake(), op:blankOp()
 };
@@ -940,11 +945,16 @@ function seed(){
     const n = wknd?rint(4,6):rint(7,11);
     const pool = [...vers], crew = [];
     for(let k=0;k<n;k++) crew.push(pool.splice(Math.floor(rr()*pool.length),1)[0]);
-    const ops = opIds.filter((_,k)=>k<(wknd?2:3));
+    /* У операторов свой график: состав смены крутится по кругу, а не повторяется день в день. */
+    const need = wknd?2:3;
+    const ops = Array.from({length:need},(_,k)=>opIds[(((i+k)%opIds.length)+opIds.length)%opIds.length]);
     const cities = [];
     if(rr()<.45) cities.push(rnd(BIG));
     else { const sp=[...SMALL]; for(let k=0,m=rint(2,4);k<m;k++) cities.push(sp.splice(Math.floor(rr()*sp.length),1)[0]); }
-    S.days.push({date:ds,cities,crew:crew.sort(),ops,planned:crew.length*25});
+    /* План руководитель ставит руками по каждому городу — округлёнными числами. */
+    const per = Math.max(5,Math.round(crew.length*25/cities.length/5)*5), caps = {};
+    cities.forEach(c=>caps[c]=per);
+    S.days.push({date:ds,cities,crew:crew.sort(),ops,caps});
   }
   const clients = ['Смирнова Т. А.','Волков Р. П.','Гареев И. М.','Дьяконова Л. С.','ООО «Стройсервис»',
     'Пшеничников А. А.','ТСЖ «Восход»','Кириллова Н. В.','Абрамов Д. Ю.','ООО «Гарант-Плюс»',
@@ -1041,6 +1051,10 @@ function stubPhoto(t1,t2){
     `<text x="240" y="176" font-family="monospace" font-size="30" fill="#c9c9c9" text-anchor="middle">${t1}</text>`+
     `<text x="24" y="336" font-family="monospace" font-size="20" fill="#8d8d8d">${t2}</text></svg>`);
 }
+/* Показания на момент поверки: вода в кубометрах, тепло в гигакалориях. */
+const mkReading = carrier => carrier==='Тепло'
+  ? rint(1,60)+','+String(rint(0,999)).padStart(3,'0')
+  : String(rint(8,940)).padStart(5,'0')+','+String(rint(0,999)).padStart(3,'0');
 /* Акт материализуется в момент выполнения: приборы, услуга в строке прибора, фото. */
 function actFor(r,ds){
   const {svc,heat,nd} = r.expect || {svc:'wv',heat:false,nd:1};
@@ -1048,8 +1062,9 @@ function actFor(r,ds){
     const t = heat?DEV_TYPES[5]:rnd(DEV_TYPES.slice(0,5));
     const sv = (j===1 && !heat && rr()<.3) ? 'wr' : svc;
     const serial = rint(10,99)+'-'+rint(100000,999999);
-    return {svc:sv,type:t.v,grsi:t.grsi,carrier:heat?'Тепло':(j===0?'ХВС':'ГВС'),
-      serial,room:rnd(ROOMS),seal:rr()<.86,
+    const carrier = heat?'Тепло':(j===0?'ХВС':'ГВС');
+    return {svc:sv,type:t.v,grsi:t.grsi,carrier,
+      serial,reading:mkReading(carrier),room:rnd(ROOMS),seal:rr()<.86,
       photos:Array.from({length:rint(1,3)},(_,k)=>({src:stubPhoto(serial,ru(ds)+' · кадр '+(k+1)),
         name:'IMG_'+rint(1000,9999)+'.jpg',t:pad(rint(9,20))+':'+pad(rint(10,59))}))};
   });
@@ -1074,18 +1089,26 @@ const onShift = (p,ds) => !!dayRec(ds) && !absentOn(p.id,ds) &&
   ((dayRec(ds).crew||[]).includes(p.id) || (dayRec(ds).ops||[]).includes(p.id));
 const crewOn = ds => (dayRec(ds)?.crew||[]).map(staffById).filter(p=>p&&!absentOn(p.id,ds));
 const opsOn  = ds => (dayRec(ds)?.ops||[]).map(staffById).filter(p=>p&&!absentOn(p.id,ds));
-const planFor = ds => dayRec(ds)?.planned ?? 0;
+const planFor = ds => dayCities(ds).reduce((a,c)=>a+capOf(ds,c),0);
 const bookedOn = ds => S.requests.filter(r=>r.date===ds&&r.status!=='отменена').length;
+/* Дата уходит под маршруты: как только руководитель сел её собирать или собрал
+   хотя бы один маршрут, оператор на неё больше не записывает — состав дня зафиксирован. */
+function dayLock(ds){
+  if(S.rc && S.rc.date===ds) return 'идёт сборка маршрутов';
+  if(S.routes.some(r=>r.date===ds)) return 'маршруты на дату уже собраны';
+  return null;
+}
+/* Руководитель — исключение: он ставит заявку в готовый маршрут даже во время выезда. */
+const lockedFor = (ds,role) => (role||S.role)==='supervisor' ? null : dayLock(ds);
 const bookedIn = (ds,c) => S.requests.filter(r=>r.date===ds&&r.city===c&&r.status!=='отменена').length;
 function dayTotal(ds){
   const p = planFor(ds), b = bookedOn(ds), pct = p?b/p:0;
   return {p,b,pct,s:p===0?'off':pct>1.1?'over':pct>=1?'full':pct>=.5?'fill':'free'};
 }
-/* Разрез дня по городу: план дня делится между городами приёма поровну. */
+/* Разрез дня по городу: у каждого города приёма свой план, заданный руководителем. */
 function dayState(ds,c){
-  const cs = dayCities(ds);
-  if(!c || !cs.length) return dayTotal(ds);
-  const p = Math.round(planFor(ds)/cs.length), b = bookedIn(ds,c), pct = p?b/p:0;
+  if(!c || !dayCities(ds).includes(c)) return dayTotal(ds);
+  const p = capOf(ds,c), b = bookedIn(ds,c), pct = p?b/p:0;
   return {p,b,pct,s:p===0?'off':pct>1.1?'over':pct>=1?'full':pct>=.5?'fill':'free'};
 }
 /* Услуга теперь живёт в строке прибора: две поверки на адресе — две услуги в расчёте. */
@@ -1183,8 +1206,9 @@ function ribbon(){
         const {p,b,pct,s} = dayTotal(ds), d = new Date(ds+'T00:00:00'), past = ds<TODAY;
         const cs = dayCities(ds);
         const tip = cs.length?cs.map(c=>{const x=dayState(ds,c);return `${c} ${x.b}/${x.p}`}).join(' · '):'выходной';
-        return `<button class="day ${past?'past':''} ${ds===TODAY?'tdy':''}" data-s="${s}" aria-pressed="${S.day===ds}"
-          title="${ru(ds)} · ${b} из ${p} · ${tip}" ${s==='off'||past?'disabled':`onclick="pickDay('${ds}')"`}>
+        const lk = past?null:lockedFor(ds);
+        return `<button class="day ${past?'past':''} ${ds===TODAY?'tdy':''} ${lk?'lk':''}" data-s="${s}" aria-pressed="${S.day===ds}"
+          title="${ru(ds)} · ${b} из ${p} · ${tip}${lk?` · приём закрыт: ${lk}`:''}" ${s==='off'||past?'disabled':`onclick="pickDay('${ds}')"`}>
           <div class="bar"><div class="fill" style="height:${Math.min(100,pct*90.9)}%"></div></div>
           <div class="inf"><div class="dt"><span class="dd">${pad(d.getDate())}.${pad(d.getMonth()+1)}</span>
             <span class="pct">${p?Math.round(pct*100)+'%':'—'}</span></div>
@@ -1196,6 +1220,7 @@ function ribbon(){
     <span><i style="background:var(--cold);opacity:.45"></i>заполняется</span>
     <span><i style="background:var(--ink);opacity:.72"></i>план набран</span>
     <span><i style="background:var(--error);opacity:.6"></i>сверх 110% — приём закрыт</span>
+    <span><i style="border:1px dashed var(--ink3);background:none"></i>дата ушла под маршруты</span>
     <span><i style="border-top:1px dashed var(--mark);height:0;width:14px"></i>граница +10%</span></div>`;
 }
 /* Выбор дня подтягивает город заявки к тем, где в этот день работает бригада. */
@@ -1250,12 +1275,17 @@ function reqForm(K,T,p,day,onDay){
         <textarea class="fld" id="${p}CmtVf" oninput="${T}.cmtVf=this.value" placeholder="Что важно знать на адресе: доступ к стояку, собака, состояние пломбы">${esc(K.cmtVf)}</textarea></div>
     </div>`;
 }
-function setF(path,k,v){ (path==='S.edit'?S.edit:S.intake)[k]=v; render(); }
+/* Формой заявки пользуются три места: приём оператора, карточка правки и заявка руководителя. */
+const formOf = path => path==='S.edit'?S.edit : path==='S.supReq'?S.supReq : S.intake;
+function setF(path,k,v){ formOf(path)[k]=v; render(); }
 
 /* ---------- приём заявки ---------- */
 function viewIntake(){
   const K = S.intake;
-  const t = dayTotal(S.day), closed = t.pct>1.1 || t.p===0;
+  const t = dayTotal(S.day), lock = lockedFor(S.day);
+  /* Причина закрытия показывается прямо на кнопке — оператору не нужно гадать. */
+  const why = lock || (t.p===0 ? 'день не запланирован' : t.pct>1.1 ? 'план перебран' : null);
+  const closed = !!why;
   const mine = S.requests.filter(r=>r.operator===S.me && r.created===TODAY)
     .sort((a,b)=>b.id.localeCompare(a.id));
   return shell(null, `
@@ -1267,8 +1297,9 @@ function viewIntake(){
 
   <div class="c"><h3>Новая заявка</h3>
     ${reqForm(K,'S.intake','in',S.day,v=>{pickDay(v);})}
-    <div class="row" style="margin-top:14px;justify-content:flex-end">
-      <button class="b long" onclick="createReq()" ${closed?'disabled':''}>${closed?'День закрыт — приём остановлен':'Сохранить заявку'}</button></div>
+    <div class="row" style="margin-top:14px;align-items:center;justify-content:flex-end">
+      ${lock?`<span class="note" style="flex:1">Состав дня зафиксирован: ${lock}. Заявку на ${ru(S.day)} теперь добавляет только руководитель — он же ставит её в нужный маршрут.</span>`:''}
+      <button class="b long" onclick="createReq()" ${closed?'disabled':''}>${closed?'Приём закрыт: '+why:'Сохранить заявку'}</button></div>
   </div>
 
   <div class="c"><h3>Мои заявки за сегодня · ${mine.length}</h3>
@@ -1393,30 +1424,89 @@ function opTick(){
   if(!here) return;   // вызов приходит только когда оператор смотрит на линию
   if(O.on && O.next>0 && --O.next<=0) ringIn();
 }
-function createReq(){
-  const K = S.intake;
-  if(!K.name.trim()) return toast(K.ctype==='Юрлицо'?'Укажите название организации.':'Укажите ФИО клиента.');
+/* Проверки формы одни и те же у оператора и у руководителя — держим их в одном месте. */
+function reqProblem(K,ds){
+  if(!K.name.trim()) return K.ctype==='Юрлицо'?'Укажите название организации.':'Укажите ФИО клиента.';
   if(K.ctype==='Юрлицо'){
     const inn = String(K.inn).replace(/\D/g,'');
-    if(!inn) return toast('Для юрлица ИНН обязателен — без него не выставить счёт и закрывающие.');
-    if(inn.length!==10 && inn.length!==12) return toast('ИНН — 10 цифр у организации или 12 у ИП. Сейчас '+inn.length+'.');
+    if(!inn) return 'Для юрлица ИНН обязателен — без него не выставить счёт и закрывающие.';
+    if(inn.length!==10 && inn.length!==12) return 'ИНН — 10 цифр у организации или 12 у ИП. Сейчас '+inn.length+'.';
   }
-  if(!K.phone.trim()) return toast('Укажите телефон — по нему пойдёт прозвонка маршрута.');
-  if(digitsOf(K.phone).length!==10) return toast('Телефон неполный: нужно 10 цифр после +7.');
-  if(K.phone2 && digitsOf(K.phone2).length!==10) return toast('Дополнительный телефон неполный: нужно 10 цифр после +7.');
-  const city = K.city || dayCities(S.day)[0];
-  if(!city) return toast('В этот день бригада не выезжает — выберите другую дату.');
-  if(!K.house.trim()) return toast('Укажите номер дома.');
-  S.requests.push({id:'R'+(++S.seq),date:S.day,created:TODAY,city,clientType:K.ctype,name:K.name,
-    inn:K.ctype==='Юрлицо'?K.inn:'',phone:K.phone,contact:K.contact,phone2:K.phone2,contact2:K.contact2,
-    street:K.street,house:K.house,entrance:K.entrance,floor:K.floor,
-    flat:K.flat,intercom:K.intercom,time:K.time,cmtOp:K.cmtOp,cmtVf:K.cmtVf,
-    services:[],devices:[],status:'создана',routeId:null,operator:S.me});
+  if(!K.phone.trim()) return 'Укажите телефон — по нему пойдёт прозвонка маршрута.';
+  if(digitsOf(K.phone).length!==10) return 'Телефон неполный: нужно 10 цифр после +7.';
+  if(K.phone2 && digitsOf(K.phone2).length!==10) return 'Дополнительный телефон неполный: нужно 10 цифр после +7.';
+  if(!(K.city || dayCities(ds)[0])) return 'В этот день бригада не выезжает — выберите другую дату.';
+  if(!K.house.trim()) return 'Укажите номер дома.';
+  return null;
+}
+const reqFrom = (K,ds,operator) => ({id:'R'+(++S.seq),date:ds,created:TODAY,city:K.city||dayCities(ds)[0],
+  clientType:K.ctype,name:K.name,inn:K.ctype==='Юрлицо'?K.inn:'',
+  phone:K.phone,contact:K.contact,phone2:K.phone2,contact2:K.contact2,
+  street:K.street,house:K.house,entrance:K.entrance,floor:K.floor,
+  flat:K.flat,intercom:K.intercom,time:K.time,cmtOp:K.cmtOp,cmtVf:K.cmtVf,
+  services:[],devices:[],status:'создана',routeId:null,operator});
+function createReq(){
+  const K = S.intake;
+  const lock = lockedFor(S.day);
+  if(lock) return toast(`${ru(S.day)}: приём закрыт — ${lock}. Добавить заявку на эту дату может только руководитель.`);
+  const bad = reqProblem(K,S.day); if(bad) return toast(bad);
+  const r = reqFrom(K,S.day,S.me);
+  S.requests.push(r);
   const wasAcw = S.op.acw>0;
   if(wasAcw){ S.op.acw=0; S.op.next=rint(5,12); }
-  S.intake = blankIntake(); S.intake.city = city;
-  toast('Заявка сохранена: '+city+', '+ru(S.day)+', окно '+pad(K.time-1)+':00–'+pad(K.time+1)+':00.'
+  S.intake = blankIntake(); S.intake.city = r.city;
+  toast('Заявка сохранена: '+r.city+', '+ru(S.day)+', окно '+pad(K.time-1)+':00–'+pad(K.time+1)+':00.'
     + (wasAcw?' Постобработка закрыта, линия снова принимает вызовы.':''));
+}
+
+/* Заявка от руководителя: единственный способ добавить адрес на дату, ушедшую под маршруты. */
+function openSupReq(ds){
+  const K = blankIntake();
+  K.city = dayCities(ds)[0] || '';
+  S.supReq = {...K, day:ds, route:''};
+  S.modal = {k:'supreq'}; render();
+}
+function supDay(v){
+  const K = S.supReq; if(!K) return;
+  K.day = v; K.route = '';
+  const cs = dayCities(v);
+  if(cs.length && !cs.includes(K.city)) K.city = cs[0];
+  render();
+}
+function createSupReq(){
+  const K = S.supReq; if(!K) return;
+  const ds = K.day;
+  const bad = reqProblem(K,ds); if(bad) return toast(bad);
+  const rt = K.route ? S.routes.find(r=>r.id===K.route && r.date===ds) : null;
+  if(K.route && !rt) return toast('Этого маршрута на дату больше нет — выберите другой.');
+  const r = reqFrom(K,ds,S.me);
+  S.requests.push(r);
+  if(rt) addToRoute(rt.id,r.id);
+  else toast(`${r.id} создана на ${ru(ds)}, ${r.city}. Маршрут не выбран — заявка ждёт в свободных.`);
+  S.supReq = null; S.modal = null; render();
+}
+function supReqModal(){
+  const K = S.supReq; if(!K) return '';
+  const ds = K.day, lock = dayLock(ds);
+  const rts = S.routes.filter(r=>r.date===ds).sort((a,b)=>a.id.localeCompare(b.id));
+  const items = [{v:'',l:'— оставить без маршрута —'},...rts.map(rt=>({v:rt.id,
+    l:`${rt.id} · ${(rt.cities||[rt.city]).join(', ')}`,
+    hint:`${rt.stops.length} точек · ${rt.status}`}))];
+  return `<div class="mask" onclick="if(event.target===this)closeModal()">
+    <div class="modal" style="width:min(1120px,96vw)">
+      <div class="mhd"><h3>Заявка на ${ru(ds)}</h3>
+        <span class="note">${lock?`для операторов дата закрыта: ${lock}`:'дата ещё открыта для операторов'}</span>
+        <button class="ib" onclick="closeModal()">${svg(I.no,15)}</button></div>
+      ${reqForm(K,'S.supReq','sq',ds,v=>supDay(v))}
+      <div class="row" style="margin-top:14px;align-items:flex-end">
+        <div class="f" style="width:300px;margin-bottom:0"><label>Включить в маршрут</label>
+          ${SEL('sqRoute',K.route,items,v=>{S.supReq.route=v;})}</div>
+        <span class="note" style="flex:1">${rts.length
+          ? 'Точка встанет в маршрут по времени прибытия — даже если маршрут уже в работе.'
+          : 'На эту дату маршрутов ещё нет — заявка останется в свободных.'}</span>
+        <button class="b" onclick="createSupReq()">Создать заявку</button>
+      </div>
+    </div></div>`;
 }
 
 /* ---------- телефон и мини-окно вызова ---------- */
@@ -1432,7 +1522,7 @@ function fmtPhone(v){
   return s;
 }
 function phoneIn(el,k,T){
-  const O = (T==='S.edit')?S.edit:S.intake;
+  const O = formOf(T);
   const prev = O[k]||'';
   let d = digitsOf(el.value);
   /* Backspace съел разделитель, а не цифру — убираем цифру сами, иначе каретка встанет колом. */
@@ -1522,40 +1612,48 @@ function viewPlan(){
   const rows = Math.ceil(((first.getDay()+6)%7 + new Date(Y,Mo,0).getDate())/7);
   const weeks = Array.from({length:rows},(_,w)=>Array.from({length:7},(_,i)=>iso(addDays(grid,w*7+i))));
   const inM = ds => ds.slice(0,7)===S.pMonth;
-  let mp=0, mb=0, mdays=0;
-  weeks.flat().forEach(ds=>{ if(!inM(ds)) return; const t=dayTotal(ds); mp+=t.p; mb+=t.b; if(t.p) mdays++; });
+  const tab = S.planTab==='ops' ? 'ops' : 'day';
+  let mp=0, mb=0, mdays=0, mops=0, mopsDays=0;
+  weeks.flat().forEach(ds=>{ if(!inM(ds)) return;
+    const t=dayTotal(ds); mp+=t.p; mb+=t.b; if(t.p) mdays++;
+    const n=opsOn(ds).length; mops+=n; if(n) mopsDays++; });
 
   return shell(null,`
   <div class="row" style="margin-bottom:14px;align-items:center">
+    ${SEG(tab,[{v:'day',l:'План дня'},{v:'ops',l:'Смены операторов'}],'planTab($v)')}
     <div class="ptop" style="margin:0">
       <button class="ib" onclick="pMonth(-1)">${svg(I.left,14)}</button>
       <b style="min-width:150px;text-align:center">${MN[Mo-1]} ${Y}</b>
       <button class="ib" onclick="pMonth(1)">${svg(I.right,14)}</button>
       <button class="g sm" onclick="S.pMonth='${TODAY.slice(0,7)}';render()">Текущий месяц</button></div>
     <div style="flex:1"></div>
-    <span class="note">Рабочих дней <b class="mono" style="color:var(--ink)">${mdays}</b> ·
-      план <b class="mono" style="color:var(--ink)">${mp}</b> · набрано <b class="mono" style="color:var(--ink)">${mb}</b></span>
+    <span class="note">${tab==='day'
+      ? `Рабочих дней <b class="mono" style="color:var(--ink)">${mdays}</b> ·
+         план <b class="mono" style="color:var(--ink)">${mp}</b> · набрано <b class="mono" style="color:var(--ink)">${mb}</b>`
+      : `Дней со сменой <b class="mono" style="color:var(--ink)">${mopsDays}</b> ·
+         смен операторов <b class="mono" style="color:var(--ink)">${mops}</b>`}</span>
   </div>
   <div class="c">
     <div class="rib4">
       <div class="wk wkd">${['пн','вт','ср','чт','пт','сб','вс'].map(d=>`<span>${d}</span>`).join('')}</div>
       ${weeks.map((days,w)=>{
-        let wp=0, wc=0;
-        days.forEach(ds=>{ if(!inM(ds)) return; wp+=planFor(ds); wc+=crewOn(ds).length; });
+        let wp=0, wc=0, wo=0;
+        days.forEach(ds=>{ if(!inM(ds)) return; wp+=planFor(ds); wc+=crewOn(ds).length; wo+=opsOn(ds).length; });
         return `<div>
           <div class="wkh"><span class="lbl">Неделя ${w+1}</span>
             <span class="rg">${ru(days[0]).slice(0,5)} — ${ru(days[6]).slice(0,5)}</span>
-            <span class="tot">план ${wp} · смен ${wc}</span></div>
-          <div class="wk">${days.map(ds=>dayCell(ds,inM(ds))).join('')}</div></div>`}).join('')}
+            <span class="tot">${tab==='day'?`план ${wp} · смен ${wc}`:`смен операторов ${wo}`}</span></div>
+          <div class="wk">${days.map(ds=>tab==='day'?dayCell(ds,inM(ds)):opsCell(ds,inM(ds))).join('')}</div></div>`}).join('')}
     </div>
-    <p class="note" style="margin-top:12px">Клик по дню открывает карточку: города приёма, смена поверителей и операторов, план заявок.
-      Пустой день считается выходным — операторы не смогут записать на него заявку.</p>
+    <p class="note" style="margin-top:12px">${tab==='day'
+      ? 'Клик по дню открывает карточку: города приёма, план по каждому городу и смена поверителей. Пустой день считается выходным — операторы не смогут записать на него заявку.'
+      : 'Операторы на день не назначаются вместе с бригадами — у них свой график. Клик по дню открывает список операторов на смену.'}</p>
   </div>`);
 }
 function dayCell(ds,inM){
   const d = new Date(ds+'T00:00:00');
   const rec = dayRec(ds), t = dayTotal(ds);
-  const crew = crewOn(ds).length, ops = opsOn(ds).length;
+  const crew = crewOn(ds).length;
   const cs = rec?.cities||[];
   return `<button class="pcell ${inM?'':'out'} ${ds===TODAY?'tdy':''} ${t.p?'':'off'}" data-s="${t.s}"
     onclick="editDay('${ds}')" title="${ru(ds)} — настроить день">
@@ -1565,31 +1663,84 @@ function dayCell(ds,inM){
     <span class="tags">${cs.length?cs.slice(0,2).map(c=>`<i class="tag">${esc(CSHORT[c]||c)}</i>`).join('')
       +(cs.length>2?`<i class="tag more">+${cs.length-2}</i>`:'')
       :'<i class="tag empty">город не задан</i>'}</span>
-    <span class="crew">${crew?`<i>${svg(I.myroute,11)}${crew}</i>`:''}${ops?`<i>${svg(I.support,11)}${ops}</i>`:''}
-      ${rec&&!crew&&!ops?'<i class="none">смена не назначена</i>':''}</span>
+    <span class="crew">${crew?`<i>${svg(I.myroute,11)}${crew}</i>`:''}
+      ${rec&&!crew?'<i class="none">смена не назначена</i>':''}</span>
   </button>`;
+}
+/* Вторая подстраница планирования: смены операторов, свой график поверх плана выездов. */
+function opsCell(ds,inM){
+  const d = new Date(ds+'T00:00:00');
+  const list = opsOn(ds), n = list.length, crew = crewOn(ds).length;
+  return `<button class="pcell ${inM?'':'out'} ${ds===TODAY?'tdy':''} ${n?'':'off'}" data-s="${n?(n>2?'full':'fill'):'off'}"
+    onclick="editOps('${ds}')" title="${ru(ds)} — смена операторов">
+    <span class="h"><span class="dn">${pad(d.getDate())}</span>
+      ${n?`<span class="cr mono">${n}</span>`:'<span class="cr">нет смены</span>'}</span>
+    <span class="tags">${n?list.slice(0,2).map(p=>`<i class="tag">${esc(p.name)}</i>`).join('')
+      +(n>2?`<i class="tag more">+${n-2}</i>`:'')
+      :`<i class="tag empty">${crew?'линия без операторов':'выходной'}</i>`}</span>
+    <span class="crew">${crew?`<i>${svg(I.myroute,11)}${crew}</i>`:''}${n?`<i>${svg(I.support,11)}${n}</i>`:''}</span>
+  </button>`;
+}
+function planTab(v){ S.planTab = v; render(); }
+function editOps(ds){ dayOrNew(ds); S.modal={k:'ops',date:ds}; render(); }
+function clearOps(ds){ dayOrNew(ds).ops=[]; toast(`${ru(ds)}: смена операторов снята.`); render(); }
+function opsModal(ds){
+  const d = dayOrNew(ds);
+  const ops = S.staff.filter(p=>p.role==='operator'||p.role==='senior');
+  const wd = WD[new Date(ds+'T00:00:00').getDay()];
+  const crew = crewOn(ds).length, on = opsOn(ds).length, need = Math.max(1,Math.ceil(crew/10));
+  return `<div class="mask" onclick="if(event.target===this)closeModal()">
+    <div class="modal" style="width:min(720px,96vw)">
+      <div class="mhd"><h3>${ru(ds)} · ${wd}</h3>
+        <span class="note">${on?`на смене ${on}`:'смена операторов не назначена'}</span>
+        <button class="ib" onclick="closeModal()">${svg(I.no,15)}</button></div>
+
+      <div class="f" style="margin-bottom:0"><label>Операторы на смене · ${d.ops.length}</label>
+        <p class="note" style="margin:0 0 8px">График операторов не привязан к выездам: линия принимает звонки и в те дни, когда бригады не работают.</p>
+        <div class="tgls">${ops.map(p=>{const ab=absentOn(p.id,ds);
+          return `<button class="tgl ${ab?'ab':''}" aria-pressed="${d.ops.includes(p.id)}" ${ab?'disabled':''}
+            title="${ab?'согласованное отсутствие':p.name}" onclick="tgDay('${ds}','ops','${p.id}')">${esc(p.name)}</button>`}).join('')}</div></div>
+
+      <div class="row" style="margin-top:16px;align-items:center">
+        <span class="note" style="flex:1">${crew?`В этот день выезжает ${crew} поверителей — на линию нужно не меньше ${need} оператор(ов).`
+          :'В этот день бригады не выезжают — смена нужна только под приём звонков.'}</span>
+        <button class="g end" onclick="clearOps('${ds}')" ${d.ops.length?'':'disabled'}>Снять всех</button>
+        <button class="b" onclick="closeModal()">Готово</button>
+      </div>
+    </div></div>`;
 }
 function pMonth(n){ const [y,m]=S.pMonth.split('-').map(Number); const d=new Date(y,m-1+n,1);
   S.pMonth = `${d.getFullYear()}-${pad(d.getMonth()+1)}`; render(); }
 function editDay(ds){ dayOrNew(ds); S.modal={k:'day',date:ds}; render(); }
 function tgDay(ds,field,val){
   const d = dayOrNew(ds), a = d[field];
-  d[field] = a.includes(val) ? a.filter(x=>x!==val) : [...a,val];
-  if(field==='crew' && !d.planned) d.planned = d.crew.length*25;
+  const off = a.includes(val);
+  d[field] = off ? a.filter(x=>x!==val) : [...a,val];
+  /* Город сняли — его план уходит вместе с ним; добавили — подставляем прикидку по смене, руководитель поправит. */
+  if(field==='cities'){
+    if(off) delete d.caps[val];
+    else if(!d.caps[val]) d.caps[val] = evenCap(d);
+  }
   render();
 }
-function setDayPlan(ds,v){ dayOrNew(ds).planned = Math.max(0,parseInt(v)||0); render(); }
+/* Подсказка по смене: 25 адресов на поверителя, разложенные по городам дня. */
+const evenCap = d => Math.max(5,Math.round(d.crew.length*25/Math.max(1,d.cities.length)/5)*5);
+function setCap(ds,c,v){ dayOrNew(ds).caps[c] = Math.max(0,parseInt(v)||0); render(); }
+function spreadCaps(ds){
+  const d = dayOrNew(ds), per = evenCap(d);
+  d.cities.forEach(c=>d.caps[c]=per);
+  toast(`План разложен по смене: ${d.cities.length} город(ов) по ${per} — всего ${per*d.cities.length}.`);
+}
 function clearDay(ds){
   const d = dayOrNew(ds);
   const booked = bookedOn(ds);
   if(booked) return toast(`На ${ru(ds)} уже записано ${booked} заявок — сначала перенесите их.`);
-  d.cities=[]; d.crew=[]; d.ops=[]; d.planned=0;
+  d.cities=[]; d.crew=[]; d.ops=[]; d.caps={};
   toast(`${ru(ds)} снят с работы: приём закрыт, смены сняты.`); render();
 }
 function dayModal(ds){
   const d = dayOrNew(ds), t = dayTotal(ds);
   const vers = S.staff.filter(p=>p.role==='verifier');
-  const ops = S.staff.filter(p=>p.role==='operator'||p.role==='senior');
   const wd = WD[new Date(ds+'T00:00:00').getDay()];
   return `<div class="mask" onclick="if(event.target===this)closeModal()">
     <div class="modal" style="width:min(900px,96vw)">
@@ -1602,22 +1753,31 @@ function dayModal(ds){
         <div class="tgls">${CITIES.map(c=>`<button class="tgl" aria-pressed="${d.cities.includes(c)}"
           onclick="tgDay('${ds}','cities','${c}')">${esc(c)}</button>`).join('')}</div></div>
 
-      <div class="g2" style="margin-top:14px">
-        <div class="f" style="margin-bottom:0"><label>Поверители на дату · ${d.crew.length}</label>
-          <div class="tgls">${vers.map(p=>{const ab=absentOn(p.id,ds);
-            return `<button class="tgl ${ab?'ab':''}" aria-pressed="${d.crew.includes(p.id)}" ${ab?'disabled':''}
-              title="${ab?'согласованное отсутствие':p.name}" onclick="tgDay('${ds}','crew','${p.id}')">${esc(p.name)}</button>`}).join('')}</div></div>
-        <div class="f" style="margin-bottom:0"><label>Операторы на дату · ${d.ops.length}</label>
-          <div class="tgls">${ops.map(p=>{const ab=absentOn(p.id,ds);
-            return `<button class="tgl ${ab?'ab':''}" aria-pressed="${d.ops.includes(p.id)}" ${ab?'disabled':''}
-              title="${ab?'согласованное отсутствие':p.name}" onclick="tgDay('${ds}','ops','${p.id}')">${esc(p.name)}</button>`}).join('')}</div></div>
-      </div>
+      ${d.cities.length?`<div class="f" style="margin-top:14px"><label>План приёма по городам · всего ${t.p}</label>
+        <p class="note" style="margin:0 0 8px">Сколько заявок готовы принять по каждому городу. Приём по городу закрывается при превышении плана на 10%.</p>
+        <table><thead><tr><th>Город</th><th class="num" style="width:110px">План</th>
+          <th class="num" style="width:110px">Записано</th><th style="width:150px">Загрузка</th></tr></thead><tbody>
+          ${d.cities.map(c=>{const x = dayState(ds,c);
+            return `<tr><td><b>${esc(c)}</b></td>
+              <td class="num"><input class="fld sm mono" style="text-align:right" value="${capOf(ds,c)}"
+                onchange="setCap('${ds}','${c}',this.value)" title="План приёма по городу ${esc(c)}"></td>
+              <td class="num mono">${x.b}</td>
+              <td>${x.p?`<span class="tg ${x.s==='over'?'t-err':x.s==='full'?'t-ink':x.s==='fill'?'t-cold':'t-mut'}">${Math.round(x.pct*100)}%</span>`
+                :'<span class="note">план не задан</span>'}</td></tr>`}).join('')}
+        </tbody></table>
+        <div class="row" style="margin-top:8px;align-items:center">
+          <button class="g sm" onclick="spreadCaps('${ds}')">Разложить по смене: ${d.crew.length} × 25</button>
+          <span class="note" style="flex:1">Записано на день ${t.b} из ${t.p}${t.p?` · приём встанет на ${Math.ceil(t.p*1.1)}`:''}.</span></div></div>`
+        :'<p class="note" style="margin-top:14px">Пока не выбран ни один город, план задавать не на что.</p>'}
 
-      <div class="row" style="margin-top:16px;align-items:flex-end">
-        <div class="f" style="width:150px;margin-bottom:0"><label>План заявок на день</label>
-          <input class="fld mono" id="dPlan" value="${d.planned}" onchange="setDayPlan('${ds}',this.value)"></div>
-        <button class="g" onclick="setDayPlan('${ds}',${d.crew.length*25})">По смене: ${d.crew.length} × 25 = ${d.crew.length*25}</button>
-        <span class="note" style="flex:1">Приём закрывается при превышении плана на 10% — это ${Math.ceil(d.planned*1.1)} заявок.</span>
+      <div class="f" style="margin-top:14px;margin-bottom:0"><label>Поверители на дату · ${d.crew.length}</label>
+        <p class="note" style="margin:0 0 8px">Операторы на день не назначаются — они работают по отдельному графику, на соседней подстранице.</p>
+        <div class="tgls">${vers.map(p=>{const ab=absentOn(p.id,ds);
+          return `<button class="tgl ${ab?'ab':''}" aria-pressed="${d.crew.includes(p.id)}" ${ab?'disabled':''}
+            title="${ab?'согласованное отсутствие':p.name}" onclick="tgDay('${ds}','crew','${p.id}')">${esc(p.name)}</button>`}).join('')}</div></div>
+
+      <div class="row" style="margin-top:16px;align-items:center">
+        <span class="note" style="flex:1">Смена ${d.crew.length} поверителей — это ориентир ${d.crew.length*25} адресов за день.</span>
         <button class="g end" onclick="clearDay('${ds}')">Сделать выходным</button>
         <button class="b" onclick="closeModal()">Готово</button>
       </div>
@@ -1812,10 +1972,12 @@ function saveReq(){
   toast(moved ? `${r.id} перенесена на ${ru(r.date)} и снята с маршрута — поставьте её в маршрут той даты.`
               : `${r.id} обновлена.`);
 }
-function closeModal(){ S.modal=null; S.edit=null; render(); }
+function closeModal(){ S.modal=null; S.edit=null; S.supReq=null; render(); }
 function modalLayer(){
   if(!S.modal) return '';
   if(S.modal.k==='day') return dayModal(S.modal.date);
+  if(S.modal.k==='ops') return opsModal(S.modal.date);
+  if(S.modal.k==='supreq') return supReqModal();
   if(S.modal.k==='rc') return rcModal();
   if(S.modal.k==='chat'){
     const rt = S.routes.find(r=>r.id===S.modal.id); if(!rt){ S.modal=null; return ''; }
@@ -2034,6 +2196,7 @@ function viewRoutes(){
       <h3>${ru(ds)} · ${WD[new Date(ds+'T00:00:00').getDay()]}</h3>
       <span class="note">${rts.length} маршрут(ов) · ${rts.reduce((a,r)=>a+r.stops.length,0)} адресов · в смене ${crew.length} поверителей${noV?` · <span style="color:var(--warning)">без поверителя ${noV}</span>`:''}</span>
       <div style="flex:1"></div>
+      <button class="g sm" onclick="openSupReq('${ds}')">${svg(I.plus,12)}Заявка на дату</button>
       <button class="g sm" onclick="openRC('${ds}')">${svg(I.map,12)}Открыть карту дня</button></div>
     <table><thead><tr><th>Маршрут</th><th>Города</th><th class="num">Адресов</th><th>Поверитель</th><th>Статус</th><th></th></tr></thead><tbody>
       ${rts.map(rt=>`<tr><td class="mono"><b>${rt.id}</b></td>
@@ -2264,7 +2427,7 @@ function viewMyRoute(){
 function workSheet(rt,s){
   const r = S.requests.find(x=>x.id===s.req); if(!r) return '';
   const i0 = rt.stops.indexOf(s);
-  r.devices.forEach(d=>{ if(!d.photos) d.photos=[]; });
+  r.devices.forEach(d=>{ if(!d.photos) d.photos=[]; if(d.reading===undefined) d.reading=''; });
   const noPh = r.devices.some(d=>!d.photos.length);
   return `<div class="c" style="margin-top:14px">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:4px">
@@ -2274,7 +2437,7 @@ function workSheet(rt,s){
         ${s.done?'<span class="tg t-ok">позиция закрыта</span>':'<span class="tg t-mut">в работе</span>'}
         <button class="g sm" onclick="startCall('${esc(r.phone)}','основной','${esc(r.name)}')">${svg(I.phone,12)}Клиент</button></div>
     </div>
-    <p class="cap">Услуга выбирается в строке прибора. К каждому прибору — фото выполненных работ, несколько кадров.</p>
+    <p class="cap">Услуга, заводской номер и показания счётчика — в строке прибора. К каждому прибору — фото выполненных работ, несколько кадров.</p>
     ${r.cmtVf?`<div class="actnote"><b>Комментарий для поверителей</b>${esc(r.cmtVf)}</div>`:''}
     ${r.devices.map((d,i)=>`<div class="wrow ${d.photos.length?'':'new'}">
       <div class="wtop">
@@ -2282,6 +2445,8 @@ function workSheet(rt,s){
         ${SEL('wT'+i,d.type,DEV_TYPES.map(t=>({v:t.v,l:t.v,hint:t.grsi})),v=>{d.type=v;d.grsi=DEV_TYPES.find(t=>t.v===v).grsi;},{sm:true})}
         ${SEL('wC'+i,d.carrier,['ХВС','ГВС','Тепло'],v=>{d.carrier=v;},{sm:true})}
         <input class="fld sm mono" value="${esc(d.serial)}" oninput="setDev('${r.id}',${i},'serial',this.value)" placeholder="Заводской №">
+        <input class="fld sm mono" value="${esc(d.reading)}" oninput="setDev('${r.id}',${i},'reading',this.value)"
+          placeholder="Показания" title="Показания счётчика на момент поверки${d.carrier==='Тепло'?', Гкал':', м³'}">
         ${SEL('wR'+i,d.room,ROOMS,v=>{d.room=v;},{sm:true})}
         ${CHK(d.seal,'пломба УК',`setDev('${r.id}',${i},'seal',${!d.seal})`)}
         <button class="ib sm no" title="Убрать прибор" onclick="rmDev('${r.id}',${i})">${svg(I.no,13)}</button>
@@ -2304,7 +2469,7 @@ function workSheet(rt,s){
 function setDev(rid,i,k,v){ const r=S.requests.find(x=>x.id===rid); r.devices[i][k]=v; render(); }
 function addDev(rid){
   const r = S.requests.find(x=>x.id===rid);
-  r.devices.push({svc:'wv',type:DEV_TYPES[0].v,grsi:DEV_TYPES[0].grsi,carrier:'ХВС',serial:'',room:'Кухня',seal:false,photos:[]});
+  r.devices.push({svc:'wv',type:DEV_TYPES[0].v,grsi:DEV_TYPES[0].grsi,carrier:'ХВС',serial:'',reading:'',room:'Кухня',seal:false,photos:[]});
   render();
 }
 function rmDev(rid,i){ const r=S.requests.find(x=>x.id===rid); r.devices.splice(i,1); render(); }
@@ -2328,10 +2493,12 @@ function closeStop(id,i){
   if(r.devices.some(d=>!String(d.serial).trim())) return toast('Заполните заводские номера приборов — они уходят в реестр УК.');
   const noPh = r.devices.filter(d=>!d.photos.length).length;
   const noSeal = r.devices.filter(d=>!d.seal).length;
+  const noRd = r.devices.filter(d=>!String(d.reading||'').trim()).length;
   s.done = true; s.called = s.called || 'подтверждена';
   r.status = 'выполнена'; r.verifier = rt.verifier; r.services = [...new Set(worksOf(r))];
   if(rt.status==='обзвонен'||rt.status==='черновик') rt.status='в работе';
   toast(`Позиция закрыта: ${r.devices.length} прибор(ов) на ${money(priceOf(r))}, вам начислено ${money(rateV(r))}.`
+    + (noRd?` Без показаний: ${noRd} — их ждёт УК, допишите в акте.`:'')
     + (noPh?` Без фото: ${noPh} — оператор увидит подсветку.`:'')
     + (noSeal?` Без пломбы УК: ${noSeal} — в отчёт УК не пойдут.`:''));
 }
@@ -2389,6 +2556,10 @@ if(typeof document==='object' && document && document.addEventListener){
   });
 }
 seed();
+/* Ближайшие даты уже ушли под маршруты — приём открываем с первой свободной. */
+S.day = Array.from({length:21},(_,i)=>iso(addDays(today,i)))
+  .find(ds=>dayCities(ds).length && !dayLock(ds)) || TODAY;
+S.intake.city = dayCities(S.day)[0] || CITIES[0];
 render();
 if(typeof setInterval==='function') setInterval(opTick,1000);
 if(typeof INTRO!=='undefined' && typeof document==='object' && document.getElementById)
