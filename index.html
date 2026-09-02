@@ -884,6 +884,8 @@ const WD = ['вс','пн','вт','ср','чт','пт','сб'];
 const MN = ['январь','февраль','март','апрель','май','июнь','июль','август','сентябрь','октябрь','ноябрь','декабрь'];
 /* Не больше пяти городов на день: столько строк помещается в ячейку ленты ёмкости. */
 const MAX_CITIES = 5;
+/* Столько операторов помещается в столбец на миниатюре дня. */
+const MAX_OPS = 4;
 const MNG = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
 const ru = s => s.split('-').reverse().join('.');
 /* Полная дата прописью: «02 сентября 2026 г.» */
@@ -1808,9 +1810,9 @@ function opsCell(ds,inM){
     onclick="editOps('${ds}')" title="${ru(ds)} — смена операторов">
     <span class="h"><span class="dn">${pad(d.getDate())}</span>
       ${n?`<span class="cr mono">${n}</span>`:'<span class="cr">нет смены</span>'}</span>
-    <span class="tags">${n?list.slice(0,2).map(p=>`<i class="tag">${esc(p.name)}</i>`).join('')
-      +(n>2?`<i class="tag more">+${n-2}</i>`:'')
-      :`<i class="tag empty">${crew?'линия без операторов':'выходной'}</i>`}</span>
+    <span class="lst"><b>Операторы</b>
+      ${n?list.slice(0,MAX_OPS).map(p=>`<i>${esc(p.name)}</i>`).join('')
+        :`<i class="none">${crew?'линия без операторов':'выходной'}</i>`}</span>
     <span class="crew">${crew?`<i>${svg(I.myroute,11)}${crew}</i>`:''}${n?`<i>${svg(I.support,11)}${n}</i>`:''}</span>
   </button>`;
 }
@@ -1828,11 +1830,13 @@ function opsModal(ds){
         <span class="note">${on?`на смене ${on}`:'смена операторов не назначена'}</span>
         <button class="ib" onclick="closeModal()">${svg(I.no,15)}</button></div>
 
-      <div class="f" style="margin-bottom:0"><label>Операторы на смене · ${d.ops.length}</label>
-        <p class="note" style="margin:0 0 8px">График операторов не привязан к выездам: линия принимает звонки и в те дни, когда бригады не работают.</p>
-        <div class="tgls">${ops.map(p=>{const ab=absentOn(p.id,ds);
-          return `<button class="tgl ${ab?'ab':''}" aria-pressed="${d.ops.includes(p.id)}" ${ab?'disabled':''}
-            title="${ab?'согласованное отсутствие':p.name}" onclick="tgDay('${ds}','ops','${p.id}')">${esc(p.name)}</button>`}).join('')}</div></div>
+      <div class="f" style="margin-bottom:0"><label>Операторы на смене · ${d.ops.length} из ${MAX_OPS}</label>
+        <p class="note" style="margin:0 0 8px">График операторов не привязан к выездам: линия принимает звонки и в те дни, когда бригады не работают.
+          Больше ${MAX_OPS} человек на смену не ставим.</p>
+        <div class="tgls">${ops.map(p=>{const ab=absentOn(p.id,ds), on=d.ops.includes(p.id), full=d.ops.length>=MAX_OPS;
+          return `<button class="tgl ${ab?'ab':''}" aria-pressed="${on}" ${ab||(!on&&full)?'disabled':''}
+            title="${ab?'согласованное отсутствие':!on&&full?`Уже назначено ${MAX_OPS} операторов`:p.name}"
+            onclick="tgDay('${ds}','ops','${p.id}')">${esc(p.name)}</button>`}).join('')}</div></div>
 
       <div class="row" style="margin-top:16px;align-items:center">
         <span class="note" style="flex:1">${crew?`В этот день выезжает ${crew} поверителей — на линию нужно не меньше ${need} оператор(ов).`
@@ -1851,6 +1855,8 @@ function tgDay(ds,field,val){
   /* Больше пяти городов не помещается в ячейку дня на ленте ёмкости у оператора. */
   if(field==='cities' && !off && a.length>=MAX_CITIES)
     return toast(`На день можно назначить не больше ${MAX_CITIES} городов — иначе они не поместятся в ленту ёмкости. Снимите лишний.`);
+  if(field==='ops' && !off && a.length>=MAX_OPS)
+    return toast(`На смену можно поставить не больше ${MAX_OPS} операторов. Снимите кого-то из назначенных.`);
   d[field] = off ? a.filter(x=>x!==val) : [...a,val];
   /* Город сняли — его план уходит вместе с ним; добавили — подставляем прикидку по смене, руководитель поправит. */
   if(field==='cities'){
