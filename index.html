@@ -463,6 +463,12 @@ td b{color:var(--ink);font-weight:600}
 .pcell[data-s="over"] .pb i{background:var(--error);opacity:.7}
 .pcell .pb s{position:absolute;top:-1px;bottom:-1px;width:1px;background:var(--mark);text-decoration:none}
 .pcell .tags{display:flex;flex-wrap:wrap;gap:3px}
+/* Города и доступные работы — списками прямо в миниатюре дня, без сокращений. */
+.pcell .lst{display:flex;flex-direction:column;gap:1px;min-width:0}
+.pcell .lst b{font-size:8px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);margin-bottom:2px}
+.pcell .lst i{font-style:normal;font-size:9px;line-height:1.45;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcell .lst i.none{color:var(--ink3)}
+.pcell.off .lst i{color:var(--ink3)}
 .tag{display:inline-flex;align-items:center;padding:1px 6px;border:1px solid var(--border);border-radius:var(--r-in);
   background:var(--surface);font-size:9.5px;font-style:normal;color:var(--ink2);letter-spacing:.02em;white-space:nowrap}
 .tag.more{color:var(--ink3)}
@@ -1167,6 +1173,12 @@ const worksOf = r => (r.devices||[]).map(d=>d.svc).filter(id=>SVC[id]);
 const skillsOf = p => p?.svcs || [];
 const canDoAll = (p,ids) => ids.every(id=>skillsOf(p).includes(id));
 const crewFor = (ds,ids) => crewOn(ds).filter(p=>canDoAll(p,ids));
+/* Что можно выполнить в этот день — объединение компетенций назначенной смены. */
+function worksOn(ds){
+  const have = new Set();
+  crewOn(ds).forEach(p=>skillsOf(p).forEach(id=>have.add(id)));
+  return SERVICES.filter(s=>have.has(s.id));
+}
 function tgSkill(pid,sid){
   const p = staffById(pid); if(!p) return;
   const s = skillsOf(p);
@@ -1742,7 +1754,7 @@ function viewPlan(){
           <div class="wk">${days.map(ds=>tab==='day'?dayCell(ds,inM(ds)):opsCell(ds,inM(ds))).join('')}</div></div>`}).join('')}
     </div>
     <p class="note" style="margin-top:12px">${tab==='day'
-      ? 'Клик по дню открывает карточку: города приёма, план по каждому городу и смена поверителей. Пустой день считается выходным — операторы не смогут записать на него заявку.'
+      ? 'В миниатюре дня видно, по каким городам идёт работа и какие виды работ в этот день закрывает назначенная смена. Клик по дню открывает карточку: города приёма, план по каждому городу и смена поверителей. Пустой день считается выходным — операторы не смогут записать на него заявку.'
       : 'Операторы на день не назначаются вместе с бригадами — у них свой график. Клик по дню открывает список операторов на смену.'}</p>
   </div>`);
 }
@@ -1751,14 +1763,18 @@ function dayCell(ds,inM){
   const rec = dayRec(ds), t = dayTotal(ds);
   const crew = crewOn(ds).length;
   const cs = rec?.cities||[];
+  const works = worksOn(ds);
   return `<button class="pcell ${inM?'':'out'} ${ds===TODAY?'tdy':''} ${t.p?'':'off'}" data-s="${t.s}"
     onclick="editDay('${ds}')" title="${ru(ds)} — настроить день">
     <span class="h"><span class="dn">${pad(d.getDate())}</span>
       ${t.p?`<span class="cr mono">${t.b}/${t.p}</span>`:'<span class="cr">выходной</span>'}</span>
     ${t.p?`<span class="pb"><i style="width:${Math.min(100,t.pct*90.9)}%"></i><s style="left:90.9%"></s></span>`:''}
-    <span class="tags">${cs.length?cs.slice(0,2).map(c=>`<i class="tag">${esc(CSHORT[c]||c)}</i>`).join('')
-      +(cs.length>2?`<i class="tag more">+${cs.length-2}</i>`:'')
-      :'<i class="tag empty">город не задан</i>'}</span>
+    <span class="lst"><b>Города</b>
+      ${cs.length?cs.map(c=>`<i>${esc(c)}</i>`).join('')
+        :'<i class="none">не заданы</i>'}</span>
+    <span class="lst"><b>Работы</b>
+      ${works.length?works.map(w=>`<i>${esc(w.name)}</i>`).join('')
+        :`<i class="none">${crew?'у смены нет компетенций':'смена не назначена'}</i>`}</span>
     <span class="crew">${crew?`<i>${svg(I.myroute,11)}${crew}</i>`:''}
       ${rec&&!crew?'<i class="none">смена не назначена</i>':''}</span>
   </button>`;
