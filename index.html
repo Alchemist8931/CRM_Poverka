@@ -198,15 +198,25 @@ textarea.fld{height:auto;padding:9px 11px;resize:vertical;min-height:76px;line-h
 .rib4 .day .cts{font-size:9.5px;color:var(--ink3);margin-top:2px;line-height:1.3;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap;letter-spacing:.02em}
 .rib4 .day[aria-pressed="true"] .cts{color:var(--ink2)}
-/* горизонтальная ячейка дня: узкая шкала слева, дата/процент/города справа */
-.rib4.ribh .day{display:flex;align-items:stretch;gap:8px;height:74px;padding:4px 6px 4px 4px;text-align:left;border-radius:var(--r)}
-.rib4.ribh .day .bar{flex:0 0 23%;min-width:13px;height:auto}
-.rib4.ribh .day .inf{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:3px}
-.rib4.ribh .day .dt{display:flex;align-items:baseline;gap:6px}
-.rib4.ribh .day .dd{margin-top:0;font-size:11.5px}
-.rib4.ribh .day .pct{position:static;margin-left:auto;font-size:10px;color:var(--ink3);flex-shrink:0}
-.rib4.ribh .day .cts{margin-top:0;white-space:normal;word-break:break-word;text-overflow:clip;
-  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;max-height:2.6em}
+/* горизонтальная ячейка дня: узкая шкала слева, дата с процентом сверху, города столбцом под ними */
+.rib4.ribh .day{display:flex;align-items:stretch;gap:7px;height:96px;padding:4px 6px 4px 4px;text-align:left;border-radius:var(--r)}
+.rib4.ribh .day .bar{flex:0 0 18%;min-width:13px;height:auto}
+.rib4.ribh .day .inf{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:flex-start;gap:3px}
+.rib4.ribh .day .dt{display:flex;align-items:baseline;gap:5px}
+.rib4.ribh .day .dd{margin-top:0;font-size:9.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rib4.ribh .day .pct{position:static;margin-left:auto;font-size:9.5px;color:var(--ink3);flex-shrink:0}
+.rib4.ribh .day .cts{margin-top:0;display:flex;flex-direction:column;gap:1px;overflow:hidden}
+/* Город и его наполняемость: название слева, счёт прижат к правой границе ячейки. */
+.rib4.ribh .day .ct{display:flex;align-items:baseline;gap:5px;font-size:9px;line-height:1.45}
+.rib4.ribh .day .ct b{font-weight:400;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rib4.ribh .day .ct i{margin-left:auto;font-style:normal;color:var(--ink3);font-variant-numeric:tabular-nums;flex-shrink:0}
+.rib4.ribh .day[aria-pressed="true"] .ct b,.rib4.ribh .day[aria-pressed="true"] .ct i{color:var(--ink2)}
+/* На узком экране ячейка уже — поджимаем шрифт, чтобы длинные названия городов не обрезались. */
+@media (max-width:1500px){
+  .rib4.ribh .day .dd{font-size:8.5px}
+  .rib4.ribh .day .pct{font-size:8.5px}
+  .rib4.ribh .day .ct{font-size:8px;gap:4px}
+}
 /* Дата ушла под маршруты: приём по ней оператору закрыт. */
 .rib4.ribh .day.lk .bar{border-style:dashed;border-color:var(--ink3)}
 .rib4.ribh .day.lk .dd{color:var(--ink3)}
@@ -312,10 +322,11 @@ td b{color:var(--ink);font-weight:600}
 .rail .nav::-webkit-scrollbar{width:0}
 .rail .nav .nb{height:36px}
 .rail .logo{margin-bottom:10px}
-.grp{display:flex;flex-direction:column;align-items:center;gap:4px;width:100%}
-.grp + .grp{margin-top:9px;padding-top:11px;position:relative}
+/* Подпись роли стоит над каждой группой, включая первую; линия-разделитель — только между группами. */
+.grp{display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;padding-top:11px;position:relative}
+.grp + .grp{margin-top:9px}
 .grp + .grp::before{content:"";position:absolute;top:2px;left:11px;right:11px;height:1px;background:var(--border)}
-.grp + .grp::after{content:attr(data-g);position:absolute;top:-3px;left:50%;transform:translateX(-50%);
+.grp::after{content:attr(data-g);position:absolute;top:-3px;left:50%;transform:translateX(-50%);
   font-size:7.5px;font-weight:600;letter-spacing:.12em;color:var(--ink3);background:var(--bg);padding:0 4px;line-height:11px}
 
 /* ---------- шаговый обход страниц ---------- */
@@ -387,7 +398,7 @@ td b{color:var(--ink);font-weight:600}
 /* ---------- акт: приборы и фото ---------- */
 .wrow{border:1px solid var(--border2);border-radius:var(--r);background:var(--card);padding:11px 12px;margin-bottom:8px}
 .wrow.new{border-color:var(--mark)}
-.wtop{display:grid;grid-template-columns:1.4fr 1.2fr .75fr 1fr 1fr .85fr auto 32px;gap:6px;align-items:center}
+.wtop{display:grid;grid-template-columns:1.4fr 1.2fr .75fr 1fr 1fr .85fr auto auto 32px;gap:6px;align-items:center}
 .wbot{display:flex;align-items:center;gap:7px;margin-top:9px;flex-wrap:wrap}
 .wbot .lbl{margin-right:2px}
 .phw{position:relative;width:58px;height:44px;flex-shrink:0}
@@ -462,9 +473,24 @@ td b{color:var(--ink);font-weight:600}
 .tgls{display:flex;flex-wrap:wrap;gap:5px;max-height:168px;overflow-y:auto;padding:1px}
 .tgl{padding:5px 10px;border:1px solid var(--border);border-radius:var(--r-in);background:var(--card);
   color:var(--ink2);font-size:11.5px;white-space:nowrap;transition:all .18s ease}
-.tgl:hover:not(:disabled){border-color:var(--mark);color:var(--ink)}
+/* Наведение не должно перекрашивать текст уже нажатого переключателя — он сливался с заливкой. */
+.tgl:hover:not(:disabled):not([aria-pressed="true"]){border-color:var(--mark);color:var(--ink)}
 .tgl[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg);font-weight:500}
 .tgl.ab{opacity:.35;text-decoration:line-through;cursor:not-allowed}
+/* Компетенции в строке сотрудника — компактнее обычных переключателей. */
+.tgls.sk{max-height:none;gap:4px;min-width:330px}
+.tgls.sk .tgl{padding:3px 7px;font-size:10.5px}
+/* Подсказка дат под выбранные услуги: рост как у поля рядом, список прокручивается. */
+.slots{height:38px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r);background:var(--card);padding:3px}
+.slots::-webkit-scrollbar{width:3px}
+.slots::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.slots .slot{display:flex;align-items:baseline;gap:6px;width:100%;padding:2px 6px;border:0;border-radius:var(--r-in);background:none;text-align:left}
+.slots .slot:hover{background:var(--surface)}
+.slots .slot.on{background:var(--ink)}
+.slots .slot b{font-size:10.5px;font-weight:500;color:var(--ink2);white-space:nowrap}
+.slots .slot i{margin-left:auto;font-style:normal;font-size:9.5px;color:var(--ink3);white-space:nowrap}
+.slots .slot.on b,.slots .slot.on i{color:var(--bg)}
+.slots .none{display:block;padding:4px 6px;font-size:10px;color:var(--ink3);line-height:1.35}
 .g.end{border-color:var(--error);color:var(--error)}
 .g.end:hover{background:var(--error);color:var(--bg);border-color:var(--error)}
 
@@ -794,11 +820,11 @@ const dayOrNew = ds => { let d=dayRec(ds); if(!d){ d={date:ds,cities:[],crew:[],
 const capOf = (ds,c) => (dayRec(ds)?.caps||{})[c] ?? 0;
 const dayCities = ds => dayRec(ds)?.cities || [];
 const SERVICES = [
-  {id:'wv',grp:'Вода', name:'Поверка счётчика воды',  pF:900, pU:1200,rV:280, rO:45},
-  {id:'wr',grp:'Вода', name:'Замена счётчика воды',   pF:2600,pU:3200,rV:750, rO:70},
-  {id:'hv',grp:'Тепло',name:'Поверка теплосчётчика',  pF:3400,pU:4100,rV:950, rO:90},
-  {id:'hm',grp:'Тепло',name:'Монтаж теплосчётчика',   pF:7800,pU:9200,rV:2100,rO:120},
-  {id:'hd',grp:'Тепло',name:'Демонтаж теплосчётчика', pF:2200,pU:2700,rV:600, rO:60}
+  {id:'wv',grp:'Вода', name:'Поверка счётчика воды',  sh:'Поверка воды',   pF:900, pP:760, pU:1200,rV:280, rO:45},
+  {id:'wr',grp:'Вода', name:'Замена счётчика воды',   sh:'Замена воды',    pF:2600,pP:2200,pU:3200,rV:750, rO:70},
+  {id:'hv',grp:'Тепло',name:'Поверка теплосчётчика',  sh:'Поверка тепла',  pF:3400,pP:2900,pU:4100,rV:950, rO:90},
+  {id:'hm',grp:'Тепло',name:'Монтаж теплосчётчика',   sh:'Монтаж тепла',   pF:7800,pP:6600,pU:9200,rV:2100,rO:120},
+  {id:'hd',grp:'Тепло',name:'Демонтаж теплосчётчика', sh:'Демонтаж тепла', pF:2200,pP:1900,pU:2700,rV:600, rO:60}
 ];
 const SVC = Object.fromEntries(SERVICES.map(s=>[s.id,s]));
 const DEV_TYPES = [
@@ -844,7 +870,12 @@ const TODAY = iso(today);
 const addDays = (d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x;};
 const WD = ['вс','пн','вт','ср','чт','пт','сб'];
 const MN = ['январь','февраль','март','апрель','май','июнь','июль','август','сентябрь','октябрь','ноябрь','декабрь'];
+/* Не больше пяти городов на день: столько строк помещается в ячейку ленты ёмкости. */
+const MAX_CITIES = 5;
+const MNG = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
 const ru = s => s.split('-').reverse().join('.');
+/* Полная дата прописью: «02 сентября 2026 г.» */
+const ruLong = s => { const [y,m,d] = s.split('-'); return `${d} ${MNG[+m-1]} ${y} г.`; };
 const money = n => Math.round(n).toLocaleString('ru-RU')+' ₽';
 const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let sd = 20260803;
@@ -900,7 +931,7 @@ const SEG = (val,items,fn) => `<div class="seg">${items.map(x=>{const o=typeof x
 
 /* ---------- состояние ---------- */
 const blankIntake = () => ({ctype:'Физлицо',name:'',inn:'',phone:'',contact:'',phone2:'',contact2:'',
-  city:'',street:STREETS[0],house:'',entrance:'',floor:'',flat:'',intercom:true,time:12,cmtOp:'',cmtVf:''});
+  city:'',street:STREETS[0],house:'',entrance:'',floor:'',flat:'',intercom:true,time:12,svcs:[],cmtOp:'',cmtVf:''});
 /* Пульт оператора: смена, входящая линия, накопленные за день минуты.
    По этим двум счётчикам руководитель видит загрузку и решает, когда нанимать. */
 const blankOp = () => ({on:false,from:null,shiftSec:0,talkSec:0,calls:0,missed:0,
@@ -922,6 +953,8 @@ function seed(){
    'Тарасов В.','Юсупов М.','Черных К.','Ложкин Е.','Демидов А.','Рогов Н.'].forEach((n,i)=>
     S.staff.push({id:'v'+i,name:n,role:'verifier',pattern:i%3===0?'5/2':'2/2',
       anchor:iso(addDays(today,-(i%4))),extra:i===2?[iso(addDays(today,3))]:[],
+      /* Компетенции: вода у всех, тепло — только у части бригад. */
+      svcs:['wv', ...(i%4!==3?['wr']:[]), ...(i%3===0?['hv','hm','hd']:i%5===1?['hv']:[])],
       phone:randPhone()}));
   ['Кузнецова Е.','Панова М.','Ефимова О.','Салтыкова А.'].forEach((n,i)=>
     S.staff.push({id:'o'+i,name:n,role:i<2?'senior':'operator',pattern:i<2?'2/2':'5/2',
@@ -1039,7 +1072,7 @@ function mkReq(ds,city,clients){
     street:rnd(STREETS),house:String(rint(1,120)),entrance:String(rint(1,6)),floor:String(rint(1,16)),
     flat:isU?'':String(rint(1,240)),intercom:rr()<.78,time:rint(10,20),
     cmtOp:rnd(CMT_OP),cmtVf:rnd(CMT_VF),
-    services:[],devices:[],status:'создана',routeId:null,operator:null,from:null,
+    svcs:[svc],services:[],devices:[],status:'создана',routeId:null,operator:null,from:null,
     expect:{svc,heat,nd:heat?1:rint(1,2)}};
 }
 /* Фото выполненных работ в демо-данных — заглушка вместо снимка с телефона. */
@@ -1065,6 +1098,7 @@ function actFor(r,ds){
     const carrier = heat?'Тепло':(j===0?'ХВС':'ГВС');
     return {svc:sv,type:t.v,grsi:t.grsi,carrier,
       serial,reading:mkReading(carrier),room:rnd(ROOMS),seal:rr()<.86,
+      pens:r.clientType!=='Юрлицо' && rr()<.22,
       photos:Array.from({length:rint(1,3)},(_,k)=>({src:stubPhoto(serial,ru(ds)+' · кадр '+(k+1)),
         name:'IMG_'+rint(1000,9999)+'.jpg',t:pad(rint(9,20))+':'+pad(rint(10,59))}))};
   });
@@ -1113,9 +1147,26 @@ function dayState(ds,c){
 }
 /* Услуга теперь живёт в строке прибора: две поверки на адресе — две услуги в расчёте. */
 const worksOf = r => (r.devices||[]).map(d=>d.svc).filter(id=>SVC[id]);
+/* Компетенции поверителя: что он умеет делать. Услуга доступна на дату,
+   если в этот день в смене есть поверитель, закрывающий все выбранные услуги. */
+const skillsOf = p => p?.svcs || [];
+const canDoAll = (p,ids) => ids.every(id=>skillsOf(p).includes(id));
+const crewFor = (ds,ids) => crewOn(ds).filter(p=>canDoAll(p,ids));
+function tgSkill(pid,sid){
+  const p = staffById(pid); if(!p) return;
+  const s = skillsOf(p);
+  p.svcs = s.includes(sid) ? s.filter(x=>x!==sid) : [...s,sid];
+  render();
+}
 const rateV = r => worksOf(r).reduce((a,id)=>a+SVC[id].rV,0);
 const rateO = r => worksOf(r).reduce((a,id)=>a+SVC[id].rO,0);
-const priceOf = r => worksOf(r).reduce((a,id)=>a+(r.clientType==='Юрлицо'?SVC[id].pU:SVC[id].pF),0);
+/* Цена считается по строкам приборов: пенсионная скидка стоит на приборе, а не на заявке. */
+const priceOfDev = (r,d) => { const s = SVC[d.svc]; if(!s) return 0;
+  return r.clientType==='Юрлицо' ? s.pU : d.pens ? s.pP : s.pF; };
+const priceOf = r => (r.devices||[]).reduce((a,d)=>a+priceOfDev(r,d),0);
+/* Скидка пенсионеру — за счёт компании: сдельные ставки от неё не зависят. */
+const discountOf = r => r.clientType==='Юрлицо' ? 0
+  : (r.devices||[]).reduce((a,d)=>{ const s=SVC[d.svc]; return a + (s&&d.pens ? s.pF-s.pP : 0); },0);
 function svcNames(r){
   const w = worksOf(r); if(!w.length) return '<span class="note">по факту</span>';
   const c = {}; w.forEach(id=>c[id]=(c[id]||0)+1);
@@ -1210,9 +1261,12 @@ function ribbon(){
         return `<button class="day ${past?'past':''} ${ds===TODAY?'tdy':''} ${lk?'lk':''}" data-s="${s}" aria-pressed="${S.day===ds}"
           title="${ru(ds)} · ${b} из ${p} · ${tip}${lk?` · приём закрыт: ${lk}`:''}" ${s==='off'||past?'disabled':`onclick="pickDay('${ds}')"`}>
           <div class="bar"><div class="fill" style="height:${Math.min(100,pct*90.9)}%"></div></div>
-          <div class="inf"><div class="dt"><span class="dd">${pad(d.getDate())}.${pad(d.getMonth()+1)}</span>
+          <div class="inf"><div class="dt"><span class="dd">${ruLong(ds)}</span>
             <span class="pct">${p?Math.round(pct*100)+'%':'—'}</span></div>
-          <div class="cts">${cs.length?(cs.length===1?esc(cs[0]):cs.map(c=>CSHORT[c]||c).join(' · ')):'—'}</div></div></button>`;
+          <div class="cts">${cs.length
+            ? cs.slice(0,MAX_CITIES).map(c=>{const x = dayState(ds,c);
+                return `<span class="ct"><b>${esc(c)}</b><i>${x.b}/${x.p}</i></span>`}).join('')
+            : '<span class="ct"><b>выходной</b></span>'}</div></div></button>`;
       }).join('')}</div></div>`;
   }).join('')}</div>
   <div class="lg">
@@ -1238,6 +1292,8 @@ function reqForm(K,T,p,day,onDay){
   const U = K.ctype==='Юрлицо';
   const cs = dayCities(day);
   if(cs.length && !cs.includes(K.city)) K.city = cs[0];
+  const want = K.svcs || (K.svcs = []);
+  const slots = want.length ? slotsFor(want) : [];
   return `<div class="row" style="margin:2px 0 14px;flex-wrap:nowrap">
       <div class="f" style="flex:none"><label>Тип клиента</label>${SEG(K.ctype,['Физлицо','Юрлицо'],`setF('${T}','ctype',$v)`)}</div>
       <div class="f" style="flex:1;min-width:240px;max-width:700px"><label>${U?'Организация':'ФИО клиента'}</label>
@@ -1253,6 +1309,9 @@ function reqForm(K,T,p,day,onDay){
       <div class="f" style="margin-bottom:0"><label>ФИО контакта</label>
         <input class="fld" id="${p}Contact2" value="${esc(K.contact2)}" oninput="${T}.contact2=this.value" placeholder="кто отвечает"></div>
     </div>
+    <div class="f" style="margin-bottom:14px"><label>Услуги · ${want.length||'не выбраны'}</label>
+      <div class="tgls sk">${SERVICES.map(s=>`<button type="button" class="tgl" aria-pressed="${want.includes(s.id)}"
+        title="${esc(s.name)}" onclick="tgSvc('${T}','${s.id}')">${esc(s.name)}</button>`).join('')}</div></div>
     <div class="row" style="margin-bottom:14px;flex-wrap:nowrap">
       <div class="f" style="width:186px"><label>Город</label>
         ${cs.length?SEL(p+'City',K.city,cs.map(c=>({v:c,l:c,hint:dayState(day,c).b+'/'+dayState(day,c).p})),v=>K.city=v)
@@ -1265,6 +1324,11 @@ function reqForm(K,T,p,day,onDay){
       <div class="f" style="width:76px"><label>Домофон</label>
         <div class="chkbox">${CHK(K.intercom,K.intercom?'вкл.':'выкл.',`${T}.intercom=!${T}.intercom;render()`)}</div></div>
       <div class="f" style="width:120px"><label>Дата выезда</label>${DATE(p+'Date',day,onDay)}</div>
+      ${want.length?`<div class="f" style="width:240px"><label>Когда есть нужные компетенции</label>
+        <div class="slots">${slots.length?slots.map(s=>`<button type="button" class="slot ${s.ds===day?'on':''}"
+          title="${ruLong(s.ds)} · свободно ${s.free} из ${s.plan} · поверителей с этими услугами ${s.crew}"
+          onclick="pickSlot('${p}','${s.ds}')"><b>${ruLong(s.ds)}</b><i>${s.crew} пов. · ${s.free}</i></button>`).join('')
+          :'<span class="none">На ближайшие дни нет смен с этими компетенциями.</span>'}</div></div>`:''}
       <div class="f" style="width:150px"><label>Время прибытия</label>
         ${SEL(p+'Time',K.time,Array.from({length:11},(_,i)=>({v:10+i,l:pad(10+i)+':00',hint:'окно '+pad(9+i)+':00–'+pad(11+i)+':00'})),v=>K.time=+v)}</div>
     </div>
@@ -1275,6 +1339,28 @@ function reqForm(K,T,p,day,onDay){
         <textarea class="fld" id="${p}CmtVf" oninput="${T}.cmtVf=this.value" placeholder="Что важно знать на адресе: доступ к стояку, собака, состояние пломбы">${esc(K.cmtVf)}</textarea></div>
     </div>`;
 }
+function tgSvc(path,id){
+  const K = formOf(path), a = K.svcs || (K.svcs = []);
+  const i = a.indexOf(id);
+  if(i>=0) a.splice(i,1); else a.push(id);
+  render();
+}
+/* Ближайшие даты под выбранные услуги: план ещё не закрыт, дата не ушла под
+   маршруты и в смене есть поверитель, закрывающий все выбранные услуги. */
+function slotsFor(ids,limit){
+  const out = [];
+  for(let i=0;i<45 && out.length<(limit||14);i++){
+    const ds = iso(addDays(today,i));
+    if(!dayCities(ds).length || lockedFor(ds,'operator')) continue;
+    const t = dayTotal(ds);
+    if(!t.p || t.pct>=1) continue;
+    const crew = crewFor(ds,ids);
+    if(!crew.length) continue;
+    out.push({ds,plan:t.p,free:Math.max(0,t.p-t.b),crew:crew.length});
+  }
+  return out;
+}
+function pickSlot(p,ds){ S.dd=null; H[p+'Date']?.(ds); render(); }
 /* Формой заявки пользуются три места: приём оператора, карточка правки и заявка руководителя. */
 const formOf = path => path==='S.edit'?S.edit : path==='S.supReq'?S.supReq : S.intake;
 function setF(path,k,v){ formOf(path)[k]=v; render(); }
@@ -1444,7 +1530,7 @@ const reqFrom = (K,ds,operator) => ({id:'R'+(++S.seq),date:ds,created:TODAY,city
   phone:K.phone,contact:K.contact,phone2:K.phone2,contact2:K.contact2,
   street:K.street,house:K.house,entrance:K.entrance,floor:K.floor,
   flat:K.flat,intercom:K.intercom,time:K.time,cmtOp:K.cmtOp,cmtVf:K.cmtVf,
-  services:[],devices:[],status:'создана',routeId:null,operator});
+  svcs:[...(K.svcs||[])],services:[],devices:[],status:'создана',routeId:null,operator});
 function createReq(){
   const K = S.intake;
   const lock = lockedFor(S.day);
@@ -1715,6 +1801,9 @@ function editDay(ds){ dayOrNew(ds); S.modal={k:'day',date:ds}; render(); }
 function tgDay(ds,field,val){
   const d = dayOrNew(ds), a = d[field];
   const off = a.includes(val);
+  /* Больше пяти городов не помещается в ячейку дня на ленте ёмкости у оператора. */
+  if(field==='cities' && !off && a.length>=MAX_CITIES)
+    return toast(`На день можно назначить не больше ${MAX_CITIES} городов — иначе они не поместятся в ленту ёмкости. Снимите лишний.`);
   d[field] = off ? a.filter(x=>x!==val) : [...a,val];
   /* Город сняли — его план уходит вместе с ним; добавили — подставляем прикидку по смене, руководитель поправит. */
   if(field==='cities'){
@@ -1748,10 +1837,13 @@ function dayModal(ds){
         <span class="note">${t.p?`план ${t.p}, записано ${t.b}`:'день не запланирован'}</span>
         <button class="ib" onclick="closeModal()">${svg(I.no,15)}</button></div>
 
-      <div class="f"><label>Города приёма · ${d.cities.length}</label>
-        <p class="note" style="margin:0 0 8px">Оператор сможет записать заявку только в эти города.</p>
-        <div class="tgls">${CITIES.map(c=>`<button class="tgl" aria-pressed="${d.cities.includes(c)}"
-          onclick="tgDay('${ds}','cities','${c}')">${esc(c)}</button>`).join('')}</div></div>
+      <div class="f"><label>Города приёма · ${d.cities.length} из ${MAX_CITIES}</label>
+        <p class="note" style="margin:0 0 8px">Оператор сможет записать заявку только в эти города.
+          Больше ${MAX_CITIES} на день не ставим — столько строк помещается в ленту ёмкости у оператора.</p>
+        <div class="tgls">${CITIES.map(c=>{const on = d.cities.includes(c), full = d.cities.length>=MAX_CITIES;
+          return `<button class="tgl" aria-pressed="${on}" ${!on&&full?'disabled':''}
+            title="${!on&&full?`Уже выбрано ${MAX_CITIES} городов`:esc(c)}"
+            onclick="tgDay('${ds}','cities','${c}')">${esc(c)}</button>`}).join('')}</div></div>
 
       ${d.cities.length?`<div class="f" style="margin-top:14px"><label>План приёма по городам · всего ${t.p}</label>
         <p class="note" style="margin:0 0 8px">Сколько заявок готовы принять по каждому городу. Приём по городу закрывается при превышении плана на 10%.</p>
@@ -1964,7 +2056,7 @@ function saveReq(){
   if(digitsOf(K.phone).length!==10) return toast('Телефон неполный: нужно 10 цифр после +7.');
   if(!K.house.trim()) return toast('Укажите номер дома.');
   ['ctype','name','inn','phone','contact','phone2','contact2','city','street','house',
-   'entrance','floor','flat','intercom','time','cmtOp','cmtVf'].forEach(k=>r[k]=K[k]);
+   'entrance','floor','flat','intercom','time','cmtOp','cmtVf','svcs'].forEach(k=>r[k]=K[k]);
   const moved = r.date!==K.day;
   if(moved){ r.date = K.day; r.routeId = null; r.status = 'создана';
     S.routes.forEach(rt=>{ const j=rt.stops.findIndex(s=>s.req===r.id); if(j>=0) rt.stops.splice(j,1); }); }
@@ -2390,16 +2482,22 @@ function viewPayroll(){
 }
 function viewServices(){
   return shell(null,`${cap()}<div class="c"><h3>Прайс и сдельные ставки</h3>
-    <p class="cap">Значения редактируются на месте — изменение сразу отражается в расчёте начислений.</p>
-    <table><thead><tr><th>Группа</th><th>Услуга</th><th class="num">Физлицо</th><th class="num">Юрлицо</th>
+    <p class="cap">Значения редактируются на месте — изменение сразу отражается в расчёте начислений.
+      Пенсионный прайс влияет только на счёт клиенту: сдельные ставки поверителя и оператора остаются полными, скидку берёт на себя компания.</p>
+    <table><thead><tr><th>Группа</th><th>Услуга</th><th class="num">Физлицо</th><th class="num">Пенсионер</th><th class="num">Юрлицо</th>
       <th class="num">Поверителю</th><th class="num">Оператору</th><th class="num">Доля ФОТ</th></tr></thead><tbody>
       ${SERVICES.map((s,i)=>`<tr><td><span class="tg t-mut">${s.grp}</span></td><td><b>${s.name}</b></td>
-        ${['pF','pU','rV','rO'].map(k=>`<td class="num"><input class="fld sm mono" style="width:80px;display:inline-flex;text-align:right" value="${s[k]}" onchange="setSvc(${i},'${k}',this.value)"></td>`).join('')}
+        ${['pF','pP','pU','rV','rO'].map(k=>`<td class="num"><input class="fld sm mono" style="width:80px;display:inline-flex;text-align:right" value="${s[k]}" onchange="setSvc(${i},'${k}',this.value)"></td>`).join('')}
         <td class="num">${Math.round((s.rV+s.rO)/s.pF*100)}%</td></tr>`).join('')}</tbody></table></div>
-  <div class="c"><h3>Сотрудники</h3><p class="cap">Внутренние номера АТС и загрузка. Персональный номер оператора нужен для всплывающей карточки звонка.</p>
-    <table><thead><tr><th>Сотрудник</th><th>Роль</th><th class="num">Смен за 14 дней</th><th>Вн. номер</th><th class="num">Телефон</th><th>Сегодня</th></tr></thead><tbody>
+  <div class="c"><h3>Сотрудники</h3><p class="cap">Внутренние номера АТС и загрузка. Персональный номер оператора нужен для всплывающей карточки звонка.
+    Услуги поверителя — его компетенции: если он в смене, эти услуги в этот день оказываются, и оператор видит дату в подсказке при приёме заявки.</p>
+    <table><thead><tr><th>Сотрудник</th><th>Роль</th><th>Оказывает услуги</th><th class="num">Смен за 14 дней</th><th>Вн. номер</th><th class="num">Телефон</th><th>Сегодня</th></tr></thead><tbody>
       ${S.staff.map(p=>`<tr><td><b>${esc(p.name)}</b></td>
         <td><span class="tg t-mut">${p.role==='verifier'?'поверитель':p.role==='senior'?'старший':p.role==='supervisor'?'руководитель':'оператор'}</span></td>
+        <td>${p.role==='verifier'
+          ? `<div class="tgls sk">${SERVICES.map(s=>`<button class="tgl" aria-pressed="${skillsOf(p).includes(s.id)}"
+              title="${esc(s.name)}" onclick="tgSkill('${p.id}','${s.id}')">${esc(s.sh)}</button>`).join('')}</div>`
+          : '<span class="note">не выезжает</span>'}</td>
         <td class="num mono">${Array.from({length:14},(_,i)=>iso(addDays(today,i))).filter(ds=>onShift(p,ds)).length}</td>
         <td class="mono">${p.ext||'—'}</td><td class="num mono">${p.phone||'—'}</td>
         <td>${absentOn(p.id,TODAY)?'<span class="tg t-err">отсутствие</span>':onShift(p,TODAY)?'<span class="tg t-ok">в смене</span>':'<span class="tg t-mut">выходной</span>'}</td></tr>`).join('')}
@@ -2411,24 +2509,28 @@ function setSvc(i,k,v){ SERVICES[i][k] = Math.max(0,parseInt(v)||0); render(); }
 function viewMyRoute(){
   const mine = S.routes.filter(r=>r.verifier===S.me).sort((a,b)=>b.date.localeCompare(a.date));
   const rt = S.routes.find(r=>r.id===S.openRoute) || mine.find(r=>r.date===TODAY) || mine[0];
-  const side = `<div class="lbl" style="padding:6px 10px 8px">Мои маршруты</div>
-    ${mine.length?mine.slice(0,14).map(r=>`<button class="sb" aria-current="${rt&&rt.id===r.id}" onclick="S.openRoute='${r.id}';S.openStop=null;render()">
-      <span><span class="mono" style="font-size:12px">${ru(r.date)}</span>
-      <span style="display:block;font-size:11px;color:var(--ink3)">${r.city} · ${r.status}</span></span>
-      <span class="n">${r.stops.filter(s=>s.done).length}/${r.stops.length}</span></button>`).join('')
-    :`<p class="note" style="padding:8px 10px">Маршрутов не назначено.</p>`}`;
-  if(!rt) return shell(side,`${cap()}<div class="c"><div class="empty">Маршрут не назначен.</div></div>`);
+  if(!rt) return shell(null,`${cap()}<div class="c"><div class="empty">Маршрутов не назначено.</div></div>`);
   const stop = rt.stops.find(s=>s.req===S.openStop)
     || rt.stops.find(s=>s.called==='подтверждена'&&!s.done) || rt.stops[0];
-  return shell(side, `${cap()}${routeCard(rt)}${stop?workSheet(rt,stop):''}`);
+  const done = rt.stops.filter(s=>s.done).length;
+  /* Маршруты — выпадающим списком в первой строке: вся ширина уходит карточке и акту. */
+  const picker = `<div class="row" style="margin-bottom:14px;align-items:flex-end">
+    <div class="f" style="width:360px;margin-bottom:0"><label>Мои маршруты · ${mine.length}</label>
+      ${SEL('myRt',rt.id,mine.slice(0,30).map(r=>({v:r.id,l:`${ru(r.date)} · ${r.city}`,
+        hint:`${r.stops.filter(s=>s.done).length}/${r.stops.length} · ${r.status}`})),
+        v=>{ S.openRoute=v; S.openStop=null; })}</div>
+    <span class="note" style="flex:1">Выполнено ${done} из ${rt.stops.length} точек${mine.length>1?` · всего маршрутов ${mine.length}`:''}.</span>
+  </div>`;
+  return shell(null, `${cap()}${picker}${routeCard(rt)}${stop?workSheet(rt,stop):''}`);
 }
 
 /* ---------- акт выполненных работ ---------- */
 function workSheet(rt,s){
   const r = S.requests.find(x=>x.id===s.req); if(!r) return '';
   const i0 = rt.stops.indexOf(s);
-  r.devices.forEach(d=>{ if(!d.photos) d.photos=[]; if(d.reading===undefined) d.reading=''; });
+  r.devices.forEach(d=>{ if(!d.photos) d.photos=[]; if(d.reading===undefined) d.reading=''; if(d.pens===undefined) d.pens=false; });
   const noPh = r.devices.some(d=>!d.photos.length);
+  const disc = discountOf(r);
   return `<div class="c" style="margin-top:14px">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:4px">
       <div><h3>Акт · точка ${pad(i0+1)} · ${esc(addrOf(r))}</h3>
@@ -2449,6 +2551,9 @@ function workSheet(rt,s){
           placeholder="Показания" title="Показания счётчика на момент поверки${d.carrier==='Тепло'?', Гкал':', м³'}">
         ${SEL('wR'+i,d.room,ROOMS,v=>{d.room=v;},{sm:true})}
         ${CHK(d.seal,'пломба УК',`setDev('${r.id}',${i},'seal',${!d.seal})`)}
+        ${r.clientType==='Юрлицо'
+          ? '<span class="note" style="white-space:nowrap">юрлицо</span>'
+          : CHK(d.pens,'пенсионер',`setDev('${r.id}',${i},'pens',${!d.pens})`)}
         <button class="ib sm no" title="Убрать прибор" onclick="rmDev('${r.id}',${i})">${svg(I.no,13)}</button>
       </div>
       <div class="wbot"><span class="lbl">Фото работ</span>
@@ -2460,7 +2565,7 @@ function workSheet(rt,s){
       </div></div>`).join('')}
     <button class="g sm" onclick="addDev('${r.id}')">${svg(I.plus,12)}Добавить прибор</button>
     <div class="row" style="margin-top:16px;justify-content:space-between">
-      <span class="note">${r.devices.length?`По прайсу ${r.clientType.toLowerCase()} <b class="mono" style="color:var(--ink)">${money(priceOf(r))}</b> · вам начислится <b class="mono" style="color:var(--ink)">${money(rateV(r))}</b> · оператору <b class="mono" style="color:var(--ink)">${money(rateO(r))}</b>${noPh?' · <span style="color:var(--error)">есть приборы без фото</span>':''}`
+      <span class="note">${r.devices.length?`К оплате клиенту <b class="mono" style="color:var(--ink)">${money(priceOf(r))}</b>${disc?` · скидка пенсионеру ${money(disc)} за счёт компании`:''} · вам начислится <b class="mono" style="color:var(--ink)">${money(rateV(r))}</b>${noPh?' · <span style="color:var(--error)">есть приборы без фото</span>':''}`
         :'Приборов в акте нет. Добавьте то, что фактически обслужили на адресе.'}</span>
       ${s.done?`<button class="g" onclick="reopenStop('${rt.id}',${i0})">Вернуть в работу</button>`
         :`<button class="b" onclick="closeStop('${rt.id}',${i0})" ${r.devices.length?'':'disabled'}>Закрыть позицию</button>`}</div>
@@ -2469,7 +2574,7 @@ function workSheet(rt,s){
 function setDev(rid,i,k,v){ const r=S.requests.find(x=>x.id===rid); r.devices[i][k]=v; render(); }
 function addDev(rid){
   const r = S.requests.find(x=>x.id===rid);
-  r.devices.push({svc:'wv',type:DEV_TYPES[0].v,grsi:DEV_TYPES[0].grsi,carrier:'ХВС',serial:'',reading:'',room:'Кухня',seal:false,photos:[]});
+  r.devices.push({svc:'wv',type:DEV_TYPES[0].v,grsi:DEV_TYPES[0].grsi,carrier:'ХВС',serial:'',reading:'',room:'Кухня',seal:false,pens:false,photos:[]});
   render();
 }
 function rmDev(rid,i){ const r=S.requests.find(x=>x.id===rid); r.devices.splice(i,1); render(); }
