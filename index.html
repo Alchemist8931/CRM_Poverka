@@ -935,11 +935,12 @@ function DATE(id,val,fn,o={}){
         <button type="button" class="g sm" style="width:100%;margin-top:8px" onclick="pick('${id}','${TODAY}')">Сегодня</button>
       </div>
       ${o.slots?`<div class="cal-s">
-        <div class="lbl">Когда есть нужные компетенции</div>
+        <div class="lbl">Когда можно записать${o.slotsCity?` · ${esc(o.slotsCity)}`:''}</div>
         <div class="slotlist">${o.slots.length?o.slots.map(s=>`<button type="button" class="slot ${s.ds===val?'on':''}"
           title="${ruLong(s.ds)} · свободно ${s.free} из ${s.plan} · поверителей с этими услугами ${s.crew}"
           onclick="pick('${id}','${s.ds}')"><b>${ruLong(s.ds)}</b><i>${s.crew} пов. · ${s.free}</i></button>`).join('')
-          :'<span class="none">На ближайшие дни нет смен, где закрыты все выбранные услуги. Снимите часть услуг или запишите клиента вручную.</span>'}</div>
+          :`<span class="none">${o.slotsCity?`По городу «${esc(o.slotsCity)}» на ближайшие дни нет смены, где закрыты все выбранные услуги.`
+            :'На ближайшие дни нет смен, где закрыты все выбранные услуги.'} Снимите часть услуг, выберите другой город или поставьте дату вручную.</span>`}</div>
       </div>`:''}
     </div>`:''}
   </div>`;
@@ -974,8 +975,11 @@ function seed(){
    'Тарасов В.','Юсупов М.','Черных К.','Ложкин Е.','Демидов А.','Рогов Н.'].forEach((n,i)=>
     S.staff.push({id:'v'+i,name:n,role:'verifier',pattern:i%3===0?'5/2':'2/2',
       anchor:iso(addDays(today,-(i%4))),extra:i===2?[iso(addDays(today,3))]:[],
-      /* Компетенции: вода у всех, тепло — только у части бригад. */
-      svcs:['wv', ...(i%4!==3?['wr']:[]), ...(i%3===0?['hv','hm','hd']:i%5===1?['hv']:[])],
+      /* Компетенции распределены неровно: вода почти у всех, поверка тепла — у трёх,
+         монтаж — у двоих, демонтаж умеет один. Из-за этого часть услуг доступна
+         не каждый день, а только когда нужный человек в смене. */
+      svcs:['wv', ...(i%4!==3?['wr']:[]), ...([0,5,9].includes(i)?['hv']:[]),
+        ...([0,9].includes(i)?['hm']:[]), ...(i===0?['hd']:[])],
       phone:randPhone()}));
   ['Кузнецова Е.','Панова М.','Ефимова О.','Салтыкова А.'].forEach((n,i)=>
     S.staff.push({id:'o'+i,name:n,role:i<2?'senior':'operator',pattern:i<2?'2/2':'5/2',
@@ -990,21 +994,35 @@ function seed(){
     {id:'A5',staff:'v5',from:iso(addDays(today,1)),to:iso(addDays(today,5)),reason:'Отпуск за свой счёт',status:'отклонено',comment:'Пик набора, перенесите на конец месяца'},
     {id:'A6',staff:'v0',from:iso(addDays(today,11)),to:iso(addDays(today,12)),reason:'Личные дела',status:'на согласовании',comment:''}
   ];
-  /* День планирует руководитель: города приёма, смена поверителей и операторов, план. */
+  /* День планирует руководитель: города приёма, смена поверителей и операторов, план.
+     Расписание намеренно рваное — покрытие по услугам и городам неполное. */
   const vers = S.staff.filter(p=>p.role==='verifier').map(p=>p.id);
   const opIds = S.staff.filter(p=>p.role==='operator'||p.role==='senior').map(p=>p.id);
+  const mod = (a,n) => ((a%n)+n)%n;
   for(let i=-25;i<36;i++){
     const ds = iso(addDays(today,i));
-    const wknd = [0,6].includes(new Date(ds+'T00:00:00').getDay());
-    const n = wknd?rint(4,6):rint(7,11);
-    const pool = [...vers], crew = [];
-    for(let k=0;k<n;k++) crew.push(pool.splice(Math.floor(rr()*pool.length),1)[0]);
+    const dow = new Date(ds+'T00:00:00').getDay();
+    const wknd = [0,6].includes(dow);
+    const wk = Math.floor((i+70)/7);
     /* У операторов свой график: состав смены крутится по кругу, а не повторяется день в день. */
     const need = wknd?2:3;
-    const ops = Array.from({length:need},(_,k)=>opIds[(((i+k)%opIds.length)+opIds.length)%opIds.length]);
+    const ops = Array.from({length:need},(_,k)=>opIds[mod(i+k,opIds.length)]);
+    /* Воскресенье через одно бригады не выезжают — линия при этом работает. */
+    if(dow===0 && wk%2===0){ S.days.push({date:ds,cities:[],crew:[],ops,caps:{}}); continue; }
+    /* Смена — скользящее окно по списку поверителей, а не случайная выборка:
+       узкий специалист попадает в неё не каждый день, поэтому часть услуг
+       в отдельные даты просто недоступна. */
+    const n = wknd ? rint(2,3) : rint(4,6);
+    const st = mod(i*5,vers.length);
+    const crew = Array.from({length:n},(_,k)=>vers[mod(st+k,vers.length)]);
+    /* У каждого города свой ритм. В крупные бригада ездит по своим дням недели —
+       примерно полнедели, и то не каждую неделю; малые объезжает по кругу, раз
+       в неделю-полторы. Полного покрытия нет ни по одному городу. */
     const cities = [];
-    if(rr()<.45) cities.push(rnd(BIG));
-    else { const sp=[...SMALL]; for(let k=0,m=rint(2,4);k<m;k++) cities.push(sp.splice(Math.floor(rr()*sp.length),1)[0]); }
+    const bigDow = {1:0, 3:0, 5:0, 2:1, 4:1, 6:2};   // пн/ср/пт — ЕКБ, вт/чт — НТ, сб — КУ
+    if(bigDow[dow]!==undefined && mod(wk+dow,4)!==0) cities.push(BIG[bigDow[dow]]);
+    const cs = mod(i*7,SMALL.length);
+    for(let k=0,m=wknd?1:2;k<m;k++) cities.push(SMALL[mod(cs+k*9,SMALL.length)]);
     /* План руководитель ставит руками по каждому городу — округлёнными числами. */
     const per = Math.max(5,Math.round(crew.length*25/cities.length/5)*5), caps = {};
     cities.forEach(c=>caps[c]=per);
@@ -1321,7 +1339,7 @@ function reqForm(K,T,p,day,onDay){
   if(cs.length && !cs.includes(K.city)) K.city = cs[0];
   const want = K.svcs || (K.svcs = []);
   /* Подсказка дат живёт внутри календаря — она нужна только когда выбраны услуги. */
-  const slots = want.length ? slotsFor(want) : null;
+  const slots = want.length ? slotsFor(want,K.city) : null;
   return `<div class="row" style="margin:2px 0 14px;flex-wrap:nowrap">
       <div class="f" style="flex:none"><label>Тип клиента</label>${SEG(K.ctype,['Физлицо','Юрлицо'],`setF('${T}','ctype',$v)`)}</div>
       <div class="f" style="flex:1;min-width:240px;max-width:700px"><label>${U?'Организация':'ФИО клиента'}</label>
@@ -1351,7 +1369,7 @@ function reqForm(K,T,p,day,onDay){
       <div class="f" style="width:50px"><label>кв.</label><input class="fld mono" id="${p}Flat" value="${esc(K.flat)}" oninput="${T}.flat=this.value" placeholder="45"></div>
       <div class="f" style="width:76px"><label>Домофон</label>
         <div class="chkbox">${CHK(K.intercom,K.intercom?'вкл.':'выкл.',`${T}.intercom=!${T}.intercom;render()`)}</div></div>
-      <div class="f" style="width:120px"><label>Дата выезда</label>${DATE(p+'Date',day,onDay,{slots})}</div>
+      <div class="f" style="width:120px"><label>Дата выезда</label>${DATE(p+'Date',day,onDay,{slots,slotsCity:K.city})}</div>
       <div class="f" style="width:150px"><label>Время прибытия</label>
         ${SEL(p+'Time',K.time,Array.from({length:11},(_,i)=>({v:10+i,l:pad(10+i)+':00',hint:'окно '+pad(9+i)+':00–'+pad(11+i)+':00'})),v=>K.time=+v)}</div>
     </div>
@@ -1368,14 +1386,17 @@ function tgSvc(path,id){
   if(i>=0) a.splice(i,1); else a.push(id);
   render();
 }
-/* Ближайшие даты под выбранные услуги: план ещё не закрыт, дата не ушла под
-   маршруты и в смене есть поверитель, закрывающий все выбранные услуги. */
-function slotsFor(ids,limit){
+/* Ближайшие даты под выбранные услуги и город: бригада едет в этот город,
+   план по нему ещё не закрыт, дата не ушла под маршруты и в смене есть
+   поверитель, закрывающий все выбранные услуги. */
+function slotsFor(ids,city,limit){
   const out = [];
   for(let i=0;i<45 && out.length<(limit||14);i++){
     const ds = iso(addDays(today,i));
-    if(!dayCities(ds).length || lockedFor(ds,'operator')) continue;
-    const t = dayTotal(ds);
+    const cs = dayCities(ds);
+    if(!cs.length || lockedFor(ds,'operator')) continue;
+    if(city && !cs.includes(city)) continue;
+    const t = city ? dayState(ds,city) : dayTotal(ds);
     if(!t.p || t.pct>=1) continue;
     const crew = crewFor(ds,ids);
     if(!crew.length) continue;
