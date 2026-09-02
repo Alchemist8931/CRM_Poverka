@@ -480,17 +480,23 @@ td b{color:var(--ink);font-weight:600}
 /* Компетенции в строке сотрудника — компактнее обычных переключателей. */
 .tgls.sk{max-height:none;gap:4px;min-width:330px}
 .tgls.sk .tgl{padding:3px 7px;font-size:10.5px}
-/* Подсказка дат под выбранные услуги: рост как у поля рядом, список прокручивается. */
-.slots{height:38px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r);background:var(--card);padding:3px}
-.slots::-webkit-scrollbar{width:3px}
-.slots::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
-.slots .slot{display:flex;align-items:baseline;gap:6px;width:100%;padding:2px 6px;border:0;border-radius:var(--r-in);background:none;text-align:left}
-.slots .slot:hover{background:var(--surface)}
-.slots .slot.on{background:var(--ink)}
-.slots .slot b{font-size:10.5px;font-weight:500;color:var(--ink2);white-space:nowrap}
-.slots .slot i{margin-left:auto;font-style:normal;font-size:9.5px;color:var(--ink3);white-space:nowrap}
-.slots .slot.on b,.slots .slot.on i{color:var(--bg)}
-.slots .none{display:block;padding:4px 6px;font-size:10px;color:var(--ink3);line-height:1.35}
+/* Подсказка дат под выбранные услуги живёт справа от календаря в его же выпадашке. */
+.pop.cal.wide{display:flex;gap:11px;width:max-content;max-height:none;overflow:visible}
+.pop.cal.wide .cal-c{width:232px;flex:none}
+.pop.cal.wide .cal-s{width:252px;flex:none;display:flex;flex-direction:column;
+  border-left:1px solid var(--border2);padding-left:11px}
+.cal-s .lbl{margin-bottom:7px}
+.cal-s .slotlist{flex:1;min-height:0;max-height:252px;overflow-y:auto;display:flex;flex-direction:column;gap:1px}
+.cal-s .slotlist::-webkit-scrollbar{width:3px}
+.cal-s .slotlist::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.cal-s .slot{display:flex;align-items:baseline;gap:6px;width:100%;padding:5px 7px;border:0;border-radius:var(--r-in);background:none;text-align:left}
+.cal-s .slot:hover{background:var(--wash)}
+.cal-s .slot.on{background:var(--ink)}
+.cal-s .slot b{font-size:11.5px;font-weight:500;color:var(--ink2);white-space:nowrap}
+.cal-s .slot i{margin-left:auto;font-style:normal;font-size:10px;color:var(--ink3);white-space:nowrap}
+.cal-s .slot:hover b{color:var(--ink)}
+.cal-s .slot.on b,.cal-s .slot.on i{color:var(--bg)}
+.cal-s .none{display:block;padding:5px 7px;font-size:10.5px;color:var(--ink3);line-height:1.4}
 .g.end{border-color:var(--error);color:var(--error)}
 .g.end:hover{background:var(--error);color:var(--bg);border-color:var(--error)}
 
@@ -911,15 +917,24 @@ function DATE(id,val,fn,o={}){
   return `<div class="sel ${open?'open':''}" data-fld>
     <button type="button" class="fld ${o.sm?'sm':''}" onclick="S.ddM='${val}';dd('${id}')" aria-expanded="${open}">
       <span class="v mono">${val?ru(val):'—'}</span>${svg(I.cal,14).replace('style="','class="cv" style="')}</button>
-    ${open?`<div class="pop cal">
-      <div class="cal-h"><button type="button" class="ib sm" onclick="calMove(-1)">${svg(I.left,13)}</button>
-        <b>${MN[cur.getMonth()]} ${cur.getFullYear()}</b>
-        <button type="button" class="ib sm" onclick="calMove(1)">${svg(I.right,13)}</button></div>
-      <div class="cal-w">${['пн','вт','ср','чт','пт','сб','вс'].map(d=>`<span>${d}</span>`).join('')}</div>
-      <div class="cal-g">${cells.map(d=>{const s=iso(d);
-        return `<button type="button" class="${d.getMonth()!==cur.getMonth()?'out':''} ${s===TODAY?'tdy':''} ${s===val?'on':''}"
-          onclick="pick('${id}','${s}')">${d.getDate()}</button>`}).join('')}</div>
-      <button type="button" class="g sm" style="width:100%;margin-top:8px" onclick="pick('${id}','${TODAY}')">Сегодня</button>
+    ${open?`<div class="pop cal ${o.slots?'wide right':''}">
+      <div class="cal-c">
+        <div class="cal-h"><button type="button" class="ib sm" onclick="calMove(-1)">${svg(I.left,13)}</button>
+          <b>${MN[cur.getMonth()]} ${cur.getFullYear()}</b>
+          <button type="button" class="ib sm" onclick="calMove(1)">${svg(I.right,13)}</button></div>
+        <div class="cal-w">${['пн','вт','ср','чт','пт','сб','вс'].map(d=>`<span>${d}</span>`).join('')}</div>
+        <div class="cal-g">${cells.map(d=>{const s=iso(d);
+          return `<button type="button" class="${d.getMonth()!==cur.getMonth()?'out':''} ${s===TODAY?'tdy':''} ${s===val?'on':''}"
+            onclick="pick('${id}','${s}')">${d.getDate()}</button>`}).join('')}</div>
+        <button type="button" class="g sm" style="width:100%;margin-top:8px" onclick="pick('${id}','${TODAY}')">Сегодня</button>
+      </div>
+      ${o.slots?`<div class="cal-s">
+        <div class="lbl">Когда есть нужные компетенции</div>
+        <div class="slotlist">${o.slots.length?o.slots.map(s=>`<button type="button" class="slot ${s.ds===val?'on':''}"
+          title="${ruLong(s.ds)} · свободно ${s.free} из ${s.plan} · поверителей с этими услугами ${s.crew}"
+          onclick="pick('${id}','${s.ds}')"><b>${ruLong(s.ds)}</b><i>${s.crew} пов. · ${s.free}</i></button>`).join('')
+          :'<span class="none">На ближайшие дни нет смен, где закрыты все выбранные услуги. Снимите часть услуг или запишите клиента вручную.</span>'}</div>
+      </div>`:''}
     </div>`:''}
   </div>`;
 }
@@ -1293,7 +1308,8 @@ function reqForm(K,T,p,day,onDay){
   const cs = dayCities(day);
   if(cs.length && !cs.includes(K.city)) K.city = cs[0];
   const want = K.svcs || (K.svcs = []);
-  const slots = want.length ? slotsFor(want) : [];
+  /* Подсказка дат живёт внутри календаря — она нужна только когда выбраны услуги. */
+  const slots = want.length ? slotsFor(want) : null;
   return `<div class="row" style="margin:2px 0 14px;flex-wrap:nowrap">
       <div class="f" style="flex:none"><label>Тип клиента</label>${SEG(K.ctype,['Физлицо','Юрлицо'],`setF('${T}','ctype',$v)`)}</div>
       <div class="f" style="flex:1;min-width:240px;max-width:700px"><label>${U?'Организация':'ФИО клиента'}</label>
@@ -1323,12 +1339,7 @@ function reqForm(K,T,p,day,onDay){
       <div class="f" style="width:50px"><label>кв.</label><input class="fld mono" id="${p}Flat" value="${esc(K.flat)}" oninput="${T}.flat=this.value" placeholder="45"></div>
       <div class="f" style="width:76px"><label>Домофон</label>
         <div class="chkbox">${CHK(K.intercom,K.intercom?'вкл.':'выкл.',`${T}.intercom=!${T}.intercom;render()`)}</div></div>
-      <div class="f" style="width:120px"><label>Дата выезда</label>${DATE(p+'Date',day,onDay)}</div>
-      ${want.length?`<div class="f" style="width:240px"><label>Когда есть нужные компетенции</label>
-        <div class="slots">${slots.length?slots.map(s=>`<button type="button" class="slot ${s.ds===day?'on':''}"
-          title="${ruLong(s.ds)} · свободно ${s.free} из ${s.plan} · поверителей с этими услугами ${s.crew}"
-          onclick="pickSlot('${p}','${s.ds}')"><b>${ruLong(s.ds)}</b><i>${s.crew} пов. · ${s.free}</i></button>`).join('')
-          :'<span class="none">На ближайшие дни нет смен с этими компетенциями.</span>'}</div></div>`:''}
+      <div class="f" style="width:120px"><label>Дата выезда</label>${DATE(p+'Date',day,onDay,{slots})}</div>
       <div class="f" style="width:150px"><label>Время прибытия</label>
         ${SEL(p+'Time',K.time,Array.from({length:11},(_,i)=>({v:10+i,l:pad(10+i)+':00',hint:'окно '+pad(9+i)+':00–'+pad(11+i)+':00'})),v=>K.time=+v)}</div>
     </div>
@@ -1360,7 +1371,6 @@ function slotsFor(ids,limit){
   }
   return out;
 }
-function pickSlot(p,ds){ S.dd=null; H[p+'Date']?.(ds); render(); }
 /* Формой заявки пользуются три места: приём оператора, карточка правки и заявка руководителя. */
 const formOf = path => path==='S.edit'?S.edit : path==='S.supReq'?S.supReq : S.intake;
 function setF(path,k,v){ formOf(path)[k]=v; render(); }
