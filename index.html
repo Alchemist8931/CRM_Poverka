@@ -419,6 +419,18 @@ td b{color:var(--ink);font-weight:600}
   background:var(--card);font-size:12px;color:var(--ink2);line-height:1.5;margin-bottom:12px}
 .actnote b{display:block;font-size:9.5px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);margin-bottom:4px}
 
+/* ---------- оплата на месте ---------- */
+.payb{border:1px solid var(--border2);border-left:2px solid var(--success);border-radius:var(--r);
+  background:var(--card);padding:11px 12px;margin-top:12px}
+.payb.none{border-left-color:var(--warning)}
+.payh{display:flex;align-items:baseline;gap:10px;margin-bottom:9px;flex-wrap:wrap}
+.payh .note{flex:1;min-width:180px}
+.payg{display:grid;grid-template-columns:1.2fr .8fr 2.2fr;gap:8px;align-items:flex-end}
+.paysum{margin-top:9px;font-size:11.5px;color:var(--ink3);line-height:1.5}
+.paysum b{color:var(--ink);font-weight:600}
+/* Подотчёт: строка итога по бригаде отделена от строк поверителей. */
+tfoot td{border-top:1px solid var(--border);border-bottom:0;color:var(--ink);font-weight:600}
+
 /* ---------- поддержка маршрутов: шкала дня ---------- */
 .rrow{display:flex;align-items:center;gap:4px}
 .rrow .sb{flex:1;min-width:0}
@@ -875,8 +887,8 @@ const CAPS = {
   support:'Маршруты на сегодня. Заявки стоят по шкале времени: можно открыть карточку, позвонить, передвинуть по часам или добавить в маршрут новую.',
   routes:'Маршруты по дням. Конструктор открывает карту области: точки — адреса заявок, порядок нажатия задаёт последовательность объезда. Как только дата ушла под маршруты, приём по ней закрывается — добавить адрес может только руководитель.',
   schedule:'Кто в смене по дням. Клик по клетке ставит или снимает сотрудника с даты — это та же смена, что в планировании.',
-  me:'Сдельная оплата по выполненным работам. Виден только собственный заработок.',
-  payroll:'Начисления по всем сотрудникам за период.',
+  me:'Сдельная оплата по выполненным работам. Виден только собственный заработок, а у поверителя — ещё и подотчёт: деньги, взятые с клиентов на адресах.',
+  payroll:'Начисления по всем сотрудникам за период и подотчёт бригады: сколько денег поверители собрали на адресах, сколько уже сдали и сколько осталось привезти.',
   services:'Цены для физических и юридических лиц, сдельные ставки поверителя и оператора.',
   myroute:'Маршрут на сегодня. По каждому адресу поверитель заполняет акт: приборы, услуга в строке прибора и фото выполненных работ.',
   absence:'Запросы на отсутствие. До согласования дни остаются рабочими по графику.'
@@ -887,6 +899,8 @@ const pad = n => String(n).padStart(2,'0');
 const iso = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const today = new Date(); today.setHours(0,0,0,0);
 const TODAY = iso(today);
+/* Текущий месяц: по нему считается подотчёт поверителей у руководителя. */
+const CUR_M = TODAY.slice(0,7);
 const addDays = (d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x;};
 const WD = ['вс','пн','вт','ср','чт','пт','сб'];
 const MN = ['январь','февраль','март','апрель','май','июнь','июль','август','сентябрь','октябрь','ноябрь','декабрь'];
@@ -905,6 +919,12 @@ const rr = () => (sd = (sd*1103515245+12345) % 2147483648) / 2147483648;
 const rnd = a => a[Math.floor(rr()*a.length)];
 const rint = (a,b) => a+Math.floor(rr()*(b-a+1));
 const randPhone = () => '+7 (9'+rint(10,99)+') '+rint(100,999)+'-'+rint(10,99)+'-'+rint(10,99);
+/* Почта есть не у всех: у юрлица её называет бухгалтерия, у частника — далеко не всегда. */
+const MAIL_HOSTS = ['mail.ru','yandex.ru','gmail.com','bk.ru'];
+const MAIL_NAMES = ['t.smirnova','r.volkov','gareev','dyakonova','a.pshenichnikov','kirillova','abramov','mezentseva','polyakov','goncharova'];
+const randMail = isU => isU
+  ? (rr()<.85 ? rnd(['buh','info','office','director'])+rint(1,99)+'@'+rnd(MAIL_HOSTS) : '')
+  : (rr()<.55 ? rnd(MAIL_NAMES)+rint(1,99)+'@'+rnd(MAIL_HOSTS) : '');
 
 /* ============ КОМПОНЕНТЫ ПОЛЕЙ ============ */
 const H = {};
@@ -962,7 +982,9 @@ const SEG = (val,items,fn) => `<div class="seg">${items.map(x=>{const o=typeof x
   return `<button type="button" aria-pressed="${String(val)===String(o.v)}" onclick="${fn.replace('$v',`'${o.v}'`)}">${esc(o.l)}</button>`}).join('')}</div>`;
 
 /* ---------- состояние ---------- */
-const blankIntake = () => ({ctype:'Физлицо',name:'',inn:'',phone:'',contact:'',phone2:'',contact2:'',
+/* Почта клиента пока только хранится: на неё уйдут чеки и уведомления,
+   когда появятся эквайринг и рассылка. */
+const blankIntake = () => ({ctype:'Физлицо',name:'',inn:'',phone:'',contact:'',phone2:'',contact2:'',email:'',
   city:'',street:STREETS[0],house:'',entrance:'',floor:'',flat:'',intercom:true,time:12,svcs:[],cmtOp:'',cmtVf:''});
 /* Пульт оператора: смена, входящая линия, накопленные за день минуты.
    По этим двум счётчикам руководитель видит загрузку и решает, когда нанимать. */
@@ -971,9 +993,9 @@ const blankOp = () => ({on:false,from:null,shiftSec:0,talkSec:0,calls:0,missed:0
 const S = {
   view:'intake', page:0, auth:false, user:ROLES.operator.who, role:'operator', me:ROLES.operator.id,
   theme:'light', dd:null, ddM:null,
-  city:CITIES[0], day:TODAY, staff:[], days:[], requests:[], routes:[], absences:[], waits:[], seq:1000,
+  city:CITIES[0], day:TODAY, staff:[], days:[], requests:[], routes:[], absences:[], waits:[], handovers:[], seq:1000,
   toast:null, openRoute:null, openStop:null, call:null, lb:null, ukCity:'', ukSeal:'', pMonth:TODAY.slice(0,7), planTab:'day',
-  mMonth:TODAY.slice(0,7), meTab:'done', modal:null, edit:null, uns:null,
+  mMonth:TODAY.slice(0,7), meTab:'done', modal:null, edit:null, uns:null, ho:null,
   intake:blankIntake(), op:blankOp()
 };
 const staffById = id => S.staff.find(s=>s.id===id);
@@ -1119,6 +1141,37 @@ function seed(){
     rt.chat = chats[i%chats.length].map(([who,txt],j)=>({who:who==='v'?v:o,vf:who==='v',txt,t:pad(9+j*2)+':'+pad(rint(10,55))}));
     if(!rt.duty) rt.duty = ops[i%ops.length].id;
   });
+  /* Деньги по выполненным работам. У физлиц примерно шесть заявок из десяти закрыты
+     наличными, три — переводом на карту, одна остаётся без оплаты и висит долгом.
+     Юрлицо платит по счёту: эти деньги через руки поверителя не проходят. */
+  S.requests.filter(r=>r.status==='выполнена').forEach(r=>{
+    const price = priceOf(r), u = r.clientType==='Юрлицо', x = rr();
+    const method = u ? (rr()<.85?'по счёту':'не оплачено')
+      : x<.6 ? 'наличные' : x<.9 ? 'перевод на карту' : 'не оплачено';
+    /* Клиент округляет: то отдаёт без мелочи, то не добирает пару сотен и обещает довезти. */
+    const y = rr();
+    let amount = price;
+    if(method==='не оплачено') amount = 0;
+    else if(y<.08) amount = Math.max(0,Math.round(price/500)*500);
+    else if(y<.15) amount = Math.max(0,price-100*rint(1,3));
+    r.pay = {method,amount,at:`${r.date} ${pad(rint(10,19))}:${pad(rint(0,59))}`,by:r.verifier,manual:amount!==price,
+      note: method==='не оплачено' ? rnd(['Нет наличных, обещал перевести на карту','Просит счёт на оплату','Платит УК, ждём подтверждения'])
+        : amount<price ? 'Отдал без сдачи, разницу обещал довезти'
+        : amount>price ? 'Округлил в большую сторону' : ''};
+  });
+  /* Сдача за прошлый месяц: часть бригады уже привезла собранное руководителю
+     в первых числах текущего. Демо-данные начинаются с первого числа, поэтому
+     сумму прошлого месяца берём по порядку величины от того, что человек собрал сейчас. */
+  const prevEnd = iso(new Date(today.getFullYear(),today.getMonth(),0));
+  const prevM = prevEnd.slice(0,7);
+  vers.forEach((vid,i)=>{
+    if(i%2) return;
+    const now = subReport(vid,CUR_M);
+    const amount = Math.round(Math.max(0,now.got-now.wage)*(.7+rr()*.5)/100)*100;
+    if(!amount) return;
+    S.handovers.push({id:'H'+(++S.seq),staff:vid,at:iso(addDays(new Date(prevEnd+'T00:00:00'),1+(i%3))),
+      period:prevM,amount,by:'sv',note:'Сдача за '+MN[+prevM.slice(5)-1]});
+  });
 }
 const CMT_OP = ['','','','Звонить только после 18:00, днём на работе','Второй перенос — уточнить актуальность',
   'Оплата по счёту, нужна закрывающая','Юрлицо: пропуск заказывать за сутки','Клиент просит смс за час до выезда'];
@@ -1143,6 +1196,7 @@ function mkReq(ds,city,clients){
     contact:isU?'Секретарь, Анна':rnd(CONTACTS),
     phone2:ph2?randPhone():'',
     contact2:ph2?rnd(CONTACTS):'',
+    email:randMail(isU),
     street:rnd(STREETS),house:String(rint(1,120)),entrance:String(rint(1,6)),floor:String(rint(1,16)),
     flat:isU?'':String(rint(1,240)),intercom:rr()<.78,time:rint(10,20),
     cmtOp:rnd(CMT_OP),cmtVf:rnd(CMT_VF),
@@ -1247,6 +1301,59 @@ const priceOf = r => (r.devices||[]).reduce((a,d)=>a+priceOfDev(r,d),0);
 /* Скидка пенсионеру — за счёт компании: сдельные ставки от неё не зависят. */
 const discountOf = r => r.clientType==='Юрлицо' ? 0
   : (r.devices||[]).reduce((a,d)=>{ const s=SVC[d.svc]; return a + (s&&d.pens ? s.pF-s.pP : 0); },0);
+/* ---------- оплата на месте и подотчёт ----------
+   Эквайринга на первом этапе нет. Поверитель берёт с клиента наличные или перевод
+   на карту и до конца месяца держит деньги у себя как подотчёт; в конце месяца сдаёт
+   собранное руководителю за вычетом своей сдельной оплаты. CRM только учитывает суммы:
+   ни QR, ни чеков, ни фискализации здесь нет — они появятся вместе с эквайрингом. */
+const PAY_METHODS = ['наличные','перевод на карту','по счёту','не оплачено'];
+/* Счёт выставляется только юрлицу — физлицу этот способ не показываем. */
+const payMethods = r => PAY_METHODS.filter(m=>m!=='по счёту' || r.clientType==='Юрлицо');
+/* В подотчёт попадает лишь то, что поверитель забрал лично: деньги по счёту идут
+   сразу на расчётный счёт и через его руки не проходят. */
+const PAY_HAND = ['наличные','перевод на карту'];
+const paidWith = (r,m) => r.pay && r.pay.method===m ? (r.pay.amount||0) : 0;
+const handCash = r => r.pay && PAY_HAND.includes(r.pay.method) ? (r.pay.amount||0) : 0;
+const noPay = r => !r.pay || r.pay.method==='не оплачено';
+/* Отметка оплаты заводится при первом открытии акта: способ подставляется по типу
+   клиента, сумма — из прайса, пока её не поправили руками. */
+function payInit(r,by){
+  if(!r.pay) r.pay = {method:r.clientType==='Юрлицо'?'по счёту':'наличные',
+    amount:priceOf(r),at:null,by:by||null,note:'',manual:false};
+  const p = r.pay;
+  if(!p.manual) p.amount = p.method==='не оплачено' ? 0 : priceOf(r);
+  return p;
+}
+function setPay(rid,k,v){
+  const r = S.requests.find(x=>x.id===rid); if(!r) return;
+  const p = payInit(r);
+  if(k==='amount'){ p.amount = Math.max(0,parseInt(String(v).replace(/\D/g,''))||0); p.manual = true; }
+  else if(k==='method'){ p.method = v; if(!p.manual) p.amount = v==='не оплачено' ? 0 : priceOf(r); }
+  else p[k] = v;
+  render();
+}
+const payTag = r => !r.pay ? '<span class="tg t-mut">оплата не отмечена</span>'
+  : r.pay.method==='не оплачено' ? '<span class="tg t-err">без оплаты</span>'
+  : `<span class="tg ${r.pay.method==='по счёту'?'t-cold':'t-ok'}">${r.pay.method} · ${money(r.pay.amount)}</span>`;
+const payLine = r => !r.pay ? 'оплата не отмечена'
+  : r.pay.method==='не оплачено' ? 'без оплаты'+(r.pay.note?' · '+r.pay.note:'')
+  : `${r.pay.method} · ${money(r.pay.amount)}`;
+/* Подотчёт поверителя за месяц: что собрал на адресах, что ему начислено сдельной
+   и что уже сдал руководителю. Сдача привязана к месяцу, за который её принесли,
+   а не к дню приёмки: деньги за август обычно везут в первых числах сентября. */
+function subReport(vid,m){
+  const done = S.requests.filter(r=>r.status==='выполнена' && r.verifier===vid && r.date.slice(0,7)===m);
+  const cash = done.reduce((a,r)=>a+paidWith(r,'наличные'),0);
+  const card = done.reduce((a,r)=>a+paidWith(r,'перевод на карту'),0);
+  const acct = done.reduce((a,r)=>a+paidWith(r,'по счёту'),0);
+  const unpaid = done.filter(noPay);
+  const wage = done.reduce((a,r)=>a+rateV(r),0);
+  const hos = S.handovers.filter(h=>h.staff===vid && h.period===m).sort((a,b)=>a.at.localeCompare(b.at));
+  const given = hos.reduce((a,h)=>a+h.amount,0);
+  const last = S.handovers.filter(h=>h.staff===vid).sort((a,b)=>b.at.localeCompare(a.at))[0] || null;
+  const got = cash+card;
+  return {done,cash,card,acct,unpaid,wage,hos,given,got,left:got-wage-given,last};
+}
 function svcNames(r){
   const w = worksOf(r); if(!w.length) return '<span class="note">по факту</span>';
   const c = {}; w.forEach(id=>c[id]=(c[id]||0)+1);
@@ -1381,6 +1488,9 @@ function reqForm(K,T,p,day,onDay){
         <input class="fld" id="${p}Name" value="${esc(K.name)}" oninput="${T}.name=this.value" placeholder="${U?'ООО «Стройсервис»':'Смирнова Т. А.'}"></div>
       ${U?`<div class="f" style="width:210px"><label>ИНН организации</label>
         <input class="fld mono" id="${p}Inn" value="${esc(K.inn)}" oninput="${T}.inn=this.value.replace(/\\D/g,'')" placeholder="10 или 12 цифр" maxlength="12"></div>`:''}
+      <div class="f" style="width:250px"><label>Почта клиента</label>
+        <input class="fld" id="${p}Mail" value="${esc(K.email||'')}" oninput="${T}.email=this.value.trim()"
+          placeholder="не обязательно" title="Понадобится для чека и уведомлений, когда появится онлайн-оплата"></div>
     </div>
     <div class="g4" style="margin-bottom:14px">
       <div class="f" style="margin-bottom:0"><label>Телефон основной</label>${PHONE(p+'Phone',K.phone,'phone','основной',T)}</div>
@@ -1589,6 +1699,9 @@ function opTick(){
   if(O.on && O.next>0 && --O.next<=0) ringIn();
 }
 /* Проверки формы одни и те же у оператора и у руководителя — держим их в одном месте. */
+/* Почта не обязательна, но если её ввели — она должна быть похожа на адрес:
+   по ней потом уйдёт чек, исправлять задним числом будет некому. */
+const mailOk = v => { const s = String(v||'').trim(); return !s || /^[^@\s]+@[^@\s]+\.[A-Za-zА-Яа-я]{2,}$/.test(s); };
 function reqProblem(K,ds){
   if(!K.name.trim()) return K.ctype==='Юрлицо'?'Укажите название организации.':'Укажите ФИО клиента.';
   if(K.ctype==='Юрлицо'){
@@ -1599,13 +1712,14 @@ function reqProblem(K,ds){
   if(!K.phone.trim()) return 'Укажите телефон — по нему пойдёт прозвонка маршрута.';
   if(digitsOf(K.phone).length!==10) return 'Телефон неполный: нужно 10 цифр после +7.';
   if(K.phone2 && digitsOf(K.phone2).length!==10) return 'Дополнительный телефон неполный: нужно 10 цифр после +7.';
+  if(!mailOk(K.email)) return 'Почта клиента введена с ошибкой — поправьте или очистите поле.';
   if(!(K.city || dayCities(ds)[0])) return 'В этот день бригада не выезжает — выберите другую дату.';
   if(!K.house.trim()) return 'Укажите номер дома.';
   return null;
 }
 const reqFrom = (K,ds,operator) => ({id:'R'+(++S.seq),date:ds,created:TODAY,city:K.city||dayCities(ds)[0],
   clientType:K.ctype,name:K.name,inn:K.ctype==='Юрлицо'?K.inn:'',
-  phone:K.phone,contact:K.contact,phone2:K.phone2,contact2:K.contact2,
+  phone:K.phone,contact:K.contact,phone2:K.phone2,contact2:K.contact2,email:(K.email||'').trim(),
   street:K.street,house:K.house,entrance:K.entrance,floor:K.floor,
   flat:K.flat,intercom:K.intercom,time:K.time,cmtOp:K.cmtOp,cmtVf:K.cmtVf,
   svcs:[...(K.svcs||[])],services:[],devices:[],status:'создана',routeId:null,operator});
@@ -2103,7 +2217,7 @@ function viewSupport(){
 function chip({rt,s,i,r}){
   return `<div class="chip2 ${s.done?'fin':''}">
     <span class="mono rt">${rt.id}</span>
-    <div class="ad"><b>${esc(r.city)}</b><small>${esc(r.street)}, ${r.house}${r.flat?', кв. '+r.flat:''}</small></div>
+    <div class="ad"><b>${esc(r.city)}</b><small>${esc(r.street)}, ${r.house}${r.flat?', кв. '+r.flat:''}${s.done?' · оплата: '+esc(payLine(r)):''}</small></div>
     ${s.called?`<span class="tg ${s.called==='подтверждена'?'t-ok':s.called==='перенос'?'t-warn':'t-err'}">${s.called}</span>`:''}
     <div class="ctl">
       <button class="ib sm" title="На час раньше" onclick="shiftReq('${r.id}',-1)" ${r.time<=10?'disabled':''}>${svg(I.up,12)}</button>
@@ -2219,8 +2333,9 @@ function saveReq(){
   if(K.ctype==='Юрлицо' && ![10,12].includes(String(K.inn).replace(/\D/g,'').length))
     return toast('ИНН — 10 цифр у организации или 12 у ИП.');
   if(digitsOf(K.phone).length!==10) return toast('Телефон неполный: нужно 10 цифр после +7.');
+  if(!mailOk(K.email)) return toast('Почта клиента введена с ошибкой — поправьте или очистите поле.');
   if(!K.house.trim()) return toast('Укажите номер дома.');
-  ['ctype','name','inn','phone','contact','phone2','contact2','city','street','house',
+  ['ctype','name','inn','phone','contact','phone2','contact2','email','city','street','house',
    'entrance','floor','flat','intercom','time','cmtOp','cmtVf','svcs'].forEach(k=>r[k]=K[k]);
   const moved = r.date!==K.day;
   if(moved){ r.date = K.day; r.routeId = null; r.status = 'создана';
@@ -2231,9 +2346,10 @@ function saveReq(){
   toast(moved ? `${r.id} перенесена на ${ru(r.date)} и снята с маршрута — поставьте её в маршрут той даты.`
               : `${r.id} обновлена.`);
 }
-function closeModal(){ S.modal=null; S.edit=null; S.supReq=null; S.uns=null; render(); }
+function closeModal(){ S.modal=null; S.edit=null; S.supReq=null; S.uns=null; S.ho=null; render(); }
 function modalLayer(){
   if(!S.modal) return '';
+  if(S.modal.k==='ho') return hoModal();
   if(S.modal.k==='day') return dayModal(S.modal.date);
   if(S.modal.k==='ops') return opsModal(S.modal.date);
   if(S.modal.k==='supreq') return supReqModal();
@@ -2524,6 +2640,7 @@ function routeCard(rt){
           <small>${pad(r.time-1)}:00–${pad(r.time+1)}:00 · ${esc(r.name)} · ${r.clientType==='Юрлицо'?'юр':'физ'}
             · под. ${r.entrance||'—'} · эт. ${r.floor||'—'} · ${r.intercom?'домофон работает':'<span style="color:var(--warning)">домофон не работает</span>'}</small>
           <small>${r.devices.length?`${r.devices.length} приб. · ${ph} фото`:'акт не заполнен'}${note?` · <span style="color:var(--ink2)">${esc(note)}</span>`:''}</small>
+          ${s.done?`<small${noPay(r)?' style="color:var(--warning)"':''}>оплата: ${esc(payLine(r))}</small>`:''}
           ${s.unserved?`<small style="color:var(--warning)">не обслужена · ${esc(s.unserved.reason.toLowerCase())}${s.unserved.note?' · '+esc(s.unserved.note):''} · ${esc(s.unserved.at)}</small>`:''}</div>
         <div style="display:flex;gap:4px;align-items:center">
           ${s.unserved?'<span class="tg t-err">не обслужена</span>'
@@ -2626,6 +2743,7 @@ function viewMe(){
     <div><div class="v">${money(sum)}</div><div class="k">за ${MN[Mo-1]}</div></div>
     <div><div class="v">${mDone.length}</div><div class="k">${isV?'выполнено работ':'заявок дошло до выполнения'}</div></div>
     <div><div class="v">${mDone.length?money(sum/mDone.length):'—'}</div><div class="k">средний чек начисления</div></div></div>
+  ${isV?subCard(S.me,S.mMonth):''}
   <div class="c"><h3>По неделям · ${MN[Mo-1]} ${Y}</h3>
     <div class="rib4">
       <div class="wk wkd">${['пн','вт','ср','чт','пт','сб','вс'].map(d=>`<span>${d}</span>`).join('')}</div>
@@ -2643,13 +2761,47 @@ function viewMe(){
     </div></div>
   <div class="c"><h3>Детализация · ${MN[Mo-1]}</h3>
     <p class="cap">${isV?'Ставка поверителя за выполненную услугу.':'Ставка оператора за принятую заявку, дошедшую до выполнения.'}</p>
-    ${mDone.length?`<table><thead><tr><th>Заявка</th><th class="num">Дата</th><th>Город</th><th>Адрес</th><th>Клиент</th><th>Услуги</th><th class="num">Сумма работ</th><th class="num">Начислено</th></tr></thead><tbody>
+    ${mDone.length?`<table><thead><tr><th>Заявка</th><th class="num">Дата</th><th>Город</th><th>Адрес</th><th>Клиент</th><th>Услуги</th><th class="num">Сумма работ</th><th>Оплата</th><th class="num">Начислено</th></tr></thead><tbody>
       ${mDone.slice(0,35).map(r=>`<tr><td class="mono">${r.id}</td><td class="num">${ru(r.date)}</td>
         <td>${r.city}</td><td><b>${esc(addrOf(r))}</b></td><td>${esc(r.name)}</td>
         <td>${svcNames(r)}</td><td class="num">${money(priceOf(r))}</td>
+        <td>${payTag(r)}</td>
         <td class="num"><b>${money(val(r))}</b></td></tr>`).join('')}</tbody></table>
       ${mDone.length>35?`<p class="note" style="margin-top:10px">Показаны первые 35 из ${mDone.length}.</p>`:''}`
       :`<div class="empty">За этот месяц начислений нет.</div>`}</div>`}`);
+}
+/* Подотчёт поверителя: сколько денег он собрал на адресах, сколько из них его
+   собственная сдельная оплата и сколько остаётся привезти руководителю. */
+function subCard(vid,m){
+  const R = subReport(vid,m);
+  const mi = +m.slice(5)-1, mn = `${MN[mi]} ${m.slice(0,4)}`;
+  const back = R.left >= 0;
+  const unpaidSum = R.unpaid.reduce((a,r)=>a+priceOf(r),0);
+  /* Месяц без выездов: считать не из чего, показываем только сдачу, если она была. */
+  if(!R.done.length) return `<div class="c"><h3>Подотчёт · ${mn}</h3>
+    <p class="cap">За этот месяц выполненных работ нет — денег с клиентов вы не брали.</p>
+    ${R.last?`<p class="note">Последняя сдача: <b style="color:var(--ink)">${money(R.last.amount)}</b>
+      от ${ru(R.last.at)} за ${MN[+R.last.period.slice(5)-1]}${R.last.by?` · принял ${esc(nameOf(R.last.by))}`:''}.</p>`
+      :`<p class="note">Сдач ещё не было.</p>`}</div>`;
+  return `<div class="c"><h3>Подотчёт · ${mn}</h3>
+    <p class="cap">Онлайн-оплаты пока нет: деньги с клиентов вы забираете на адресе и держите у себя.
+      В конце месяца сдаёте руководителю собранное за вычетом своей сдельной оплаты.</p>
+    <div class="kpi" style="margin-bottom:12px">
+      <div><div class="v">${money(R.cash)}</div><div class="k">принято наличными</div></div>
+      <div><div class="v">${money(R.card)}</div><div class="k">принято переводом</div></div>
+      <div><div class="v">${money(R.wage)}</div><div class="k">начислено сдельной</div></div>
+      <div><div class="v">${money(R.given)}</div><div class="k">сдано руководителю</div></div>
+      <div><div class="v" style="color:var(--${back?'success':'warning'})">${money(Math.abs(R.left))}</div>
+        <div class="k">${back?'к возврату с вас':'к доплате вам'}</div></div>
+    </div>
+    <p class="note">Принято ${money(R.got)} − начислено ${money(R.wage)}${R.given?` − сдано ${money(R.given)}`:''}
+      = <b style="color:var(--ink)">${money(Math.abs(R.left))}</b> ${back?'привезти руководителю':'компания доплачивает вам'}.
+      ${R.acct?`Ещё ${money(R.acct)} клиенты оплатили по счёту — эти деньги через вас не проходят. `:''}
+      ${R.unpaid.length?`Без оплаты закрыто адресов: ${R.unpaid.length} на ${money(unpaidSum)} — их видит руководитель.`:''}</p>
+    ${R.last?`<p class="note" style="margin-top:6px">Последняя сдача: <b style="color:var(--ink)">${money(R.last.amount)}</b>
+      от ${ru(R.last.at)}${R.last.period!==m?` за ${MN[+R.last.period.slice(5)-1]}`:''}${R.last.by?` · принял ${esc(nameOf(R.last.by))}`:''}.</p>`
+      :`<p class="note" style="margin-top:6px">Сдач ещё не было.</p>`}
+  </div>`;
 }
 function mMonth(n){ const [y,m]=S.mMonth.split('-').map(Number); const d=new Date(y,m-1+n,1);
   S.mMonth = `${d.getFullYear()}-${pad(d.getMonth()+1)}`; render(); }
@@ -2675,7 +2827,100 @@ function viewPayroll(){
     <div><div class="v">${Math.round((tV+tO)/rev*100)}%</div><div class="k">доля сдельной оплаты</div></div></div>
   <div class="g2">
     <div class="c"><h3>Поверители</h3><p class="cap">По закрытым маршрутам.</p>${tbl(byV,cV,'Сотрудник')}</div>
-    <div class="c"><h3>Операторы</h3><p class="cap">По заявкам, дошедшим до выполнения.</p>${tbl(byO,cO,'Сотрудник')}</div></div>`);
+    <div class="c"><h3>Операторы</h3><p class="cap">По заявкам, дошедшим до выполнения.</p>${tbl(byO,cO,'Сотрудник')}</div></div>
+  ${subTable()}
+  ${unpaidCard()}`);
+}
+/* Подотчёт бригады за текущий месяц: у поверителя на руках наличные и переводы,
+   он сдаёт их за вычетом своей сдельной оплаты. Пока нет эквайринга — это
+   единственное место, где видно, сколько денег ходит мимо кассы. */
+function subTable(){
+  const m = CUR_M, mn = `${MN[+m.slice(5)-1]} ${m.slice(0,4)}`;
+  const rows = S.staff.filter(p=>p.role==='verifier').map(p=>({p,R:subReport(p.id,m)}))
+    .filter(x=>x.R.done.length || x.R.hos.length)
+    .sort((a,b)=>b.R.left-a.R.left);
+  const T = rows.reduce((a,x)=>({cash:a.cash+x.R.cash,card:a.card+x.R.card,got:a.got+x.R.got,
+    wage:a.wage+x.R.wage,given:a.given+x.R.given,left:a.left+x.R.left}),{cash:0,card:0,got:0,wage:0,given:0,left:0});
+  return `<div class="c"><h3>Подотчёт бригады · ${mn}</h3>
+    <p class="cap">Эквайринга нет: деньги на адресе берёт поверитель и держит у себя до конца месяца.
+      «Принять возврат» — это приход денег в кассу: поверитель привёз собранное за вычетом своей сдельной оплаты.</p>
+    ${rows.length?`<table><thead><tr><th>Поверитель</th><th class="num">Наличными</th><th class="num">Переводом</th>
+      <th class="num">Принято</th><th class="num">Начислено</th><th class="num">Сдано</th><th class="num">Остаток</th>
+      <th>Последняя сдача</th><th></th></tr></thead><tbody>
+      ${rows.map(({p,R})=>`<tr><td><b>${esc(p.name)}</b></td>
+        <td class="num">${money(R.cash)}</td><td class="num">${money(R.card)}</td>
+        <td class="num">${money(R.got)}</td><td class="num">${money(R.wage)}</td><td class="num">${money(R.given)}</td>
+        <td class="num"><b style="color:var(--${R.left>0?'warning':R.left<0?'cold':'success'})">${R.left<0?'−'+money(-R.left):money(R.left)}</b></td>
+        <td class="note" style="white-space:nowrap">${R.last?`${money(R.last.amount)} · ${ru(R.last.at)}`:'не было'}</td>
+        <td style="text-align:right"><button class="g sm" onclick="openHo('${p.id}')" ${R.left>0?'':'disabled'}
+          title="${R.left>0?'Принять деньги от поверителя':R.left<0?'Компания должна поверителю — возврата нет':'Подотчёт закрыт'}">Принять возврат</button></td></tr>`).join('')}
+      </tbody><tfoot><tr><td>Итого по бригаде</td>
+        <td class="num">${money(T.cash)}</td><td class="num">${money(T.card)}</td><td class="num">${money(T.got)}</td>
+        <td class="num">${money(T.wage)}</td><td class="num">${money(T.given)}</td>
+        <td class="num">${T.left<0?'−'+money(-T.left):money(T.left)}</td><td colspan="2"></td></tr></tfoot></table>`
+      :`<div class="empty">За ${mn} выполненных работ и сдач нет.</div>`}</div>`;
+}
+/* Долги: работа сделана, денег нет. Оператор звонит и добивает оплату. */
+function unpaidCard(){
+  const list = S.requests.filter(r=>r.status==='выполнена' && noPay(r))
+    .sort((a,b)=>b.date.localeCompare(a.date));
+  const sum = list.reduce((a,r)=>a+priceOf(r),0);
+  return `<div class="c"><h3>Выполнено без оплаты · ${list.length}</h3>
+    <p class="cap">Акт закрыт, деньги не взяты: клиент обещал перевести, просит счёт или платит через УК.
+      Общая сумма долга — <b style="color:var(--ink)">${money(sum)}</b>.</p>
+    ${list.length?`<table><thead><tr><th class="num">Дата</th><th>Заявка</th><th>Город</th><th>Адрес</th><th>Клиент</th>
+      <th class="num">Сумма</th><th>Поверитель</th><th>Что сказал клиент</th></tr></thead><tbody>
+      ${list.slice(0,30).map(r=>`<tr><td class="num mono">${ru(r.date)}</td><td class="mono">${r.id}</td>
+        <td>${esc(r.city)}</td><td><b>${esc(addrOf(r))}</b></td><td>${esc(r.name)}</td>
+        <td class="num"><b>${money(priceOf(r))}</b></td><td>${esc(nameOf(r.verifier))}</td>
+        <td class="note">${r.pay&&r.pay.note?esc(r.pay.note):'—'}</td></tr>`).join('')}</tbody></table>
+      ${list.length>30?`<p class="note" style="margin-top:10px">Показаны первые 30 из ${list.length}.</p>`:''}`
+      :`<div class="empty">Все выполненные работы оплачены.</div>`}</div>`;
+}
+/* Приём возврата: сумма по умолчанию — остаток подотчёта, дату можно поставить задним числом. */
+function openHo(vid){
+  const R = subReport(vid,CUR_M);
+  S.ho = {staff:vid,amount:Math.max(0,Math.round(R.left)),at:TODAY,period:CUR_M,note:''};
+  S.modal = {k:'ho'}; render();
+}
+function setHo(k,v){
+  if(!S.ho) return;
+  S.ho[k] = k==='amount' ? Math.max(0,parseInt(String(v).replace(/\D/g,''))||0) : v;
+  render();
+}
+function takeHo(){
+  const K = S.ho; if(!K) return;
+  const amount = Math.round(K.amount)||0;
+  if(amount<=0) return toast('Сумма возврата должна быть больше нуля.');
+  S.handovers.push({id:'H'+(++S.seq),staff:K.staff,at:K.at,period:K.period,amount,by:S.me,note:(K.note||'').trim()});
+  const R = subReport(K.staff,K.period);
+  S.modal = null; S.ho = null;
+  toast(`${nameOf(K.staff)}: принято ${money(amount)} от ${ru(K.at)}. Остаток подотчёта — ${R.left<0?'−'+money(-R.left):money(R.left)}.`);
+}
+function hoModal(){
+  const K = S.ho; if(!K){ S.modal=null; return ''; }
+  const R = subReport(K.staff,K.period);
+  const after = R.left - (K.amount||0);
+  return `<div class="mask" onclick="if(event.target===this)closeModal()">
+    <div class="modal" style="width:min(620px,94vw)">
+      <div class="mhd"><h3>Принять возврат подотчёта</h3>
+        <span class="note">${esc(nameOf(K.staff))} · ${MN[+K.period.slice(5)-1]} ${K.period.slice(0,4)}</span>
+        <button class="ib" onclick="closeModal()">${svg(I.no,15)}</button></div>
+      <p class="cap">Поверитель привёз наличные и переводы, собранные на адресах, за вычетом своей сдельной оплаты.
+        Принято ${money(R.got)} · начислено ${money(R.wage)}${R.given?` · уже сдано ${money(R.given)}`:''} · остаток <b style="color:var(--ink)">${money(R.left)}</b>.</p>
+      <div class="row" style="flex-wrap:nowrap;align-items:flex-end">
+        <div class="f" style="width:170px;margin-bottom:0"><label>Сумма, ₽</label>
+          <input class="fld mono" id="hoAmt" value="${K.amount}" oninput="setHo('amount',this.value)"></div>
+        <div class="f" style="width:170px;margin-bottom:0"><label>Дата приёмки</label>${DATE('hoDate',K.at,v=>{S.ho.at=v;})}</div>
+        <div class="f" style="flex:1;margin-bottom:0"><label>Примечание</label>
+          <input class="fld" id="hoNote" value="${esc(K.note)}" oninput="S.ho.note=this.value" placeholder="например: остальное довезёт в пятницу"></div>
+      </div>
+      <p class="note" style="margin-top:10px">После подтверждения остаток станет
+        <b style="color:var(--ink)">${after<0?'−'+money(-after):money(after)}</b>, запись уйдёт в историю сдач.</p>
+      <div class="row" style="margin-top:12px;justify-content:flex-end">
+        <button class="g" onclick="closeModal()">Отмена</button>
+        <button class="b" onclick="takeHo()">Принять ${money(K.amount||0)}</button></div>
+    </div></div>`;
 }
 function viewServices(){
   return shell(null,`${cap()}<div class="c"><h3>Прайс и сдельные ставки</h3>
@@ -2729,6 +2974,8 @@ function workSheet(rt,s){
   r.devices.forEach(d=>{ if(!d.photos) d.photos=[]; if(d.reading===undefined) d.reading=''; if(d.pens===undefined) d.pens=false; });
   const noPh = r.devices.some(d=>!d.photos.length);
   const disc = discountOf(r);
+  const p = payInit(r,rt.verifier), price = priceOf(r);
+  const diff = p.method==='не оплачено' ? 0 : p.amount-price;
   return `<div class="c" style="margin-top:14px">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:4px">
       <div><h3>Акт · точка ${pad(i0+1)} · ${esc(addrOf(r))}</h3>
@@ -2762,9 +3009,32 @@ function workSheet(rt,s){
         ${d.photos.length?`<span class="note">${d.photos.length} кадр(ов)</span>`:'<span class="nophoto">нет фото</span>'}
       </div></div>`).join('')}
     <button class="g sm" onclick="addDev('${r.id}')">${svg(I.plus,12)}Добавить прибор</button>
-    <div class="row" style="margin-top:16px;justify-content:space-between">
-      <span class="note">${r.devices.length?`К оплате клиенту <b class="mono" style="color:var(--ink)">${money(priceOf(r))}</b>${disc?` · скидка пенсионеру ${money(disc)} за счёт компании`:''} · вам начислится <b class="mono" style="color:var(--ink)">${money(rateV(r))}</b>${noPh?' · <span style="color:var(--error)">есть приборы без фото</span>':''}`
+    <div class="row" style="margin-top:16px">
+      <span class="note">${r.devices.length?`К оплате клиенту <b class="mono" style="color:var(--ink)">${money(price)}</b>${disc?` · скидка пенсионеру ${money(disc)} за счёт компании`:''} · вам начислится <b class="mono" style="color:var(--ink)">${money(rateV(r))}</b>${noPh?' · <span style="color:var(--error)">есть приборы без фото</span>':''}`
         :'Приборов в акте нет. Добавьте то, что фактически обслужили на адресе.'}</span>
+    </div>
+    <div class="payb ${p.method==='не оплачено'?'none':''}">
+      <div class="payh"><span class="lbl">Оплата</span>
+        <span class="note">Онлайн-оплаты пока нет: деньги вы берёте на адресе и держите у себя как подотчёт, в конце месяца сдаёте руководителю.</span>
+        ${p.at?`<span class="tg t-mut">отмечено ${esc(p.at)}${p.by?' · '+esc(nameOf(p.by)):''}</span>`:''}</div>
+      <div class="payg">
+        <div class="f" style="margin-bottom:0"><label>Способ</label>
+          ${SEL('payM'+r.id,p.method,payMethods(r),v=>setPay(r.id,'method',v),{sm:true})}</div>
+        <div class="f" style="margin-bottom:0"><label>Принято, ₽</label>
+          <input class="fld sm mono" id="payA${r.id}" value="${p.method==='не оплачено'?0:p.amount}"
+            ${p.method==='не оплачено'?'disabled':''} oninput="setPay('${r.id}','amount',this.value)"
+            title="Подставлено из прайса — поправьте, если клиент округлил или доплатил не всё"></div>
+        <div class="f" style="margin-bottom:0"><label>Примечание</label>
+          <input class="fld sm" id="payN${r.id}" value="${esc(p.note||'')}" oninput="setPay('${r.id}','note',this.value)"
+            placeholder="${p.method==='не оплачено'?'почему не оплачено — это увидит руководитель':'что сказал клиент про деньги'}"></div>
+      </div>
+      <div class="paysum">${p.method==='не оплачено'
+        ? `Позицию можно закрыть и без оплаты: работа выполнена, долг <b>${money(price)}</b> останется видимым у оператора и руководителя.`
+        : PAY_HAND.includes(p.method)
+          ? `В ваш подотчёт уйдёт <b>${money(p.amount)}</b>${diff?` · расхождение с прайсом ${diff>0?'+':'−'}${money(Math.abs(diff))}`:''}.`
+          : `Счёт юрлицу: <b>${money(p.amount)}</b> придут на расчётный счёт, в подотчёт не попадают${diff?` · расхождение с прайсом ${diff>0?'+':'−'}${money(Math.abs(diff))}`:''}.`}</div>
+    </div>
+    <div class="row" style="margin-top:14px;justify-content:flex-end">
       ${s.unserved?`<button class="g" onclick="clearUnserved('${rt.id}',${i0})">Вернуть в работу</button>`
         :s.done?`<button class="g" onclick="reopenStop('${rt.id}',${i0})">Вернуть в работу</button>`
         :`<button class="b" onclick="closeStop('${rt.id}',${i0})" ${r.devices.length?'':'disabled'}>Закрыть позицию</button>`}</div>
@@ -2802,7 +3072,15 @@ function closeStop(id,i){
   s.done = true; s.called = s.called || 'подтверждена';
   r.status = 'выполнена'; r.verifier = rt.verifier; r.services = [...new Set(worksOf(r))];
   if(rt.status==='обзвонен'||rt.status==='черновик') rt.status='в работе';
+  /* Деньги фиксируются в момент закрытия позиции: закрыть можно и без оплаты —
+     тогда адрес останется в долгах, видимых оператору и руководителю. */
+  const p = payInit(r,rt.verifier);
+  const now2 = new Date();
+  p.at = `${TODAY} ${pad(now2.getHours())}:${pad(now2.getMinutes())}`; p.by = rt.verifier;
   toast(`Позиция закрыта: ${r.devices.length} прибор(ов) на ${money(priceOf(r))}, вам начислено ${money(rateV(r))}.`
+    + (p.method==='не оплачено' ? ' Оплата не принята — адрес уйдёт в список «выполнено без оплаты».'
+      : PAY_HAND.includes(p.method) ? ` Принято ${p.method}: ${money(p.amount)} — сумма легла в ваш подотчёт.`
+      : ` Оплата по счёту: ${money(p.amount)} — деньги придут на расчётный счёт.`)
     + (noRd?` Без показаний: ${noRd} — их ждёт УК, допишите в акте.`:'')
     + (noPh?` Без фото: ${noPh} — оператор увидит подсветку.`:'')
     + (noSeal?` Без пломбы УК: ${noSeal} — в отчёт УК не пойдут.`:''));
@@ -2810,7 +3088,9 @@ function closeStop(id,i){
 function reopenStop(id,i){
   const rt = S.routes.find(r=>r.id===id), s = rt.stops[i], r = S.requests.find(x=>x.id===s.req);
   s.done = false; r.status = 'в маршруте'; r.verifier = null;
-  toast('Позиция вернулась в работу. Начисления по ней сняты до повторного закрытия.');
+  /* Способ и сумму оставляем — снимаем только отметку о принятии денег. */
+  if(r.pay) r.pay.at = null;
+  toast('Позиция вернулась в работу. Начисления и отметка об оплате сняты до повторного закрытия.');
 }
 
 /* ============================================================ */
