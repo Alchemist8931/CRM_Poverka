@@ -108,6 +108,9 @@ textarea.fld{height:auto;padding:9px 11px;resize:vertical;min-height:76px;line-h
 .seg button{padding:6px 13px;border:0;border-radius:var(--r-in);background:transparent;color:var(--ink3);font-size:12px;transition:all .2s ease;white-space:nowrap}
 .seg button:hover{color:var(--ink)}
 .seg button[aria-pressed="true"]{background:var(--card);color:var(--ink);font-weight:500;box-shadow:var(--shSoft)}
+.seg.sm{padding:2px}
+.seg.sm button{padding:4px 9px;font-size:11px}
+.seg.sm button[aria-pressed="true"].bad{color:var(--error)}
 .opt{display:inline-flex;align-items:center;gap:8px;padding:0 13px;height:38px;border:1px solid var(--border);border-radius:var(--r);background:var(--card);color:var(--ink2);font-size:12.5px;transition:all .2s ease}
 .opt:hover{border-color:var(--mark);color:var(--ink)}
 .opt[aria-pressed="true"]{border-color:var(--ink);background:var(--wash);color:var(--ink)}
@@ -403,8 +406,19 @@ td b{color:var(--ink);font-weight:600}
 /* ---------- акт: приборы и фото ---------- */
 .wrow{border:1px solid var(--border2);border-radius:var(--r);background:var(--card);padding:11px 12px;margin-bottom:8px}
 .wrow.new{border-color:var(--mark)}
-.wtop{display:grid;grid-template-columns:1.4fr 1.2fr .75fr 1fr 1fr .85fr auto auto 32px;gap:6px;align-items:center}
+.wrow.bad{border-left:2px solid var(--error)}
+.wrow.swap{border-left:2px solid var(--cold)}
+.wtop{display:grid;grid-template-columns:1.25fr 1.05fr .7fr .95fr .95fr .8fr auto auto auto 32px;gap:6px;align-items:center}
 .wbot{display:flex;align-items:center;gap:7px;margin-top:9px;flex-wrap:wrap}
+/* Непригодный прибор: причина, бумажный бланк и решение по замене — отдельной
+   полосой под строкой, чтобы годные приборы оставались одной строкой. */
+.wbad{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:9px;padding:9px 10px;
+  border:1px dashed var(--border);border-radius:var(--r-in);background:var(--wash)}
+.wbad .lbl{color:var(--error)}
+.wbad .sel{width:210px}
+.wbad input.fld{width:190px}
+.wbad input.fld.no{width:150px}
+.wswap{margin-top:8px;font-size:11px;color:var(--cold);line-height:1.45}
 .wbot .lbl{margin-right:2px}
 .phw{position:relative;width:58px;height:44px;flex-shrink:0}
 .phw img{width:100%;height:100%;object-fit:cover;border:1px solid var(--border);border-radius:var(--r-in);display:block;cursor:zoom-in}
@@ -877,6 +891,24 @@ const ROOMS = ['Кухня','Санузел','Иное'];
 /* Почему точка осталась не обслуженной: причину выбирает поверитель на адресе,
    «другое» требует текста — по нему оператор звонит клиенту. */
 const WAIT_REASONS = ['Нет дома','Отказ на месте','Нет доступа к прибору','Перенос по просьбе клиента','Другое'];
+/* Поверка кончается решением: прибор годен или непригоден. Непригодный списывается,
+   поверителю остаётся предложить замену. Причина нужна в свидетельстве о непригодности
+   и в записи ФГИС «Аршин»; «другое» требует текста. */
+const FAIL_REASONS = ['Погрешность выше допуска','Механическое повреждение','Нечитаемый номер','Другое'];
+/* Чем меняют непригодный прибор: воду — на новый счётчик воды, тепло — на монтаж
+   теплосчётчика. Демонтаж отдельной строкой не заводим: он входит в работу по замене. */
+const REPL_SVC = {'Вода':'wr','Тепло':'hm'};
+const replSvcOf = d => REPL_SVC[SVC[d.svc]?.grp] || 'wr';
+/* Результат «годен / не годен» бывает только у поверки: у замены, монтажа и
+   демонтажа поверять нечего. */
+const isCheck = d => d.svc==='wv' || d.svc==='hv';
+/* Заводской номер не спрашиваем там, где его как раз и не смогли прочитать. */
+const needSerial = d => !(d.bad && d.badWhy==='Нечитаемый номер');
+const badDevs = r => (r.devices||[]).filter(d=>d.bad);
+/* Пометка для списков: на адресе нашли непригодные приборы — это видно оператору
+   и руководителю, не открывая акт. */
+const badTag = r => { const n = badDevs(r).length;
+  return n ? `<span class="tg t-err" title="Приборов признано непригодными: ${n}">есть непригодные · ${n}</span>` : ''; };
 const STREETS = ['Ленина','Малышева','Победы','Крауля','Сурикова','Белинского','Уральская','Мира','Куйбышева','Гагарина','Есенина','Шевченко'];
 const ROLES = {
   operator:{label:'Оператор',who:'Ефимова О.',id:'o2'},
@@ -1000,8 +1032,8 @@ function DATE(id,val,fn,o={}){
 function calMove(n){ const d=new Date((S.ddM||TODAY)+'T00:00:00'); d.setDate(1); d.setMonth(d.getMonth()+n); S.ddM=iso(d); render(); }
 const CHK = (on,label,fn) => `<button type="button" class="chk" role="checkbox" aria-checked="${!!on}" onclick="${fn}">
   <i>${svg(I.ok,11)}</i>${label?`<span>${esc(label)}</span>`:''}</button>`;
-const SEG = (val,items,fn) => `<div class="seg">${items.map(x=>{const o=typeof x==='object'?x:{v:x,l:x};
-  return `<button type="button" aria-pressed="${String(val)===String(o.v)}" onclick="${fn.replace('$v',`'${o.v}'`)}">${esc(o.l)}</button>`}).join('')}</div>`;
+const SEG = (val,items,fn,z={}) => `<div class="seg ${z.sm?'sm':''}">${items.map(x=>{const o=typeof x==='object'?x:{v:x,l:x};
+  return `<button type="button" class="${o.c||''}" aria-pressed="${String(val)===String(o.v)}" onclick="${fn.replace('$v',`'${o.v}'`)}">${esc(o.l)}</button>`}).join('')}</div>`;
 
 /* ---------- состояние ---------- */
 /* Почта клиента пока только хранится: на неё уйдут чеки и уведомления,
@@ -1159,6 +1191,52 @@ function seed(){
     const v = nameOf(rt.verifier), o = nameOf(rt.duty||ops[0].id);
     rt.chat = chats[i%chats.length].map(([who,txt],j)=>({who:who==='v'?v:o,vf:who==='v',txt,t:pad(9+j*2)+':'+pad(rint(10,55))}));
     if(!rt.duty) rt.duty = ops[i%ops.length].id;
+  });
+  /* Отрицательный результат поверки: примерно каждый двадцатый поверенный прибор
+     признан непригодным. Свидетельство о непригодности выписано от руки на бумажном
+     бланке — в CRM от него остаётся только номер, нумерация у заказчика сквозная.
+     Часть клиентов согласилась на замену сразу — тогда в акте стоит строка замены,
+     остальные отложили: их адреса ждут звонка оператора в листе ожидания. Старые
+     отложенные замены оператор уже разобрал, свежие ещё висят. */
+  const FAIL_NOTES = ['Крыльчатка стоит, вода идёт мимо счёта','Стекло разбито, шкала не читается',
+    'Корпус в известковом наросте, доступ к шкале закрыт','Счётчик установлен с нарушением, проливка невозможна'];
+  let blankNo = 418;
+  S.requests.filter(r=>r.status==='выполнена').forEach(r=>{
+    const add = [];
+    r.devices.forEach((d,i)=>{
+      if(!isCheck(d) || rr()>=.05) return;
+      d.bad = true;
+      d.badWhy = rnd(FAIL_REASONS);
+      d.badNote = d.badWhy==='Другое' ? rnd(FAIL_NOTES) : '';
+      /* «Нечитаемый номер» — ровно тот случай, когда заводского номера в акте нет. */
+      if(d.badWhy==='Нечитаемый номер' && rr()<.6) d.serial = '';
+      d.blank = rr()<.85;
+      d.blankNo = d.blank ? 'НП-'+(++blankNo) : '';
+      if(rr()<.55){
+        /* Клиент согласился менять на месте: в акте появилась платная строка замены. */
+        d.repl = 'предложена';
+        const svc = replSvcOf(d), ser = rint(10,99)+'-'+rint(100000,999999);
+        add.push([i,{svc,type:d.type,grsi:d.grsi,carrier:d.carrier,serial:ser,reading:'0',room:d.room,
+          seal:rr()<.9,pens:d.pens,
+          photos:[{src:stubPhoto(ser,ru(r.date)+' · новый прибор'),name:'IMG_'+rint(1000,9999)+'.jpg',
+            t:pad(rint(9,20))+':'+pad(rint(10,59))}],
+          bad:false,badWhy:FAIL_REASONS[0],badNote:'',blank:false,blankNo:'',repl:null,
+          swap:true,swapOf:d.serial||''}]);
+      } else {
+        d.repl = 'отложена';
+        const fresh = r.date >= iso(addDays(today,-3));
+        const w = {id:'W'+(++S.seq),req:r.id,route:r.routeId,city:r.city,kind:'замена',reason:'Нужна замена',
+          note:`${d.serial?'Прибор №'+d.serial:'Прибор без читаемого номера'} непригоден · ${d.badWhy.toLowerCase()}`
+            + (d.badNote?' · '+d.badNote:'') + '. Клиент отложил замену.',
+          at:`${r.date} ${pad(rint(10,19))}:${pad(rint(0,59))}`,by:r.verifier,
+          state:fresh?'не обработана':'снята',to:null};
+        S.waits.push(w); d.replW = w.id;
+      }
+    });
+    if(!add.length) return;
+    /* Строки замены вставляем с конца, чтобы не сбить индексы непригодных приборов. */
+    add.reverse().forEach(([i,nd])=>r.devices.splice(i+1,0,nd));
+    r.services = [...new Set(r.devices.map(d=>d.svc))];
   });
   /* Деньги по выполненным работам. У физлиц примерно шесть заявок из десяти закрыты
      наличными, три — переводом на карту, одна остаётся без оплаты и висит долгом.
@@ -1686,7 +1764,7 @@ function clientHistory(r){
       ${rows.map(q=>`<tr><td class="mono"><b>${q.id}</b></td><td class="num mono">${ru(q.date)}</td>
         <td>${esc(q.city)}</td>
         <td>${esc(addrOf(q))}${sameAddr(q,r)?' <span class="same">· тот же адрес</span>':''}</td>
-        <td>${esc(svcShort(q))}</td><td>${reqTag(q.status)}</td></tr>`).join('')}</tbody></table>
+        <td>${esc(svcShort(q))}</td><td>${reqTag(q.status)} ${badTag(q)}</td></tr>`).join('')}</tbody></table>
     ${h.length>rows.length?`<p class="note" style="margin-top:8px">Показаны последние ${rows.length} из ${h.length}.</p>`:''}</div>`;
 }
 
@@ -1746,7 +1824,7 @@ function viewIntake(){
         <td class="num mono">${r.status==='отменена'?'<span class="note">—</span>':ru(r.date)}</td>
         <td>${r.city}</td>
         <td><span class="tg ${r.clientType==='Юрлицо'?'t-ink':'t-mut'}">${r.clientType==='Юрлицо'?'юрлицо':'физлицо'}</span></td>
-        <td>${reqTag(r.status)}</td></tr>`).join('')}</tbody></table>
+        <td>${reqTag(r.status)} ${badTag(r)}</td></tr>`).join('')}</tbody></table>
       ${mine.length>25?`<p class="note" style="margin-top:10px">Показаны последние 25 из ${mine.length}.</p>`:''}`
       :`<div class="empty">Сегодня вы ещё не приняли ни одной заявки.</div>`}</div>`);
 }
@@ -2389,6 +2467,7 @@ function chip({rt,s,i,r}){
   return `<div class="chip2 ${s.done?'fin':''}">
     <span class="mono rt">${rt.id}</span>
     <div class="ad"><b>${esc(r.city)}</b><small>${esc(r.street)}, ${r.house}${r.flat?', кв. '+r.flat:''}${s.done?' · оплата: '+esc(payLine(r)):''}</small></div>
+    ${badTag(r)}
     ${s.called?`<span class="tg ${s.called==='подтверждена'?'t-ok':s.called==='перенос'?'t-warn':'t-err'}">${s.called}</span>`:''}
     <div class="ctl">
       <button class="ib sm" title="На час раньше" onclick="shiftReq('${r.id}',-1)" ${r.time<=10?'disabled':''}>${svg(I.up,12)}</button>
@@ -2421,7 +2500,13 @@ const waitsNew = () => S.waits.filter(w=>w.state==='не обработана');
 const waitOf = id => S.waits.find(w=>w.req===id && w.state==='не обработана');
 const waitTag = w => w.state==='перенесена' ? `<span class="tg t-cold">перенесена на ${ru(w.to)}</span>`
   : w.state==='отменена' ? '<span class="tg t-err">отменена</span>'
+  : w.state==='снята' ? '<span class="tg t-mut">снята с листа</span>'
   : '<span class="tg t-warn">не обработана</span>';
+/* В лист попадают записи двух родов: адрес, который не удалось обслужить, и адрес,
+   где прибор признан непригодным, а клиент отложил замену. Работа со вторыми другая:
+   заявка там выполнена и оплачена, переносить и отменять её нельзя — оператор звонит
+   и оформляет замену отдельной заявкой. */
+const isRepl = w => w.kind==='замена';
 /* Поверитель: отметка «не обслужена» с причиной. */
 function openUnserved(id,i){ S.uns = {reason:WAIT_REASONS[0],note:''}; S.modal = {k:'uns',id,i}; render(); }
 function markUnserved(){
@@ -2456,6 +2541,14 @@ function waitToRoute(wid,rtId){
   w.state = 'перенесена'; w.to = rt.date;
   addToRoute(rt.id,r.id);
 }
+/* Запись о нужной замене оператор закрывает сама по себе: либо он принял новую
+   заявку на замену обычным приёмом, либо клиент окончательно отказался. Выполненную
+   заявку это не трогает — работа по ней сдана и оплачена. */
+function waitDrop(wid){
+  const w = S.waits.find(x=>x.id===wid); if(!w) return;
+  w.state = 'снята'; w.to = null;
+  toast(`${w.req}: замена снята с листа ожидания. Если клиент согласился — примите отдельную заявку на замену.`);
+}
 function waitCancel(wid){
   const w = S.waits.find(x=>x.id===wid); if(!w) return;
   const r = S.requests.find(x=>x.id===w.req);
@@ -2467,9 +2560,12 @@ function waitList(){
   const list = [...S.waits].sort((a,b)=>
     (a.state==='не обработана'?0:1)-(b.state==='не обработана'?0:1) || b.at.localeCompare(a.at));
   const nw = waitsNew().length, today_ = routesToday();
+  const nr = waitsNew().filter(isRepl).length;
   return `<div class="c"><h3>Лист ожидания · ${nw}</h3>
     <p class="cap">Адреса, которые поверитель не смог обслужить. Оператор звонит клиенту и решает:
-      перенести на другую дату в карточке заявки, поставить в маршрут сегодня или отменить.</p>
+      перенести на другую дату в карточке заявки, поставить в маршрут сегодня или отменить.
+      Сюда же попадают адреса с отложенной заменой${nr?` · сейчас их ${nr}`:''}: прибор признан непригодным, а менять его клиент пока отказался —
+      по ним оператор звонит и оформляет замену отдельной заявкой.</p>
     ${list.length?`<table><thead><tr><th>Заявка</th><th>Адрес</th><th>Город</th><th>Причина</th><th>Когда и кто</th><th>Состояние</th><th>Действия</th></tr></thead><tbody>
       ${list.map(w=>{
         const r = S.requests.find(x=>x.id===w.req); if(!r) return '';
@@ -2477,10 +2573,13 @@ function waitList(){
         return `<tr class="wtr ${open?'':'off'}"><td class="mono">${w.req}</td>
           <td style="min-width:170px"><b>${esc(addrOf(r))}</b><small>${esc(r.name)}</small></td>
           <td>${esc(w.city)}</td>
-          <td style="min-width:150px">${esc(w.reason)}${w.note?`<small>${esc(w.note)}</small>`:''}</td>
+          <td style="min-width:150px">${isRepl(w)?'<span class="tg t-err">нужна замена</span>':esc(w.reason)}${w.note?`<small>${esc(w.note)}</small>`:''}</td>
           <td class="mono" style="white-space:nowrap">${ru(w.at.slice(0,10))} ${w.at.slice(11)}<small>${esc(nameOf(w.by))}</small></td>
           <td>${waitTag(w)}</td>
-          <td style="width:250px">${open?`<div class="wact">
+          <td style="width:250px">${open?isRepl(w)?`<div class="wact">
+            <button class="g sm" onclick="startCall('${esc(r.phone)}','основной','${esc(r.name)}')">${svg(I.phone,12)}Позвонить</button>
+            <button class="g sm" title="Клиент отказался или заявка на замену уже принята" onclick="waitDrop('${w.id}')">Снять с листа</button>
+          </div>`:`<div class="wact">
             <button class="g sm" onclick="openReq('${w.req}')">Перенести на дату</button>
             ${fit.length?fit.map(rt=>`<button class="g sm" title="${rt.city} · ${rt.stops.length} точек · ${rt.status}"
               onclick="waitToRoute('${w.id}','${rt.id}')">В ${rt.id} сегодня</button>`).join('')
@@ -2814,8 +2913,10 @@ function routeCard(rt){
             · под. ${r.entrance||'—'} · эт. ${r.floor||'—'} · ${r.intercom?'домофон работает':'<span style="color:var(--warning)">домофон не работает</span>'}</small>
           <small>${r.devices.length?`${r.devices.length} приб. · ${ph} фото`:'акт не заполнен'}${note?` · <span style="color:var(--ink2)">${esc(note)}</span>`:''}</small>
           ${s.done?`<small${noPay(r)?' style="color:var(--warning)"':''}>оплата: ${esc(payLine(r))}</small>`:''}
+          ${badDevs(r).length?`<small style="color:var(--error)">непригодны: ${badDevs(r).map(d=>esc(String(d.badWhy||'').toLowerCase())+(d.blank&&d.blankNo?' · бланк №'+esc(d.blankNo):'')).join('; ')}${badDevs(r).some(d=>d.repl==='отложена')?' · замена отложена':''}</small>`:''}
           ${s.unserved?`<small style="color:var(--warning)">не обслужена · ${esc(s.unserved.reason.toLowerCase())}${s.unserved.note?' · '+esc(s.unserved.note):''} · ${esc(s.unserved.at)}</small>`:''}</div>
         <div style="display:flex;gap:4px;align-items:center">
+          ${badTag(r)}
           ${s.unserved?'<span class="tg t-err">не обслужена</span>'
             :s.called?`<span class="tg ${s.called==='подтверждена'?'t-ok':s.called==='перенос'?'t-warn':'t-err'}">${s.called}</span>`
             :vf?'<span class="tg t-mut">без прозвонки</span>'
@@ -2937,7 +3038,7 @@ function viewMe(){
     ${mDone.length?`<table><thead><tr><th>Заявка</th><th class="num">Дата</th><th>Город</th><th>Адрес</th><th>Клиент</th><th>Услуги</th><th class="num">Сумма работ</th><th>Оплата</th><th class="num">Начислено</th></tr></thead><tbody>
       ${mDone.slice(0,35).map(r=>`<tr><td class="mono">${r.id}</td><td class="num">${ru(r.date)}</td>
         <td>${r.city}</td><td><b>${esc(addrOf(r))}</b></td><td>${esc(r.name)}</td>
-        <td>${svcNames(r)}</td><td class="num">${money(priceOf(r))}</td>
+        <td>${svcNames(r)} ${badTag(r)}</td><td class="num">${money(priceOf(r))}</td>
         <td>${payTag(r)}</td>
         <td class="num"><b>${money(val(r))}</b></td></tr>`).join('')}</tbody></table>
       ${mDone.length>35?`<p class="note" style="margin-top:10px">Показаны первые 35 из ${mDone.length}.</p>`:''}`
@@ -3144,8 +3245,12 @@ function viewMyRoute(){
 function workSheet(rt,s){
   const r = S.requests.find(x=>x.id===s.req); if(!r) return '';
   const i0 = rt.stops.indexOf(s);
-  r.devices.forEach(d=>{ if(!d.photos) d.photos=[]; if(d.reading===undefined) d.reading=''; if(d.pens===undefined) d.pens=false; });
+  r.devices.forEach(d=>{ if(!d.photos) d.photos=[]; if(d.reading===undefined) d.reading=''; if(d.pens===undefined) d.pens=false;
+    if(d.bad===undefined) d.bad=false; if(d.badWhy===undefined) d.badWhy=FAIL_REASONS[0];
+    if(d.badNote===undefined) d.badNote=''; if(d.blank===undefined) d.blank=false;
+    if(d.blankNo===undefined) d.blankNo=''; if(d.repl===undefined) d.repl=null; });
   const noPh = r.devices.some(d=>!d.photos.length);
+  const nBad = badDevs(r).length;
   const disc = discountOf(r);
   const p = payInit(r,rt.verifier), price = priceOf(r);
   const diff = p.method==='не оплачено' ? 0 : p.amount-price;
@@ -3157,23 +3262,47 @@ function workSheet(rt,s){
         ${s.unserved?'<span class="tg t-err">не обслужена</span>':s.done?'<span class="tg t-ok">позиция закрыта</span>':'<span class="tg t-mut">в работе</span>'}
         <button class="g sm" onclick="startCall('${esc(r.phone)}','основной','${esc(r.name)}')">${svg(I.phone,12)}Клиент</button></div>
     </div>
-    <p class="cap">Услуга, заводской номер и показания счётчика — в строке прибора. К каждому прибору — фото выполненных работ, несколько кадров.</p>
+    <p class="cap">Услуга, заводской номер и показания счётчика — в строке прибора. К каждому прибору — фото выполненных работ, несколько кадров.
+      Результат поверки отмечается тут же: «годен» или «не годен». Акт и свидетельство о непригодности вы заполняете на бумажном бланке от руки —
+      CRM пока ничего не печатает, ей нужен только результат и номер выданного бланка.</p>
     ${r.cmtVf?`<div class="actnote"><b>Комментарий для поверителей</b>${esc(r.cmtVf)}</div>`:''}
-    ${r.devices.map((d,i)=>`<div class="wrow ${d.photos.length?'':'new'}">
+    ${r.devices.map((d,i)=>`<div class="wrow ${d.photos.length?'':'new'} ${d.bad?'bad':''} ${d.swap?'swap':''}">
       <div class="wtop">
         ${SEL('wS'+i,d.svc,SERVICES.map(x=>({v:x.id,l:x.name,hint:x.grp})),v=>{d.svc=v;},{sm:true,ph:'Услуга'})}
         ${SEL('wT'+i,d.type,DEV_TYPES.map(t=>({v:t.v,l:t.v,hint:t.grsi})),v=>{d.type=v;d.grsi=DEV_TYPES.find(t=>t.v===v).grsi;},{sm:true})}
         ${SEL('wC'+i,d.carrier,['ХВС','ГВС','Тепло'],v=>{d.carrier=v;},{sm:true})}
-        <input class="fld sm mono" value="${esc(d.serial)}" oninput="setDev('${r.id}',${i},'serial',this.value)" placeholder="Заводской №">
-        <input class="fld sm mono" value="${esc(d.reading)}" oninput="setDev('${r.id}',${i},'reading',this.value)"
+        <input class="fld sm mono" id="sn${r.id}_${i}" value="${esc(d.serial)}" oninput="setDev('${r.id}',${i},'serial',this.value)" placeholder="Заводской №">
+        <input class="fld sm mono" id="rd${r.id}_${i}" value="${esc(d.reading)}" oninput="setDev('${r.id}',${i},'reading',this.value)"
           placeholder="Показания" title="Показания счётчика на момент поверки${d.carrier==='Тепло'?', Гкал':', м³'}">
         ${SEL('wR'+i,d.room,ROOMS,v=>{d.room=v;},{sm:true})}
         ${CHK(d.seal,'пломба УК',`setDev('${r.id}',${i},'seal',${!d.seal})`)}
         ${r.clientType==='Юрлицо'
           ? '<span class="note" style="white-space:nowrap">юрлицо</span>'
           : CHK(d.pens,'пенсионер',`setDev('${r.id}',${i},'pens',${!d.pens})`)}
+        ${isCheck(d)
+          ? SEG(d.bad?'bad':'ok',[{v:'ok',l:'годен'},{v:'bad',l:'не годен',c:'bad'}],`setBad('${r.id}',${i},$v)`,{sm:true})
+          : '<span class="note" style="white-space:nowrap">без поверки</span>'}
         <button class="ib sm no" title="Убрать прибор" onclick="rmDev('${r.id}',${i})">${svg(I.no,13)}</button>
       </div>
+      ${d.swap?`<div class="wswap">Прибор на замену вместо непригодного${d.swapOf?` №${esc(d.swapOf)}`:''} — впишите заводской номер установленного счётчика.</div>`:''}
+      ${d.bad?`<div class="wbad">
+        <span class="lbl">Непригоден</span>
+        ${SEL('wF'+i,d.badWhy,FAIL_REASONS,v=>{d.badWhy=v; if(v!=='Другое') d.badNote='';},{sm:true})}
+        ${d.badWhy==='Другое'?`<input class="fld sm" id="bn${r.id}_${i}" value="${esc(d.badNote)}"
+          oninput="setDev('${r.id}',${i},'badNote',this.value)" placeholder="что именно с прибором">`:''}
+        ${CHK(d.blank,'выдан бланк о непригодности',`setDev('${r.id}',${i},'blank',${!d.blank})`)}
+        ${d.blank?`<input class="fld sm mono no" id="bl${r.id}_${i}" value="${esc(d.blankNo)}"
+          oninput="setDev('${r.id}',${i},'blankNo',this.value)" placeholder="№ бланка"
+          title="Номер бумажного бланка: нумерацию ведёт руководитель, печатных форм в CRM пока нет">`:''}
+        ${d.repl==='предложена'
+          ? `<span class="tg t-cold">замена предложена · строка ниже</span>
+             <button class="g sm" onclick="postponeRepl('${r.id}',${i})" title="Передумал на месте: строка замены уйдёт из акта, адрес — в лист ожидания оператора">Клиент отказался</button>`
+          : d.repl==='отложена'
+            ? `<span class="tg t-warn">замена отложена</span>
+               <button class="g sm" onclick="clearRepl('${r.id}',${i})">Снять отметку</button>`
+            : `<button class="g sm" onclick="offerRepl('${r.id}',${i})">${svg(I.plus,12)}Предложить замену</button>
+               <button class="g sm" onclick="postponeRepl('${r.id}',${i})" title="Клиент отказался менять сейчас — адрес уйдёт в лист ожидания оператора">Замена отложена</button>`}
+      </div>`:''}
       <div class="wbot"><span class="lbl">Фото работ</span>
         ${d.photos.map((p,k)=>`<span class="phw"><img src="${p.src}" alt="${esc(p.name)}" title="${esc(p.name)} · ${esc(p.t)}" onclick="lbOpen('${r.id}',${i},${k})">
           <button class="x" title="Удалить кадр" onclick="rmPhoto('${r.id}',${i},${k})">${svg(I.no,9)}</button></span>`).join('')}
@@ -3183,7 +3312,7 @@ function workSheet(rt,s){
       </div></div>`).join('')}
     <button class="g sm" onclick="addDev('${r.id}')">${svg(I.plus,12)}Добавить прибор</button>
     <div class="row" style="margin-top:16px">
-      <span class="note">${r.devices.length?`К оплате клиенту <b class="mono" style="color:var(--ink)">${money(price)}</b>${disc?` · скидка пенсионеру ${money(disc)} за счёт компании`:''} · вам начислится <b class="mono" style="color:var(--ink)">${money(rateV(r))}</b>${noPh?' · <span style="color:var(--error)">есть приборы без фото</span>':''}`
+      <span class="note">${r.devices.length?`К оплате клиенту <b class="mono" style="color:var(--ink)">${money(price)}</b>${disc?` · скидка пенсионеру ${money(disc)} за счёт компании`:''} · вам начислится <b class="mono" style="color:var(--ink)">${money(rateV(r))}</b>${nBad?` · <span style="color:var(--error)">непригодных ${nBad}</span> — поверка их всё равно оплачивается`:''}${noPh?' · <span style="color:var(--error)">есть приборы без фото</span>':''}`
         :'Приборов в акте нет. Добавьте то, что фактически обслужили на адресе.'}</span>
     </div>
     <div class="payb ${p.method==='не оплачено'?'none':''}">
@@ -3216,10 +3345,80 @@ function workSheet(rt,s){
 function setDev(rid,i,k,v){ const r=S.requests.find(x=>x.id===rid); r.devices[i][k]=v; render(); }
 function addDev(rid){
   const r = S.requests.find(x=>x.id===rid);
-  r.devices.push({svc:'wv',type:DEV_TYPES[0].v,grsi:DEV_TYPES[0].grsi,carrier:'ХВС',serial:'',reading:'',room:'Кухня',seal:false,pens:false,photos:[]});
+  r.devices.push({svc:'wv',type:DEV_TYPES[0].v,grsi:DEV_TYPES[0].grsi,carrier:'ХВС',serial:'',reading:'',room:'Кухня',
+    seal:false,pens:false,photos:[],bad:false,badWhy:FAIL_REASONS[0],badNote:'',blank:false,blankNo:'',repl:null});
   render();
 }
-function rmDev(rid,i){ const r=S.requests.find(x=>x.id===rid); r.devices.splice(i,1); render(); }
+function rmDev(rid,i){
+  const r = S.requests.find(x=>x.id===rid), d = r.devices[i];
+  /* Убрали непригодный прибор — вместе с ним уходят его строка замены и запись в листе ожидания.
+     Убрали саму строку замены — у непригодного прибора снимается отметка «замена предложена»,
+     иначе в акте осталась бы ссылка на строку, которой больше нет. */
+  if(d){ dropReplWait(d); if(r.devices[i+1] && r.devices[i+1].swap) r.devices.splice(i+1,1); }
+  if(d && d.swap && r.devices[i-1] && r.devices[i-1].repl==='предложена') r.devices[i-1].repl = null;
+  r.devices.splice(i,1); render();
+}
+/* ---------- непригодный прибор и замена ----------
+   Поверка непригодного прибора всё равно выполнена и оплачивается: работа сделана,
+   результат отрицательный. Свидетельство о непригодности поверитель выписывает на
+   бумажном бланке от руки — CRM хранит только номер бланка, нумерацию заказчик ведёт
+   сам. Дальше поверителю остаётся предложить замену: согласился клиент — в акте
+   появляется строка замены того же носителя, отказался — адрес уходит оператору
+   в лист ожидания с причиной «нужна замена». */
+function dropReplWait(d){
+  if(!d || !d.replW) return;
+  S.waits = S.waits.filter(x=>x.id!==d.replW);
+  d.replW = null;
+}
+function setBad(rid,i,v){
+  const r = S.requests.find(x=>x.id===rid); if(!r) return;
+  const d = r.devices[i]; if(!d) return;
+  const bad = v==='bad';
+  if(bad===!!d.bad) return render();
+  d.bad = bad; d.badNote=''; d.blank=false; d.blankNo=''; d.repl=null;
+  if(bad){ d.badWhy = d.badWhy || FAIL_REASONS[0]; }
+  else {
+    /* Вернули «годен» — снимаем всё, что тянулось за непригодностью. */
+    dropReplWait(d);
+    if(r.devices[i+1] && r.devices[i+1].swap) r.devices.splice(i+1,1);
+    d.badWhy = FAIL_REASONS[0];
+  }
+  render();
+}
+function offerRepl(rid,i){
+  const r = S.requests.find(x=>x.id===rid); if(!r) return;
+  const d = r.devices[i]; if(!d || !d.bad) return;
+  dropReplWait(d);
+  d.repl = 'предложена';
+  const svc = replSvcOf(d);
+  const nd = {svc,type:d.type,grsi:d.grsi,carrier:d.carrier,serial:'',reading:'',room:d.room,
+    seal:false,pens:d.pens,photos:[],bad:false,badWhy:FAIL_REASONS[0],badNote:'',blank:false,blankNo:'',
+    repl:null,swap:true,swapOf:d.serial||''};
+  r.devices.splice(i+1,0,nd);
+  toast(`Добавлена строка замены: ${SVC[svc].name} · ${money(priceOfDev(r,nd))} клиенту, вам ${money(SVC[svc].rV)}. `
+    + 'Впишите заводской номер установленного прибора — без него позицию не закрыть.');
+}
+function postponeRepl(rid,i){
+  const r = S.requests.find(x=>x.id===rid); if(!r) return;
+  const d = r.devices[i]; if(!d || !d.bad) return;
+  /* Клиент отказался менять сейчас — строку замены из акта убираем: работа не выполнена. */
+  if(r.devices[i+1] && r.devices[i+1].swap) r.devices.splice(i+1,1);
+  dropReplWait(d);
+  d.repl = 'отложена';
+  const now = new Date();
+  const w = {id:'W'+(++S.seq),req:r.id,route:r.routeId,city:r.city,kind:'замена',reason:'Нужна замена',
+    note:`${d.serial?'Прибор №'+d.serial:'Прибор без читаемого номера'} непригоден · ${d.badWhy.toLowerCase()}`
+      + (d.badNote?' · '+d.badNote:'') + '. Клиент отложил замену.',
+    at:`${TODAY} ${pad(now.getHours())}:${pad(now.getMinutes())}`,by:r.verifier||S.me,state:'не обработана',to:null};
+  S.waits.push(w); d.replW = w.id;
+  toast(`${r.id}: замена отложена. Адрес ушёл в лист ожидания оператора с причиной «нужна замена» — он перезвонит клиенту.`);
+}
+function clearRepl(rid,i){
+  const r = S.requests.find(x=>x.id===rid); if(!r) return;
+  const d = r.devices[i]; if(!d) return;
+  dropReplWait(d); d.repl = null;
+  toast('Отметка об отложенной замене снята, адрес убран из листа ожидания.');
+}
 function rmPhoto(rid,i,k){ const r=S.requests.find(x=>x.id===rid); r.devices[i].photos.splice(k,1); S.lb=null; render(); }
 function addPhotos(rid,i,el){
   const list = [...el.files].slice(0,8); if(!list.length) return;
@@ -3238,7 +3437,15 @@ function closeStop(id,i){
   if(s.unserved) return toast('Точка отмечена не обслуженной — сначала верните её в работу.');
   if(!r.devices.length) return toast('В акте нет приборов — закрывать нечего.');
   if(r.devices.some(d=>!d.svc)) return toast('В каждой строке прибора выберите услугу.');
-  if(r.devices.some(d=>!String(d.serial).trim())) return toast('Заполните заводские номера приборов — они уходят в реестр УК.');
+  if(r.devices.some(d=>needSerial(d) && !String(d.serial).trim()))
+    return toast('Заполните заводские номера приборов — они уходят в реестр УК. Пустым номер остаётся только у прибора с причиной «нечитаемый номер».');
+  if(r.devices.some(d=>d.bad && d.badWhy==='Другое' && !String(d.badNote||'').trim()))
+    return toast('Причина непригодности «другое» — опишите словами: это уйдёт в свидетельство и в «Аршин».');
+  if(r.devices.some(d=>d.bad && d.blank && !String(d.blankNo||'').trim()))
+    return toast('Укажите номер выданного бланка о непригодности — по нему руководитель сверяет бумажную нумерацию.');
+  const bad = badDevs(r);
+  const noBlank = bad.filter(d=>!d.blank).length;
+  const post = bad.filter(d=>d.repl==='отложена').length;
   const noPh = r.devices.filter(d=>!d.photos.length).length;
   const noSeal = r.devices.filter(d=>!d.seal).length;
   const noRd = r.devices.filter(d=>!String(d.reading||'').trim()).length;
@@ -3254,6 +3461,9 @@ function closeStop(id,i){
     + (p.method==='не оплачено' ? ' Оплата не принята — адрес уйдёт в список «выполнено без оплаты».'
       : PAY_HAND.includes(p.method) ? ` Принято ${p.method}: ${money(p.amount)} — сумма легла в ваш подотчёт.`
       : ` Оплата по счёту: ${money(p.amount)} — деньги придут на расчётный счёт.`)
+    + (bad.length?` Непригодных приборов: ${bad.length} — поверка по ним оплачена.`:'')
+    + (noBlank?` Без бланка о непригодности: ${noBlank} — выпишите свидетельство и отметьте его номер.`:'')
+    + (post?` Отложенных замен: ${post} — адрес ждёт оператора в листе ожидания.`:'')
     + (noRd?` Без показаний: ${noRd} — их ждёт УК, допишите в акте.`:'')
     + (noPh?` Без фото: ${noPh} — оператор увидит подсветку.`:'')
     + (noSeal?` Без пломбы УК: ${noSeal} — в отчёт УК не пойдут.`:''));
@@ -3282,7 +3492,7 @@ function goPage(n){
   if(p.v==='myroute') S.openRoute = null;
   /* Оператор входит в поддержку — сразу говорим, сколько адресов ждёт решения. */
   if(p.v==='support'){ const n = waitsNew().length;
-    if(n) toast(`Лист ожидания: ${n} не обслуженных адрес(ов) ждут решения — перенос, маршрут сегодня или отмена.`); }
+    if(n) toast(`Лист ожидания: ${n} адрес(ов) ждут решения — перенос, маршрут сегодня, отмена или замена непригодного прибора.`); }
   render();
 }
 function step(d){ goPage(S.page+d); }
