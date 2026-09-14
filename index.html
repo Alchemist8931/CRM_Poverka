@@ -296,6 +296,11 @@ td b{color:var(--ink);font-weight:600}
 .stamp b{font-size:10px;font-weight:600;letter-spacing:.16em;display:block;color:var(--ink2)}
 .stamp span{font-size:9px;display:block;margin-top:3px}
 
+/* ---------- лист ожидания ---------- */
+.wtr small{display:block;font-size:10.5px;color:var(--ink3);margin-top:2px;line-height:1.4}
+.wtr.off td{opacity:.5}
+.wact{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+
 /* ---------- прочее ---------- */
 .chat{border:1px solid var(--border);border-radius:var(--r);background:var(--card);height:236px;overflow-y:auto;padding:12px}
 .msg{margin-bottom:11px;font-size:12.5px;line-height:1.45;color:var(--ink2)}
@@ -845,6 +850,9 @@ const DEV_TYPES = [
   {v:'Норма СВК-15',   grsi:'28151-09'}, {v:'ТСК-7 (тепло)',grsi:'44096-10'}
 ];
 const ROOMS = ['Кухня','Санузел','Иное'];
+/* Почему точка осталась не обслуженной: причину выбирает поверитель на адресе,
+   «другое» требует текста — по нему оператор звонит клиенту. */
+const WAIT_REASONS = ['Нет дома','Отказ на месте','Нет доступа к прибору','Перенос по просьбе клиента','Другое'];
 const STREETS = ['Ленина','Малышева','Победы','Крауля','Сурикова','Белинского','Уральская','Мира','Куйбышева','Гагарина','Есенина','Шевченко'];
 const ROLES = {
   operator:{label:'Оператор',who:'Ефимова О.',id:'o2'},
@@ -963,9 +971,9 @@ const blankOp = () => ({on:false,from:null,shiftSec:0,talkSec:0,calls:0,missed:0
 const S = {
   view:'intake', page:0, auth:false, user:ROLES.operator.who, role:'operator', me:ROLES.operator.id,
   theme:'light', dd:null, ddM:null,
-  city:CITIES[0], day:TODAY, staff:[], days:[], requests:[], routes:[], absences:[], seq:1000,
+  city:CITIES[0], day:TODAY, staff:[], days:[], requests:[], routes:[], absences:[], waits:[], seq:1000,
   toast:null, openRoute:null, openStop:null, call:null, lb:null, ukCity:'', ukSeal:'', pMonth:TODAY.slice(0,7), planTab:'day',
-  mMonth:TODAY.slice(0,7), meTab:'done', modal:null, edit:null,
+  mMonth:TODAY.slice(0,7), meTab:'done', modal:null, edit:null, uns:null,
   intake:blankIntake(), op:blankOp()
 };
 const staffById = id => S.staff.find(s=>s.id===id);
@@ -1066,6 +1074,31 @@ function seed(){
       });
     });
   }
+  /* Демо-поверитель должен видеть сегодняшний маршрут: если круговое назначение его
+     обошло, отдаём ему неначатый маршрут дня — по нему и отмечают не обслуженные точки. */
+  if(!S.routes.some(r=>r.date===TODAY && r.verifier===ROLES.verifier.id)){
+    const rt = S.routes.find(r=>r.date===TODAY && !r.stops.some(s=>s.done));
+    if(rt) rt.verifier = ROLES.verifier.id;
+  }
+  /* Вчерашние срывы: пять точек бригада не закрыла — они ждут решения оператора.
+     Причины разные, у «другого» — текст поверителя. */
+  const yest = iso(addDays(today,-1));
+  const yStops = S.routes.filter(r=>r.date===yest).flatMap(rt=>rt.stops.map(s=>({rt,s}))).filter(x=>x.s.done);
+  const UNS = [['Нет дома',''],
+    ['Отказ на месте','Клиент говорит, что поверку в июле уже делала другая контора'],
+    ['Нет доступа к прибору',''],
+    ['Перенос по просьбе клиента','Просит приехать в субботу до обеда'],
+    ['Другое','УК перекрыла стояк до вечера, воды в доме нет']];
+  const gap = Math.floor(yStops.length/UNS.length);
+  UNS.forEach(([reason,note],k)=>{
+    const x = gap ? yStops[k*gap] : null; if(!x) return;
+    const r = S.requests.find(q=>q.id===x.s.req); if(!r) return;
+    x.s.done = false; x.s.called = 'подтверждена';
+    x.s.unserved = {reason,note,at:`${yest} ${pad(rint(10,19))}:${pad(rint(0,59))}`,by:x.rt.verifier};
+    r.status = 'ожидание'; r.devices = []; r.services = []; r.verifier = null;
+    S.waits.push({id:'W'+(++S.seq),req:r.id,route:x.rt.id,city:r.city,reason,note,
+      at:x.s.unserved.at,by:x.rt.verifier,state:'не обработана',to:null});
+  });
   /* Свежие звонки этого дня: приняты, но в маршрут ещё не поставлены. */
   dayCities(TODAY).forEach(c=>{
     for(let k=0;k<rint(2,4);k++){
@@ -1243,7 +1276,7 @@ function toggleTheme(){ S.theme = S.theme==='light'?'dark':'light';
   document.documentElement.setAttribute('data-theme',S.theme); render(); }
 
 function badgeFor(v,role){
-  if(v==='support') return S.routes.filter(r=>r.date===TODAY&&r.status!=='выполнен').length;
+  if(v==='support') return S.routes.filter(r=>r.date===TODAY&&r.status!=='выполнен').length + waitsNew().length;
   if(v==='routes') return S.routes.filter(r=>r.date>=TODAY&&!r.verifier).length;
   if(v==='absence') return role==='supervisor'?S.absences.filter(a=>a.status==='на согласовании').length:0;
   if(v==='myroute') return S.routes.filter(r=>r.verifier===ROLES.verifier.id&&r.date===TODAY&&r.status!=='выполнен').length;
@@ -1443,7 +1476,7 @@ function viewIntake(){
       ${mine.length>25?`<p class="note" style="margin-top:10px">Показаны последние 25 из ${mine.length}.</p>`:''}`
       :`<div class="empty">Сегодня вы ещё не приняли ни одной заявки.</div>`}</div>`);
 }
-const reqTag = s => `<span class="tg ${s==='выполнена'?'t-ok':s==='отменена'?'t-err':s==='перенос'?'t-warn':s==='в маршруте'?'t-cold':'t-mut'}">${s}</span>`;
+const reqTag = s => `<span class="tg ${s==='выполнена'?'t-ok':s==='отменена'?'t-err':s==='перенос'||s==='ожидание'?'t-warn':s==='в маршруте'?'t-cold':'t-mut'}">${s}</span>`;
 function setIn(k,v){ S.intake[k]=v; render(); }
 
 /* ============ ПУЛЬТ ОПЕРАТОРА (заготовка под облачную АТС) ============ */
@@ -2052,6 +2085,8 @@ function viewSupport(){
           :'<span class="none">свободно</span>'}</div></div>`}).join('')}</div>
   </div>
 
+  ${waitList()}
+
   <div class="c"><h3>Заявки без маршрута · ${free.length}</h3>
     <p class="cap">Созданные сегодня и ещё не поставленные в маршрут. Добавляются в маршрут дня по городу.</p>
     ${free.length?`<table><thead><tr><th>Заявка</th><th>Город</th><th>Адрес</th><th>Клиент</th><th class="num">Окно</th><th>В маршрут</th></tr></thead><tbody>
@@ -2093,6 +2128,83 @@ function addToRoute(rid,reqId){
     return (A?.time||0)-(B?.time||0);});
   toast(`${r.id} добавлена в ${rt.id} на ${pad(r.time-1)}:00–${pad(r.time+1)}:00.`);
 }
+/* ============ ЛИСТ ОЖИДАНИЯ ============
+   Точку, которую не удалось выполнить, поверитель отмечает не обслуженной с причиной.
+   Заявка уходит в ожидание, а оператор решает: перенести на дату, поставить в маршрут
+   сегодня или отменить. Пока решения нет — запись висит в листе и считается в бейдже. */
+const waitsNew = () => S.waits.filter(w=>w.state==='не обработана');
+const waitOf = id => S.waits.find(w=>w.req===id && w.state==='не обработана');
+const waitTag = w => w.state==='перенесена' ? `<span class="tg t-cold">перенесена на ${ru(w.to)}</span>`
+  : w.state==='отменена' ? '<span class="tg t-err">отменена</span>'
+  : '<span class="tg t-warn">не обработана</span>';
+/* Поверитель: отметка «не обслужена» с причиной. */
+function openUnserved(id,i){ S.uns = {reason:WAIT_REASONS[0],note:''}; S.modal = {k:'uns',id,i}; render(); }
+function markUnserved(){
+  const rt = S.routes.find(r=>r.id===S.modal.id); if(!rt) return;
+  const s = rt.stops[S.modal.i], r = s && S.requests.find(x=>x.id===s.req); if(!r) return;
+  const K = S.uns || {reason:WAIT_REASONS[0],note:''}, note = (K.note||'').trim();
+  if(K.reason==='Другое' && !note) return toast('Причина «другое» — опишите словами, оператор будет звонить клиенту.');
+  const now = new Date();
+  s.unserved = {reason:K.reason,note,at:`${TODAY} ${pad(now.getHours())}:${pad(now.getMinutes())}`,by:rt.verifier};
+  s.done = false;
+  r.status = 'ожидание';
+  S.waits.push({id:'W'+(++S.seq),req:r.id,route:rt.id,city:r.city,reason:K.reason,note,
+    at:s.unserved.at,by:rt.verifier,state:'не обработана',to:null});
+  S.modal = null; S.uns = null; S.openStop = null;
+  toast(`${r.id}: ${addrOf(r)} — не обслужена, ${K.reason.toLowerCase()}. Заявка ушла в лист ожидания оператора.`);
+}
+/* Ошибся — пока оператор не взялся за запись, отметку можно снять. */
+function clearUnserved(id,i){
+  const rt = S.routes.find(r=>r.id===id); if(!rt) return;
+  const s = rt.stops[i], r = s && S.requests.find(x=>x.id===s.req); if(!r) return;
+  const w = waitOf(r.id); if(w) S.waits = S.waits.filter(x=>x!==w);
+  s.unserved = null; r.status = r.routeId ? 'в маршруте' : 'создана';
+  toast(`${r.id}: отметка снята, точка снова в работе.`);
+}
+/* Оператор: поставить не обслуженный адрес в маршрут сегодня. Старая точка остаётся
+   во вчерашнем маршруте следом неудачного выезда — по ней виден срыв. */
+function waitToRoute(wid,rtId){
+  const w = S.waits.find(x=>x.id===wid); if(!w) return;
+  const rt = S.routes.find(x=>x.id===rtId), r = S.requests.find(x=>x.id===w.req);
+  if(!rt||!r) return;
+  r.date = rt.date; r.status = 'создана';
+  w.state = 'перенесена'; w.to = rt.date;
+  addToRoute(rt.id,r.id);
+}
+function waitCancel(wid){
+  const w = S.waits.find(x=>x.id===wid); if(!w) return;
+  const r = S.requests.find(x=>x.id===w.req);
+  w.state = 'отменена'; w.to = null;
+  if(r) r.status = 'отменена';
+  toast(`${w.req}: заявка отменена, адрес снят с листа ожидания.`);
+}
+function waitList(){
+  const list = [...S.waits].sort((a,b)=>
+    (a.state==='не обработана'?0:1)-(b.state==='не обработана'?0:1) || b.at.localeCompare(a.at));
+  const nw = waitsNew().length, today_ = routesToday();
+  return `<div class="c"><h3>Лист ожидания · ${nw}</h3>
+    <p class="cap">Адреса, которые поверитель не смог обслужить. Оператор звонит клиенту и решает:
+      перенести на другую дату в карточке заявки, поставить в маршрут сегодня или отменить.</p>
+    ${list.length?`<table><thead><tr><th>Заявка</th><th>Адрес</th><th>Город</th><th>Причина</th><th>Когда и кто</th><th>Состояние</th><th>Действия</th></tr></thead><tbody>
+      ${list.map(w=>{
+        const r = S.requests.find(x=>x.id===w.req); if(!r) return '';
+        const open = w.state==='не обработана', fit = today_.filter(rt=>rt.city===r.city);
+        return `<tr class="wtr ${open?'':'off'}"><td class="mono">${w.req}</td>
+          <td style="min-width:170px"><b>${esc(addrOf(r))}</b><small>${esc(r.name)}</small></td>
+          <td>${esc(w.city)}</td>
+          <td style="min-width:150px">${esc(w.reason)}${w.note?`<small>${esc(w.note)}</small>`:''}</td>
+          <td class="mono" style="white-space:nowrap">${ru(w.at.slice(0,10))} ${w.at.slice(11)}<small>${esc(nameOf(w.by))}</small></td>
+          <td>${waitTag(w)}</td>
+          <td style="width:250px">${open?`<div class="wact">
+            <button class="g sm" onclick="openReq('${w.req}')">Перенести на дату</button>
+            ${fit.length?fit.map(rt=>`<button class="g sm" title="${rt.city} · ${rt.stops.length} точек · ${rt.status}"
+              onclick="waitToRoute('${w.id}','${rt.id}')">В ${rt.id} сегодня</button>`).join('')
+              :'<span class="note">сегодня нет маршрута по этому городу</span>'}
+            <button class="ib sm no" title="Отменить заявку" onclick="waitCancel('${w.id}')">${svg(I.no,13)}</button>
+          </div>`:`<span class="note">решение принято</span>`}</td></tr>`}).join('')}
+    </tbody></table>`
+    :`<div class="empty">Все выезды закрыты — не обслуженных адресов нет.</div>`}</div>`;
+}
 /* Карточка заявки правится поверх страницы: копия, чтобы «Отмена» ничего не портила. */
 function openReq(id){
   const r = S.requests.find(x=>x.id===id); if(!r) return;
@@ -2112,17 +2224,20 @@ function saveReq(){
    'entrance','floor','flat','intercom','time','cmtOp','cmtVf','svcs'].forEach(k=>r[k]=K[k]);
   const moved = r.date!==K.day;
   if(moved){ r.date = K.day; r.routeId = null; r.status = 'создана';
-    S.routes.forEach(rt=>{ const j=rt.stops.findIndex(s=>s.req===r.id); if(j>=0) rt.stops.splice(j,1); }); }
+    S.routes.forEach(rt=>{ const j=rt.stops.findIndex(s=>s.req===r.id); if(j>=0) rt.stops.splice(j,1); });
+    /* Перенос по дате — это и есть решение оператора по листу ожидания. */
+    const w = waitOf(r.id); if(w){ w.state='перенесена'; w.to=r.date; } }
   S.modal = null; S.edit = null;
   toast(moved ? `${r.id} перенесена на ${ru(r.date)} и снята с маршрута — поставьте её в маршрут той даты.`
               : `${r.id} обновлена.`);
 }
-function closeModal(){ S.modal=null; S.edit=null; S.supReq=null; render(); }
+function closeModal(){ S.modal=null; S.edit=null; S.supReq=null; S.uns=null; render(); }
 function modalLayer(){
   if(!S.modal) return '';
   if(S.modal.k==='day') return dayModal(S.modal.date);
   if(S.modal.k==='ops') return opsModal(S.modal.date);
   if(S.modal.k==='supreq') return supReqModal();
+  if(S.modal.k==='uns') return unsModal();
   if(S.modal.k==='rc') return rcModal();
   if(S.modal.k==='chat'){
     const rt = S.routes.find(r=>r.id===S.modal.id); if(!rt){ S.modal=null; return ''; }
@@ -2145,6 +2260,29 @@ function modalLayer(){
       <div class="row" style="margin-top:14px;justify-content:flex-end">
         <button class="g" onclick="closeModal()">Отмена</button>
         <button class="b long" onclick="saveReq()">Сохранить изменения</button></div>
+    </div></div>`;
+}
+/* Отметка «не обслужена»: причина обязательна, у «другого» — ещё и текст. */
+function unsModal(){
+  const rt = S.routes.find(r=>r.id===S.modal.id); if(!rt){ S.modal=null; return ''; }
+  const s = rt.stops[S.modal.i], r = s && S.requests.find(x=>x.id===s.req);
+  if(!r){ S.modal=null; return ''; }
+  if(!S.uns) S.uns = {reason:WAIT_REASONS[0],note:''};
+  const K = S.uns;
+  return `<div class="mask" onclick="if(event.target===this)closeModal()">
+    <div class="modal" style="width:min(560px,94vw)">
+      <div class="mhd"><h3>Точка не обслужена</h3>
+        <span class="note">${rt.id} · ${esc(addrOf(r))} · ${esc(r.name)}</span>
+        <button class="ib" onclick="closeModal()">${svg(I.no,15)}</button></div>
+      <p class="cap">Заявка уйдёт в лист ожидания оператора: он позвонит клиенту и назначит новую дату.</p>
+      <div class="f"><label>Причина</label>
+        ${SEL('unsR',K.reason,WAIT_REASONS,v=>{S.uns.reason=v; if(v!=='Другое') S.uns.note='';})}</div>
+      <div class="f"><label>Что произошло${K.reason==='Другое'?' · обязательно':''}</label>
+        <textarea class="fld" id="unsNote" placeholder="Коротко, своими словами — это увидит оператор"
+          oninput="S.uns.note=this.value">${esc(K.note)}</textarea></div>
+      <div class="row" style="margin-top:4px;justify-content:flex-end">
+        <button class="g" onclick="closeModal()">Отмена</button>
+        <button class="b" onclick="markUnserved()">Отметить не обслуженной</button></div>
     </div></div>`;
 }
 function chatPanel(rt){
@@ -2385,14 +2523,20 @@ function routeCard(rt){
         <div style="min-width:0"><b style="color:var(--ink)">${r.street}, ${r.house}${r.flat?', кв. '+r.flat:''}</b>
           <small>${pad(r.time-1)}:00–${pad(r.time+1)}:00 · ${esc(r.name)} · ${r.clientType==='Юрлицо'?'юр':'физ'}
             · под. ${r.entrance||'—'} · эт. ${r.floor||'—'} · ${r.intercom?'домофон работает':'<span style="color:var(--warning)">домофон не работает</span>'}</small>
-          <small>${r.devices.length?`${r.devices.length} приб. · ${ph} фото`:'акт не заполнен'}${note?` · <span style="color:var(--ink2)">${esc(note)}</span>`:''}</small></div>
+          <small>${r.devices.length?`${r.devices.length} приб. · ${ph} фото`:'акт не заполнен'}${note?` · <span style="color:var(--ink2)">${esc(note)}</span>`:''}</small>
+          ${s.unserved?`<small style="color:var(--warning)">не обслужена · ${esc(s.unserved.reason.toLowerCase())}${s.unserved.note?' · '+esc(s.unserved.note):''} · ${esc(s.unserved.at)}</small>`:''}</div>
         <div style="display:flex;gap:4px;align-items:center">
-          ${s.called?`<span class="tg ${s.called==='подтверждена'?'t-ok':s.called==='перенос'?'t-warn':'t-err'}">${s.called}</span>`
+          ${s.unserved?'<span class="tg t-err">не обслужена</span>'
+            :s.called?`<span class="tg ${s.called==='подтверждена'?'t-ok':s.called==='перенос'?'t-warn':'t-err'}">${s.called}</span>`
             :vf?'<span class="tg t-mut">без прозвонки</span>'
             :`<button class="ib sm ok" title="Подтверждена" onclick="callStop('${rt.id}',${i},'подтверждена')">${svg(I.ok,13)}</button>
               <button class="ib sm wr" title="Перенос" onclick="callStop('${rt.id}',${i},'перенос')">${svg(I.fwd,13)}</button>
               <button class="ib sm no" title="Отказ" onclick="callStop('${rt.id}',${i},'отказ')">${svg(I.no,13)}</button>`}
-          ${vf?`<button class="g sm" onclick="S.openStop='${r.id}';render()">${svg(I.act,12)}${s.done?'Акт':'Работы'}</button>`
+          ${vf?s.unserved
+              ? (waitOf(r.id)?`<button class="g sm" onclick="clearUnserved('${rt.id}',${i})">${svg(I.left,12)}Вернуть в работу</button>`
+                             :'<span class="note">оператор уже обработал</span>')
+              : `<button class="g sm" onclick="S.openStop='${r.id}';render()">${svg(I.act,12)}${s.done?'Акт':'Работы'}</button>
+                 ${s.done?'':`<button class="g sm" onclick="openUnserved('${rt.id}',${i})">${svg(I.no,12)}Не обслужена</button>`}`
             :`<button class="ib sm" title="Выше" onclick="move('${rt.id}',${i},-1)" ${i?'':'disabled'}>${svg(I.up,12)}</button>
               <button class="ib sm" title="Ниже" onclick="move('${rt.id}',${i},1)" ${i<rt.stops.length-1?'':'disabled'}>${svg(I.down,12)}</button>`}
         </div></div>`}).join('')}</div>
@@ -2563,8 +2707,9 @@ function viewMyRoute(){
   const mine = S.routes.filter(r=>r.verifier===S.me).sort((a,b)=>b.date.localeCompare(a.date));
   const rt = S.routes.find(r=>r.id===S.openRoute) || mine.find(r=>r.date===TODAY) || mine[0];
   if(!rt) return shell(null,`${cap()}<div class="c"><div class="empty">Маршрутов не назначено.</div></div>`);
+  /* Не обслуженные точки в акт не подставляем: по ним работает оператор, а не поверитель. */
   const stop = rt.stops.find(s=>s.req===S.openStop)
-    || rt.stops.find(s=>s.called==='подтверждена'&&!s.done) || rt.stops[0];
+    || rt.stops.find(s=>s.called==='подтверждена'&&!s.done&&!s.unserved) || rt.stops[0];
   const done = rt.stops.filter(s=>s.done).length;
   /* Маршруты — выпадающим списком в первой строке: вся ширина уходит карточке и акту. */
   const picker = `<div class="row" style="margin-bottom:14px;align-items:flex-end">
@@ -2589,7 +2734,7 @@ function workSheet(rt,s){
       <div><h3>Акт · точка ${pad(i0+1)} · ${esc(addrOf(r))}</h3>
         <div class="mono" style="font-size:11px;color:var(--ink3);margin-top:3px">${r.id} · ${esc(r.name)} · эт. ${r.floor||'—'} · ${r.intercom?'домофон работает':'домофон не работает'} · окно ${pad(r.time-1)}:00–${pad(r.time+1)}:00</div></div>
       <div style="display:flex;gap:6px;align-items:center">
-        ${s.done?'<span class="tg t-ok">позиция закрыта</span>':'<span class="tg t-mut">в работе</span>'}
+        ${s.unserved?'<span class="tg t-err">не обслужена</span>':s.done?'<span class="tg t-ok">позиция закрыта</span>':'<span class="tg t-mut">в работе</span>'}
         <button class="g sm" onclick="startCall('${esc(r.phone)}','основной','${esc(r.name)}')">${svg(I.phone,12)}Клиент</button></div>
     </div>
     <p class="cap">Услуга, заводской номер и показания счётчика — в строке прибора. К каждому прибору — фото выполненных работ, несколько кадров.</p>
@@ -2620,7 +2765,8 @@ function workSheet(rt,s){
     <div class="row" style="margin-top:16px;justify-content:space-between">
       <span class="note">${r.devices.length?`К оплате клиенту <b class="mono" style="color:var(--ink)">${money(priceOf(r))}</b>${disc?` · скидка пенсионеру ${money(disc)} за счёт компании`:''} · вам начислится <b class="mono" style="color:var(--ink)">${money(rateV(r))}</b>${noPh?' · <span style="color:var(--error)">есть приборы без фото</span>':''}`
         :'Приборов в акте нет. Добавьте то, что фактически обслужили на адресе.'}</span>
-      ${s.done?`<button class="g" onclick="reopenStop('${rt.id}',${i0})">Вернуть в работу</button>`
+      ${s.unserved?`<button class="g" onclick="clearUnserved('${rt.id}',${i0})">Вернуть в работу</button>`
+        :s.done?`<button class="g" onclick="reopenStop('${rt.id}',${i0})">Вернуть в работу</button>`
         :`<button class="b" onclick="closeStop('${rt.id}',${i0})" ${r.devices.length?'':'disabled'}>Закрыть позицию</button>`}</div>
   </div>`;
 }
@@ -2646,6 +2792,7 @@ function addPhotos(rid,i,el){
 }
 function closeStop(id,i){
   const rt = S.routes.find(r=>r.id===id), s = rt.stops[i], r = S.requests.find(x=>x.id===s.req);
+  if(s.unserved) return toast('Точка отмечена не обслуженной — сначала верните её в работу.');
   if(!r.devices.length) return toast('В акте нет приборов — закрывать нечего.');
   if(r.devices.some(d=>!d.svc)) return toast('В каждой строке прибора выберите услугу.');
   if(r.devices.some(d=>!String(d.serial).trim())) return toast('Заполните заводские номера приборов — они уходят в реестр УК.');
@@ -2680,6 +2827,9 @@ function goPage(n){
   /* Открываем конкретный маршрут: общий режим на 200 точек тяжело перерисовывать. */
   if(p.v==='support') S.openRoute = routesToday()[0]?.id || null;
   if(p.v==='myroute') S.openRoute = null;
+  /* Оператор входит в поддержку — сразу говорим, сколько адресов ждёт решения. */
+  if(p.v==='support'){ const n = waitsNew().length;
+    if(n) toast(`Лист ожидания: ${n} не обслуженных адрес(ов) ждут решения — перенос, маршрут сегодня или отмена.`); }
   render();
 }
 function step(d){ goPage(S.page+d); }
