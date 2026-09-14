@@ -431,6 +431,18 @@ td b{color:var(--ink);font-weight:600}
 /* Подотчёт: строка итога по бригаде отделена от строк поверителей. */
 tfoot td{border-top:1px solid var(--border);border-bottom:0;color:var(--ink);font-weight:600}
 
+/* ---------- знакомый клиент ---------- */
+.known{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:-4px 0 14px;padding:9px 12px;
+  border:1px solid var(--border2);border-left:2px solid var(--cold);border-radius:var(--r);
+  background:var(--card);font-size:11.5px;color:var(--ink2);line-height:1.5}
+.known b{color:var(--ink);font-weight:600}
+.known .last{color:var(--ink3)}
+.known .g{margin-left:auto;flex-shrink:0}
+.chist{margin-top:16px;border-top:1px solid var(--border);padding-top:13px}
+.chist>b{display:block;font-size:9.5px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink3);margin-bottom:8px}
+.chist .same{color:var(--cold)}
+
 /* ---------- поддержка маршрутов: шкала дня ---------- */
 .rrow{display:flex;align-items:center;gap:4px}
 .rrow .sb{flex:1;min-width:0}
@@ -914,8 +926,18 @@ const ru = s => s.split('-').reverse().join('.');
 const ruLong = s => { const [y,m,d] = s.split('-'); return `${d} ${MNG[+m-1]} ${y} г.`; };
 const money = n => Math.round(n).toLocaleString('ru-RU')+' ₽';
 const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+/* Генератор с фиксированным зерном: тестовое наполнение должно быть одинаковым
+   при каждой загрузке. Умножение ведём через Math.imul — у обычного `*` результат
+   вылетает за 2^53, младшие биты теряются, и поток чисел замыкается в цикл
+   на десяти тысячах вызовов. Наполнению нужно на порядок больше, поэтому
+   короткий цикл заново раздавал бы те же имена, адреса и телефоны. */
 let sd = 20260803;
-const rr = () => (sd = (sd*1103515245+12345) % 2147483648) / 2147483648;
+const rr = () => {
+  sd = (sd + 0x6D2B79F5) | 0;
+  let t = Math.imul(sd ^ sd>>>15, 1 | sd);
+  t = (t + Math.imul(t ^ t>>>7, 61 | t)) ^ t;
+  return ((t ^ t>>>14) >>> 0) / 4294967296;
+};
 const rnd = a => a[Math.floor(rr()*a.length)];
 const rint = (a,b) => a+Math.floor(rr()*(b-a+1));
 const randPhone = () => '+7 (9'+rint(10,99)+') '+rint(100,999)+'-'+rint(10,99)+'-'+rint(10,99);
@@ -995,7 +1017,7 @@ const S = {
   theme:'light', dd:null, ddM:null,
   city:CITIES[0], day:TODAY, staff:[], days:[], requests:[], routes:[], absences:[], waits:[], handovers:[], seq:1000,
   toast:null, openRoute:null, openStop:null, call:null, lb:null, ukCity:'', ukSeal:'', pMonth:TODAY.slice(0,7), planTab:'day',
-  mMonth:TODAY.slice(0,7), meTab:'done', modal:null, edit:null, uns:null, ho:null,
+  mMonth:TODAY.slice(0,7), meTab:'done', modal:null, edit:null, uns:null, ho:null, dupAsk:null,
   intake:blankIntake(), op:blankOp()
 };
 const staffById = id => S.staff.find(s=>s.id===id);
@@ -1060,9 +1082,6 @@ function seed(){
     cities.forEach(c=>caps[c]=per);
     S.days.push({date:ds,cities,crew:crew.sort(),ops,caps});
   }
-  const clients = ['Смирнова Т. А.','Волков Р. П.','Гареев И. М.','Дьяконова Л. С.','ООО «Стройсервис»',
-    'Пшеничников А. А.','ТСЖ «Восход»','Кириллова Н. В.','Абрамов Д. Ю.','ООО «Гарант-Плюс»',
-    'Мезенцева О. И.','Хайруллин Т. Р.','ТСН «Малышева 84»','Гончарова Е. В.','Поляков С. Н.'];
   const ops = S.staff.filter(s=>s.role==='operator'||s.role==='senior');
   let oi = 0;
   /* Набор идёт на две недели вперёд: ближние дни почти закрыты, дальние ещё добираются. */
@@ -1072,7 +1091,7 @@ function seed(){
     const cs = dayCities(ds); if(!cs.length) continue;
     const n = Math.round(planFor(ds)*rate*(.85+rr()*.3));
     for(let k=0;k<n;k++){
-      const r = mkReq(ds,cs[k%cs.length],clients);
+      const r = mkReq(ds,cs[k%cs.length]);
       r.operator = ops[oi++%ops.length].id; S.requests.push(r);
     }
   }
@@ -1124,7 +1143,7 @@ function seed(){
   /* Свежие звонки этого дня: приняты, но в маршрут ещё не поставлены. */
   dayCities(TODAY).forEach(c=>{
     for(let k=0;k<rint(2,4);k++){
-      const r = mkReq(TODAY,c,clients);
+      const r = mkReq(TODAY,c);
       r.created = TODAY; r.operator = ops[oi++%ops.length].id;
       r.time = rint(12,20); r.routeId = null; r.status = 'создана';
       S.requests.push(r);
@@ -1180,8 +1199,53 @@ const CMT_VF = ['','','','Собака во дворе, звонить с кал
   'Доступ к стояку через соседнюю квартиру'];
 const CONTACTS = ['','','Муж, Сергей','Дочь, Ольга','Сын, Дмитрий','Сосед, Пётр','Секретарь, Анна',
   'Бухгалтер, Ирина','Завхоз, Николай','Председатель, Тамара'];
-function mkReq(ds,city,clients){
-  const nm = rnd(clients), isU = /^(ООО|ТСЖ|ТСН)/.test(nm);
+const SURNAMES = ['Смирнова','Волков','Гареев','Дьяконова','Пшеничников','Кириллова','Абрамов','Мезенцева',
+  'Хайруллин','Гончарова','Поляков','Ерёмина','Костин','Лазарева','Юркин','Ситникова','Бабушкин','Трофимова',
+  'Нечаев','Шаламова','Кузьмин','Игнатьева','Белов','Романова','Дёмин','Савельева','Панкратов','Ильина',
+  'Чернов','Фомина','Аверьянов','Копылова','Зыков','Наумова','Щербаков','Кондратьева'];
+const INITIALS = ['А. А.','Т. А.','И. М.','Л. С.','Р. П.','Н. В.','Д. Ю.','О. И.','С. Н.','Е. В.','М. К.','В. Г.'];
+const ORG_NAMES = ['ООО «Стройсервис»','ООО «Гарант-Плюс»','ООО «Урал-Комфорт»','ООО «Теплодом»',
+  'ООО «Ремстрой-Е»','ООО «Промснаб»','ООО «Жилсервис-2»','ООО «Атлант-Урал»'];
+/* Клиент прототипа — это связка «номер телефона + адрес + кто платит».
+   Отдельной карточки клиента в модели пока нет: базы контактов нет, и всё,
+   что связывает заявки между собой, — совпадение номера. */
+function mkClient(phone,isU,city){
+  return {phone,city,ctype:isU?'Юрлицо':'Физлицо',
+    name:isU ? (rr()<.6 ? rnd(ORG_NAMES) : rnd(['ТСЖ','ТСН'])+' «'+rnd(STREETS)+' '+rint(1,120)+'»')
+             : rnd(SURNAMES)+' '+rnd(INITIALS),
+    inn:isU?String(rint(6600000000,6699999999)):'',
+    contact:isU?'Секретарь, Анна':rnd(CONTACTS),
+    phone2:'',contact2:'',email:randMail(isU),
+    street:rnd(STREETS),house:String(rint(1,120)),entrance:String(rint(1,6)),floor:String(rint(1,16)),
+    flat:isU?'':String(rint(1,240)),intercom:rr()<.78};
+}
+/* Постоянные клиенты: две сотни номеров, с которых заявка приходит не в первый раз.
+   В квартире счётчиков несколько, сроки поверки у них разъезжаются, после переноса
+   человек звонит заново — такие обращения и должны узнаваться на приёме по номеру.
+   Остальные заявки приходят с новых номеров: если бы весь набор шёл из пула,
+   история была бы у каждого адреса и плашка перестала бы что-либо значить. */
+const CLIENT_POOL = (()=>{
+  const seen = new Set(), out = [];
+  while(out.length<200){
+    const phone = randPhone();
+    if(seen.has(phone)) continue;
+    seen.add(phone);
+    /* Клиент живёт в одном городе: в крупные бригада ездит чаще, там и клиентов
+       больше. Иначе один и тот же адрес всплывал бы в истории по трём городам. */
+    const c = mkClient(phone,out.length%9===4,rr()<.45?rnd(BIG):rnd(SMALL));
+    /* Сколько раз человек обратится за два месяца наполнения: два-четыре.
+       Без потолка в малом городе весь набор ушёл бы на пять знакомых номеров. */
+    c.cap = rint(2,4); c.used = 0;
+    out.push(c);
+  }
+  return out;
+})();
+const POOL_BY_CITY = CLIENT_POOL.reduce((a,c)=>{ (a[c.city]=a[c.city]||[]).push(c); return a; },{});
+function mkReq(ds,city){
+  /* Примерно каждая четвёртая заявка в городе — от знакомого номера. */
+  const local = (POOL_BY_CITY[city] || []).filter(x=>x.used<x.cap);
+  const c = local.length && rr()<.3 ? rnd(local) : mkClient(randPhone(),rr()<.12,city);
+  if(c.cap) c.used++;
   const svc = rr()<.7?'wv' : rr()<.55?'wr' : rnd(['hv','hm','hd']);
   const heat = svc[0]==='h';
   const back = rint(0,6);
@@ -1190,15 +1254,15 @@ function mkReq(ds,city,clients){
      иначе весь будущий набор схлопнется в сегодня. */
   if(cr>TODAY) cr = iso(addDays(today,-rint(0,6)));
   const ph2 = rr()<.35;
-  return {id:'R'+(++S.seq),date:ds,created:cr>TODAY?TODAY:cr,city,clientType:isU?'Юрлицо':'Физлицо',name:nm,
-    inn:isU?String(rint(6600000000,6699999999)):'',
-    phone:randPhone(),
-    contact:isU?'Секретарь, Анна':rnd(CONTACTS),
+  return {id:'R'+(++S.seq),date:ds,created:cr>TODAY?TODAY:cr,city,clientType:c.ctype,name:c.name,
+    inn:c.inn,
+    phone:c.phone,
+    contact:c.contact,
     phone2:ph2?randPhone():'',
     contact2:ph2?rnd(CONTACTS):'',
-    email:randMail(isU),
-    street:rnd(STREETS),house:String(rint(1,120)),entrance:String(rint(1,6)),floor:String(rint(1,16)),
-    flat:isU?'':String(rint(1,240)),intercom:rr()<.78,time:rint(10,20),
+    email:c.email,
+    street:c.street,house:c.house,entrance:c.entrance,floor:c.floor,
+    flat:c.flat,intercom:c.intercom,time:rint(10,20),
     cmtOp:rnd(CMT_OP),cmtVf:rnd(CMT_VF),
     svcs:[svc],services:[],devices:[],status:'создана',routeId:null,operator:null,from:null,
     expect:{svc,heat,nd:heat?1:rint(1,2)}};
@@ -1500,6 +1564,7 @@ function reqForm(K,T,p,day,onDay){
       <div class="f" style="margin-bottom:0"><label>ФИО контакта</label>
         <input class="fld" id="${p}Contact2" value="${esc(K.contact2)}" oninput="${T}.contact2=this.value" placeholder="кто отвечает"></div>
     </div>
+    ${knownClient(K,T)}
     <div class="f" style="margin-bottom:14px"><label>Услуги · ${want.length||'не выбраны'}</label>
       <div class="tgls sk">${SERVICES.map(s=>`<button type="button" class="tgl" aria-pressed="${want.includes(s.id)}"
         title="${esc(s.name)}" onclick="tgSvc('${T}','${s.id}')">${esc(s.name)}</button>`).join('')}</div></div>
@@ -1552,6 +1617,104 @@ function slotsFor(ids,city,limit){
 /* Формой заявки пользуются три места: приём оператора, карточка правки и заявка руководителя. */
 const formOf = path => path==='S.edit'?S.edit : path==='S.supReq'?S.supReq : S.intake;
 function setF(path,k,v){ formOf(path)[k]=v; render(); }
+/* Дата, на которую оформляется заявка: у приёма она общая для экрана, у двух
+   остальных форм лежит в самой форме. */
+const dayOf = path => path==='S.intake' ? S.day : (formOf(path)||{}).day;
+/* Правка открытой заявки не должна считать саму себя прежним обращением. */
+const selfOf = path => path==='S.edit' ? (S.modal||{}).id : null;
+
+/* ---------- клиент по номеру телефона ---------- */
+/* Карточки клиента в модели нет: справочника контактов у заказчика тоже нет,
+   а телефон он и так спрашивает первым. Поэтому «тот же клиент» — это тот же
+   номер, набранный в основном или в дополнительном поле любой прежней заявки. */
+function histFor(phone,exceptId){
+  const d = digitsOf(phone);
+  if(d.length!==10) return [];
+  return S.requests.filter(r=>r.id!==exceptId && (digitsOf(r.phone)===d || digitsOf(r.phone2)===d))
+    .sort((a,b)=> b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+}
+const sameAddr = (a,b) => nrm(a.street)===nrm(b.street) && nrm(a.house)===nrm(b.house)
+  && nrm(a.flat)===nrm(b.flat) && nrm(a.entrance)===nrm(b.entrance);
+const nrm = v => String(v==null?'':v).trim().toLowerCase();
+/* Что заказано: у выполненной заявки — услуги из акта, у остальных — то, что записал оператор. */
+const svcShort = r => {
+  const ids = (r.services && r.services.length ? r.services : (r.svcs||[])).filter(id=>SVC[id]);
+  return ids.length ? ids.map(id=>SVC[id].sh).join(', ') : '—';
+};
+/* Плашка под телефоном: как только номер набран целиком, оператор видит,
+   что этот клиент уже обращался, и может не переспрашивать адрес заново. */
+function knownClient(K,T){
+  const h = histFor(K.phone,selfOf(T));
+  if(!h.length) return '';
+  const last = h[0];
+  return `<div class="known">
+    <span><b>Клиент уже обращался:</b> ${h.length} ${plural(h.length,'заявка','заявки','заявок')} с этого номера.
+      <span class="last">Последняя ${ru(last.date)} · ${esc(last.city)}, ${esc(addrOf(last))} · ${esc(last.name)}</span></span>
+    <button type="button" class="g sm" onclick="fillClient('${T}')"
+      title="Подставит ФИО, тип клиента, ИНН, адрес и контакты из последней заявки">Подставить данные</button>
+  </div>`;
+}
+const plural = (n,a,b,c) => { const d=n%100, e=n%10;
+  return d>10&&d<20 ? c : e===1 ? a : e>1&&e<5 ? b : c; };
+/* Подставляем всё, что у клиента не меняется от обращения к обращению.
+   Дату, услуги и комментарии не трогаем — они у нового обращения свои. */
+function fillClient(T){
+  const K = formOf(T);
+  const h = histFor(K.phone,selfOf(T));
+  if(!h.length) return toast('Прежних заявок с этого номера нет — подставлять нечего.');
+  const s = h[0];
+  K.ctype = s.clientType; K.name = s.name; K.inn = s.inn || '';
+  K.contact = s.contact || ''; K.phone2 = s.phone2 || ''; K.contact2 = s.contact2 || '';
+  K.email = s.email || '';
+  K.street = s.street; K.house = s.house; K.entrance = s.entrance;
+  K.floor = s.floor; K.flat = s.flat; K.intercom = !!s.intercom;
+  /* Город подставляем только если бригада в этот день туда едет: иначе форма
+     всё равно вернёт его к городу дня, и оператор не поймёт, что произошло. */
+  const cs = dayCities(dayOf(T));
+  if(cs.includes(s.city)) K.city = s.city;
+  toast(`Данные из ${s.id} подставлены: ${s.name}, ${s.city}, ${addrOf(s)}. Проверьте адрес — клиент мог переехать.`);
+}
+/* История клиента в карточке заявки: чем этот номер занимался раньше.
+   Оператор смотрит сюда перед звонком — видно, что уже делали, где и чем кончилось. */
+function clientHistory(r){
+  const h = histFor(r.phone,r.id);
+  if(!h.length) return `<div class="chist"><b>История клиента</b>
+    <p class="note">Других заявок с номера ${esc(fmtPhone(r.phone))} нет — клиент обратился впервые.</p></div>`;
+  const rows = h.slice(0,12);
+  return `<div class="chist"><b>История клиента · ${h.length} ${plural(h.length,'заявка','заявки','заявок')} с номера ${esc(fmtPhone(r.phone))}</b>
+    <table><thead><tr><th>Заявка</th><th class="num">Дата</th><th>Город</th><th>Адрес</th><th>Услуги</th><th>Статус</th></tr></thead><tbody>
+      ${rows.map(q=>`<tr><td class="mono"><b>${q.id}</b></td><td class="num mono">${ru(q.date)}</td>
+        <td>${esc(q.city)}</td>
+        <td>${esc(addrOf(q))}${sameAddr(q,r)?' <span class="same">· тот же адрес</span>':''}</td>
+        <td>${esc(svcShort(q))}</td><td>${reqTag(q.status)}</td></tr>`).join('')}</tbody></table>
+    ${h.length>rows.length?`<p class="note" style="margin-top:8px">Показаны последние ${rows.length} из ${h.length}.</p>`:''}</div>`;
+}
+
+/* ---------- дубль при приёме ---------- */
+/* Тот же телефон, тот же адрес, та же дата — это либо клиент позвонил второй раз
+   и попал к другому оператору, либо первое сохранение уже прошло. Молча не пишем:
+   первое нажатие предупреждает, второе сохраняет как есть — бывает и правда две
+   заявки на день, например поверка в квартире и в офисе того же человека. */
+function dupOf(K,ds,exceptId){
+  const d = digitsOf(K.phone);
+  if(d.length!==10 || !ds) return null;
+  const city = K.city || dayCities(ds)[0] || '';
+  return S.requests.find(r=>r.id!==exceptId && r.date===ds && r.status!=='отменена'
+    && digitsOf(r.phone)===d && r.city===city && sameAddr(r,K)) || null;
+}
+const dupKey = (K,ds,exceptId) => [exceptId||'',ds,digitsOf(K.phone),K.city||'',
+  nrm(K.street),nrm(K.house),nrm(K.entrance),nrm(K.flat)].join('|');
+/* Ждём ли сейчас повторного нажатия по этой самой форме. */
+const dupPending = (K,ds,exceptId) => !!S.dupAsk && S.dupAsk===dupKey(K,ds,exceptId);
+function dupGuard(K,ds,exceptId){
+  const dup = dupOf(K,ds,exceptId);
+  if(!dup){ S.dupAsk = null; return false; }
+  if(dupPending(K,ds,exceptId)){ S.dupAsk = null; return false; }
+  S.dupAsk = dupKey(K,ds,exceptId);
+  toast(`Похоже на дубль: ${dup.id} на ${ru(ds)}, тот же телефон и адрес, статус «${dup.status}». `
+    + 'Заявка не сохранена. Нажмите ещё раз, если обращение всё-таки второе.');
+  return true;
+}
 
 /* ---------- приём заявки ---------- */
 function viewIntake(){
@@ -1573,7 +1736,8 @@ function viewIntake(){
     ${reqForm(K,'S.intake','in',S.day,v=>{pickDay(v);})}
     <div class="row" style="margin-top:14px;align-items:center;justify-content:flex-end">
       ${lock?`<span class="note" style="flex:1">Состав дня зафиксирован: ${lock}. Заявку на ${ru(S.day)} теперь добавляет только руководитель — он же ставит её в нужный маршрут.</span>`:''}
-      <button class="b long" onclick="createReq()" ${closed?'disabled':''}>${closed?'Приём закрыт: '+why:'Сохранить заявку'}</button></div>
+      <button class="b long" onclick="createReq()" ${closed?'disabled':''}>${closed?'Приём закрыт: '+why
+        : dupPending(K,S.day,null)?'Сохранить как вторую заявку':'Сохранить заявку'}</button></div>
   </div>
 
   <div class="c"><h3>Мои заявки за сегодня · ${mine.length}</h3>
@@ -1728,6 +1892,7 @@ function createReq(){
   const lock = lockedFor(S.day);
   if(lock) return toast(`${ru(S.day)}: приём закрыт — ${lock}. Добавить заявку на эту дату может только руководитель.`);
   const bad = reqProblem(K,S.day); if(bad) return toast(bad);
+  if(dupGuard(K,S.day,null)) return;
   const r = reqFrom(K,S.day,S.me);
   S.requests.push(r);
   const wasAcw = S.op.acw>0;
@@ -1755,6 +1920,7 @@ function createSupReq(){
   const K = S.supReq; if(!K) return;
   const ds = K.day;
   const bad = reqProblem(K,ds); if(bad) return toast(bad);
+  if(dupGuard(K,ds,null)) return;
   const rt = K.route ? S.routes.find(r=>r.id===K.route && r.date===ds) : null;
   if(K.route && !rt) return toast('Этого маршрута на дату больше нет — выберите другой.');
   const r = reqFrom(K,ds,S.me);
@@ -1782,7 +1948,7 @@ function supReqModal(){
         <span class="note" style="flex:1">${rts.length
           ? 'Точка встанет в маршрут по времени прибытия — даже если маршрут уже в работе.'
           : 'На эту дату маршрутов ещё нет — заявка останется в свободных.'}</span>
-        <button class="b" onclick="createSupReq()">Создать заявку</button>
+        <button class="b" onclick="createSupReq()">${dupPending(K,ds,null)?'Создать как вторую':'Создать заявку'}</button>
       </div>
     </div></div>`;
 }
@@ -1811,6 +1977,11 @@ function phoneIn(el,k,T){
   if(typeof el.setSelectionRange==='function'){ try{ el.setSelectionRange(end,end); }catch(e){} }
   const btn = el.parentElement.querySelector('.call');
   if(btn) btn.disabled = d.length<10;
+  /* Обычный набор идёт без перерисовки — иначе каретка прыгает. Но на границе
+     «номер собран целиком» под полем появляется или исчезает плашка о прежних
+     обращениях, а её рисует сама форма: здесь перерисовываем один раз,
+     фокус и каретку render() возвращает на место. */
+  if(k==='phone' && d!==digitsOf(prev) && (d.length===10 || digitsOf(prev).length===10)) render();
 }
 function PHONE(id,val,key,kind,T){
   const full = digitsOf(val).length===10;
@@ -2335,6 +2506,7 @@ function saveReq(){
   if(digitsOf(K.phone).length!==10) return toast('Телефон неполный: нужно 10 цифр после +7.');
   if(!mailOk(K.email)) return toast('Почта клиента введена с ошибкой — поправьте или очистите поле.');
   if(!K.house.trim()) return toast('Укажите номер дома.');
+  if(dupGuard(K,K.day,r.id)) return;
   ['ctype','name','inn','phone','contact','phone2','contact2','email','city','street','house',
    'entrance','floor','flat','intercom','time','cmtOp','cmtVf','svcs'].forEach(k=>r[k]=K[k]);
   const moved = r.date!==K.day;
@@ -2346,7 +2518,7 @@ function saveReq(){
   toast(moved ? `${r.id} перенесена на ${ru(r.date)} и снята с маршрута — поставьте её в маршрут той даты.`
               : `${r.id} обновлена.`);
 }
-function closeModal(){ S.modal=null; S.edit=null; S.supReq=null; S.uns=null; S.ho=null; render(); }
+function closeModal(){ S.modal=null; S.edit=null; S.supReq=null; S.uns=null; S.ho=null; S.dupAsk=null; render(); }
 function modalLayer(){
   if(!S.modal) return '';
   if(S.modal.k==='ho') return hoModal();
@@ -2373,9 +2545,10 @@ function modalLayer(){
         <span class="note">${reqTag(r.status)} · создана ${ru(r.created)}${r.routeId?' · маршрут '+r.routeId:''}</span>
         <button class="ib" onclick="closeModal()">${svg(I.no,15)}</button></div>
       ${reqForm(K,'S.edit','ed',K.day,v=>{K.day=v;})}
+      ${clientHistory(r)}
       <div class="row" style="margin-top:14px;justify-content:flex-end">
         <button class="g" onclick="closeModal()">Отмена</button>
-        <button class="b long" onclick="saveReq()">Сохранить изменения</button></div>
+        <button class="b long" onclick="saveReq()">${dupPending(K,K.day,r.id)?'Сохранить как вторую заявку':'Сохранить изменения'}</button></div>
     </div></div>`;
 }
 /* Отметка «не обслужена»: причина обязательна, у «другого» — ещё и текст. */
