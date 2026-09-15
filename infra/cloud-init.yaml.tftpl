@@ -1,0 +1,169 @@
+#cloud-config
+# Первичная настройка ВМ CRM «Учёткин». Файл собирается Terraform: всё, что
+# зависит от контура и от доменного имени, приходит переменными, а не правится руками.
+timezone: ${timezone}
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - docker.io
+  - docker-compose-v2
+  - jq
+  - curl
+  - ca-certificates
+  - unattended-upgrades
+  - chrony
+
+users:
+  - name: ${vm_user}
+    gecos: Сервисный пользователь CRM «Учёткин»
+    groups: [docker, sudo]
+    shell: /bin/bash
+    sudo: "ALL=(ALL) NOPASSWD:ALL"
+    lock_passwd: true
+
+write_files:
+  # ── Конфигурация приложения. Секретов здесь нет: только адреса и идентификаторы
+  #    секретов в Lockbox, которые приложение читает при старте по сервисному аккаунту.
+  - path: /etc/uchetkin/app.env
+    permissions: "0640"
+    owner: root:root
+    content: |
+      APP_ENV=${env}
+      TZ=${timezone}
+      APP_DOMAIN=${app_domain}
+      PUBLIC_BASE_URL=${public_base_url}
+      API_BASE_URL=${api_base_url}
+      WEBHOOK_BASE_URL=${webhook_base_url}
+      COOKIE_DOMAIN=${cookie_domain}
+      API_PATH_PREFIX=${api_path_prefix}
+      HEALTH_PATH=${health_check_path}
+      TLS_BY_CADDY=${tls_by_caddy}
+      YC_FOLDER_ID=${folder_id}
+      S3_ENDPOINT=https://storage.yandexcloud.net
+      ACTS_BUCKET=${acts_bucket}
+      CALLS_BUCKET=${calls_bucket}
+      MANAGED_POSTGRES=${managed_postgres}
+      PGHOST=${pg_host}
+      PGPORT=${pg_port}
+      PGDATABASE=${pg_database}
+      PGUSER=${pg_user}
+      LOCKBOX_DB_SECRET_ID=${lockbox_db_secret_id}
+      LOCKBOX_APP_SECRET_ID=${lockbox_app_secret_id}
+      LOCKBOX_STORAGE_SECRET_ID=${lockbox_storage_secret_id}
+%{ for name, id in lockbox_external_secrets ~}
+      LOCKBOX_${upper(name)}_SECRET_ID=${id}
+%{ endfor ~}
+
+  # ── То же самое для собранного фронта: адрес API отдаётся ему файлом,
+  #    а не зашивается в сборку. Переезд на боевой домен фронт не пересобирает.
+  - path: /opt/uchetkin/config/frontend.json
+    permissions: "0644"
+    owner: root:root
+    content: |
+      {
+        "env": "${env}",
+        "apiBaseUrl": "${api_base_url}",
+        "publicBaseUrl": "${public_base_url}",
+        "healthPath": "${health_check_path}"
+      }
+
+  # ── Домен для Caddy. Caddy сам получает и продлевает сертификат Let's Encrypt.
+  - path: /etc/uchetkin/caddy.env
+    permissions: "0644"
+    owner: root:root
+    content: |
+      SITE_ADDRESS=${tls_by_caddy ? app_domain : ":80"}
+      API_UPSTREAM=api:3000
+
+  # ── Ротация журналов Docker: иначе они съедают диск ВМ.
+  - path: /etc/docker/daemon.json
+    permissions: "0644"
+    owner: root:root
+    content: |
+      {
+        "log-driver": "json-file",
+        "log-opts": { "max-size": "50m", "max-file": "5" }
+      }
+
+  # ── Агент мониторинга. Метрики уходят в Cloud Monitoring, авторизация —
+  #    по сервисному аккаунту ВМ через метаданные, без ключей на диске.
+  - path: /etc/uchetkin/unified-agent.yml
+    permissions: "0644"
+    owner: root:root
+    content: |
+      status:
+        port: 16241
+      storages:
+        - name: main
+          plugin: fs
+          config:
+            directory: /var/lib/yandex/unified_agent/main
+            max_partition_size: 100mb
+      channels:
+        - name: cloud_monitoring
+          channel:
+            pipe:
+              - storage_ref:
+                  name: main
+            output:
+              plugin: yc_metrics
+              config:
+                folder_id: ${folder_id}
+                iam:
+                  cloud_meta: {}
+      routes:
+        - input:
+            plugin: linux_metrics
+            config:
+              namespace: sys
+          channel:
+            channel_ref:
+              name: cloud_monitoring
+
+  - path: /opt/uchetkin/compose.platform.yml
+    permissions: "0644"
+    owner: root:root
+    content: |
+      # Платформенная часть: она есть на ВМ с первого запуска и не зависит
+      # от выкладки приложения. Сборка и обновление контейнеров api, worker и
+      # caddy — пункт плана cloud-cicd.
+      services:
+        unified-agent:
+          image: ${monitoring_agent_image}
+          container_name: unified-agent
+          restart: always
+          network_mode: host
+          pid: host
+          privileged: true
+          environment:
+            - FOLDER_ID=${folder_id}
+          volumes:
+            - /etc/uchetkin/unified-agent.yml:/etc/yandex/unified_agent/config.yml:ro
+            - /var/lib/yandex/unified_agent:/var/lib/yandex/unified_agent
+            - /proc:/ua_proc:ro
+
+  - path: /etc/uchetkin/README
+    permissions: "0644"
+    owner: root:root
+    content: |
+      Машина описана в Terraform: CRM_Poverka/infra. Руками её не настраивают —
+      правка здесь потеряется при пересоздании ВМ.
+        /etc/uchetkin/app.env            конфигурация приложения (без секретов)
+        /opt/uchetkin/config/            конфигурация фронта
+        /opt/uchetkin/compose.platform.yml  агент мониторинга
+        /opt/uchetkin/compose.yml        приложение, кладёт выкладка (cloud-cicd)
+      Секреты лежат в Lockbox и читаются приложением при старте.
+
+runcmd:
+  - [mkdir, -p, /opt/uchetkin/config, /var/lib/yandex/unified_agent/main]
+  - [chown, -R, "${vm_user}:${vm_user}", /opt/uchetkin]
+  - [systemctl, enable, --now, docker]
+  - [systemctl, restart, docker]
+%{ if monitoring_agent_enabled ~}
+  - [docker, compose, -f, /opt/uchetkin/compose.platform.yml, up, -d]
+%{ endif ~}
+  - [systemctl, enable, --now, unattended-upgrades]
+
+final_message: "ВМ ${env} CRM «Учёткин» готова: docker и агент мониторинга подняты, конфигурация в /etc/uchetkin"

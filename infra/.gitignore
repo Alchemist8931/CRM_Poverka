@@ -1,0 +1,24 @@
+# Рабочие каталоги и всё, что может унести секреты в репозиторий.
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+
+# Локальные переопределения и любые файлы с реальными значениями.
+*.auto.tfvars
+*.auto.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Ключи сервисных аккаунтов.
+*.pem
+*.key
+key.json
+authorized_key.json
+sa-key*.json
