@@ -607,6 +607,110 @@ tfoot td{border-top:1px solid var(--border);border-bottom:0;color:var(--ink);fon
 .lb .bar .ib{border-color:rgba(231,231,231,.28);color:#E7E7E7}
 .lb .bar .ib:hover{border-color:#E7E7E7}
 .lb .cls{position:absolute;top:22px;right:22px}
+
+/* Кнопка, сворачивающая чат маршрута, живёт только на телефоне: на компьютере
+   чат стоит рядом с карточкой маршрута и прятать его незачем. */
+.mchatt{display:none}
+
+/* ============ ТЕЛЕФОН (до 768 px) ============
+   Поверитель работает на адресе клиента с телефона: ему нужны страница
+   «Мой маршрут» и акт. Остальные роли сидят за компьютером, поэтому всё
+   ниже заперто в медиазапрос и десктопную вёрстку не трогает. */
+@media (max-width:768px){
+  /* ---- каркас: боковой рейл уходит вниз панелью ---- */
+  .stage,.app{height:100dvh}
+  .app{border-left:0;border-right:0}
+  .rail{position:fixed;left:0;right:0;bottom:0;z-index:50;width:auto;height:58px;
+    flex-direction:row;align-items:center;justify-content:space-between;gap:4px;padding:0 10px;
+    border-right:0;border-top:1px solid var(--border);background:var(--bg)}
+  .rail .logo{display:none}
+  .rail .nav{flex:1;flex-direction:row;align-items:center;justify-content:flex-start;
+    gap:4px;height:100%;overflow-x:auto;overflow-y:hidden;padding-bottom:0}
+  /* В панели — иконки только текущей роли: чужие страницы с телефона не листают. */
+  .rail .grp:not(.cur){display:none}
+  .rail .grp{flex-direction:row;width:auto;gap:4px;padding-top:0}
+  .rail .grp + .grp{margin-top:0}
+  .rail .grp::after,.rail .grp + .grp::before{display:none}
+  .rail .nav .nb,.rail .nb{width:44px;height:44px;flex-shrink:0}
+  .rail .foot{margin-top:0;flex-direction:row;align-items:center;gap:4px}
+  .rail .ava{display:none}
+  .col{min-width:0}
+  .body{flex-direction:column}
+  .side{width:auto;flex-direction:row;gap:6px;padding:10px 12px;overflow-x:auto;
+    border-right:0;border-bottom:1px solid var(--border2)}
+  .side .sb{width:auto;white-space:nowrap;min-height:44px}
+  .main{padding:14px 12px 78px}            /* снизу место под нижнюю панель */
+  /* ---- шапка: название страницы и дата ---- */
+  .hd{height:52px;padding:0 12px;gap:8px}
+  .hd .ttl .lbl,.hd .ttl .tg,.hd .step,.hd .chip,.hd .ib{display:none}
+  .hd .ttl b{font-size:15px}
+  .hd .mono{margin-left:auto}
+  /* ---- палец вместо мыши: нажимаемое не меньше 44 px ---- */
+  .b,.g,.opt{min-height:44px;height:auto}
+  .b.sm,.g.sm{min-height:44px;height:auto;font-size:12.5px;padding:0 12px}
+  .ib,.ib.sm{width:44px;height:44px}
+  .fld,.fld.sm{min-height:44px}
+  textarea.fld{min-height:88px}
+  .phone{min-height:44px}
+  .phone .call{height:36px}
+  .chk{min-height:44px}
+  .seg button,.seg.sm button{min-height:44px}
+  .pop .o{min-height:44px}
+  .cal-g button{height:38px}
+  .tgl{min-height:40px}
+  /* ---- всё в одну колонку ---- */
+  .c{padding:12px}
+  .g2,.g3,.g4,.payg,.rcbody,.kpi{grid-template-columns:1fr}
+  .dev{grid-template-columns:1fr 1fr}
+  .main .f{width:100%!important;min-width:0}
+  .chip2,.tgls.sk{min-width:0}
+  .login{width:100%;max-width:400px}
+  .modal{width:100%;padding:14px 12px 16px}
+  .mask{padding:16px 10px}
+  .toast{left:12px;right:12px;bottom:70px;max-width:none}
+  /* ---- карточка маршрута: точки крупнее, чат — в кнопку ---- */
+  /* Точки крупнее, но список остаётся прокручиваемым: иначе на маршруте
+     из двух десятков адресов до акта пришлось бы листать полэкрана. */
+  .stops{max-height:52vh}
+  .stop{grid-template-columns:26px 1fr;gap:8px;padding:11px 2px;font-size:14px}
+  .stop small{font-size:12px}
+  .stop > div:last-child{grid-column:1/-1;flex-wrap:wrap}
+  /* Чат свёрнут в кнопку: на телефоне он мешает акту, но нужен под рукой. */
+  .mchat{display:flex;flex-direction:column}
+  .mchat > h3{order:-2}
+  .mchatt{order:-1;display:inline-flex;align-self:stretch;margin-top:10px}
+  .mchat:not(.open) > .cap,.mchat:not(.open) > .chat,.mchat:not(.open) > .row{display:none}
+  .chat{height:200px}
+  /* Шапка акта: адрес во всю ширину, статус и звонок клиенту — строкой ниже. */
+  .acthd{flex-wrap:wrap}
+  .acthd > div:first-child{flex:1 1 100%}
+  /* ---- акт: строка прибора в три ряда ----
+     Первые два ряда держат проценты в flex-basis, третий (место, пломба,
+     пенсионер, результат, удаление) переносится сам по ширине экрана. */
+  .wtop{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+  .wtop > *{min-width:0}
+  .wtop > *:nth-child(1),.wtop > *:nth-child(2){flex:1 1 calc(50% - 3px)}
+  .wtop > *:nth-child(3){flex:1 1 calc(26% - 4px)}
+  .wtop > *:nth-child(4),.wtop > *:nth-child(5){flex:1 1 calc(37% - 4px)}
+  .wtop > *:nth-child(6){flex:1 1 calc(25% - 6px)}
+  .wtop > *:nth-child(n+7){flex:0 0 auto}
+  .wtop .chk{font-size:11.5px;gap:6px}
+  /* Результат поверки уходит полосой под три ряда: «годен / не годен» рядом
+     с пломбой и пенсионером на 390 px уже не помещается. */
+  .wtop > *:nth-child(9){order:1;flex:1 1 100%}
+  .wtop > *:last-child{margin-left:auto}
+  .wbad .sel,.wbad input.fld,.wbad input.fld.no{width:100%}
+  /* ---- фото: сетка по три в ряд, съёмка во всю ширину ---- */
+  .wbot{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-items:center;margin-top:10px}
+  .wbot > .lbl,.wbot > .note,.wbot > .nophoto,.wbot .addph{grid-column:1/-1}
+  .phw{width:100%;height:104px}
+  /* Крестик кадра — тоже под палец: наведения на телефоне нет, поэтому он виден
+     всегда. Нажимается угол 44×44, а закрашен из него только кружок. */
+  .phw .x{top:0;right:0;width:44px;height:44px;opacity:1;border:0;background:transparent}
+  .phw .x svg{width:11px;height:11px;box-sizing:content-box;padding:6px;
+    background:var(--card);border:1px solid var(--border);border-radius:50%}
+  .addph{justify-content:center}
+}
 </style>
 </head>
 <body>
@@ -1049,7 +1153,7 @@ const S = {
   theme:'light', dd:null, ddM:null,
   city:CITIES[0], day:TODAY, staff:[], days:[], requests:[], routes:[], absences:[], waits:[], handovers:[], seq:1000,
   toast:null, openRoute:null, openStop:null, call:null, lb:null, ukCity:'', ukSeal:'', pMonth:TODAY.slice(0,7), planTab:'day',
-  mMonth:TODAY.slice(0,7), meTab:'done', modal:null, edit:null, uns:null, ho:null, dupAsk:null,
+  mMonth:TODAY.slice(0,7), meTab:'done', modal:null, edit:null, uns:null, ho:null, dupAsk:null, mchat:false,
   intake:blankIntake(), op:blankOp()
 };
 const staffById = id => S.staff.find(s=>s.id===id);
@@ -1539,7 +1643,7 @@ function shell(side,main){
   return `<div class="stage"><div class="app">
     <nav class="rail">
       <div class="logo" title="CRM «Учёткин»">${iconAt(22)}</div>
-      <div class="nav">${GROUPS.map(g=>`<div class="grp" data-g="${g.short}">${g.views.map(v=>{
+      <div class="nav">${GROUPS.map(g=>`<div class="grp ${g.role===S.role?'cur':''}" data-g="${g.short}">${g.views.map(v=>{
         i++; const b=badgeFor(v,g.role), n=i;
         return `<button class="nb" title="${TITLES[v]} · ${ROLES[g.role].label}" aria-current="${S.page===n}" onclick="goPage(${n})">
           ${svg(I[v])}${b?`<span class="bdg">${b}</span>`:''}</button>`}).join('')}</div>`).join('')}</div>
@@ -2938,8 +3042,10 @@ function routeCard(rt){
         <button class="b sm" onclick="setStatus('${rt.id}','выполнен')" ${rt.status==='обзвонен'||rt.status==='в работе'?'':'disabled'}>Закрыть маршрут</button></div></div>
     ${rt.status==='выполнен'?`<div class="stamp"><b>ПОВЕРЕНО</b><span>${rt.id}</span></div>`:''}
   </div>
-  <div class="c" style="margin-bottom:0"><h3>Чат маршрута</h3>
+  <div class="c mchat ${S.mchat?'open':''}" style="margin-bottom:0"><h3>Чат маршрута</h3>
     ${chatPanel(rt)}
+    <button class="g sm mchatt" onclick="S.mchat=!S.mchat;render()" title="Чат маршрута ${rt.id}">
+      ${svg(I.chat,12)}${S.mchat?'Свернуть чат':'Открыть чат'}${rt.chat.length?' · '+rt.chat.length:''}</button>
   </div></div>`;
 }
 function callStop(id,i,res){
@@ -3255,7 +3361,7 @@ function workSheet(rt,s){
   const p = payInit(r,rt.verifier), price = priceOf(r);
   const diff = p.method==='не оплачено' ? 0 : p.amount-price;
   return `<div class="c" style="margin-top:14px">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:4px">
+    <div class="acthd" style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:4px">
       <div><h3>Акт · точка ${pad(i0+1)} · ${esc(addrOf(r))}</h3>
         <div class="mono" style="font-size:11px;color:var(--ink3);margin-top:3px">${r.id} · ${esc(r.name)} · эт. ${r.floor||'—'} · ${r.intercom?'домофон работает':'домофон не работает'} · окно ${pad(r.time-1)}:00–${pad(r.time+1)}:00</div></div>
       <div style="display:flex;gap:6px;align-items:center">
@@ -3304,9 +3410,9 @@ function workSheet(rt,s){
                <button class="g sm" onclick="postponeRepl('${r.id}',${i})" title="Клиент отказался менять сейчас — адрес уйдёт в лист ожидания оператора">Замена отложена</button>`}
       </div>`:''}
       <div class="wbot"><span class="lbl">Фото работ</span>
-        ${d.photos.map((p,k)=>`<span class="phw"><img src="${p.src}" alt="${esc(p.name)}" title="${esc(p.name)} · ${esc(p.t)}" onclick="lbOpen('${r.id}',${i},${k})">
+        ${d.photos.map((p,k)=>`<span class="phw"><img src="${p.src}" alt="${esc(p.name)}" title="${esc(p.name)} · ${esc(p.t)}${p.w?` · ${p.w}×${p.h}`:''}" onclick="lbOpen('${r.id}',${i},${k})">
           <button class="x" title="Удалить кадр" onclick="rmPhoto('${r.id}',${i},${k})">${svg(I.no,9)}</button></span>`).join('')}
-        <input type="file" id="ph${r.id}_${i}" accept="image/*" multiple style="display:none" onchange="addPhotos('${r.id}',${i},this)">
+        <input type="file" id="ph${r.id}_${i}" accept="image/*" capture="environment" multiple style="display:none" onchange="addPhotos('${r.id}',${i},this)">
         <label class="g sm addph" for="ph${r.id}_${i}">${svg(I.cam,12)}Добавить фото</label>
         ${d.photos.length?`<span class="note">${d.photos.length} кадр(ов)</span>`:'<span class="nophoto">нет фото</span>'}
       </div></div>`).join('')}
@@ -3420,16 +3526,45 @@ function clearRepl(rid,i){
   toast('Отметка об отложенной замене снята, адрес убран из листа ожидания.');
 }
 function rmPhoto(rid,i,k){ const r=S.requests.find(x=>x.id===rid); r.devices[i].photos.splice(k,1); S.lb=null; render(); }
+/* ---------- фото работ ----------
+   Кнопка «Добавить фото» на телефоне открывает камеру (capture="environment").
+   Кадр с телефона — это 3–5 МБ и 12 Мп, в акте столько не нужно: заказчик просил
+   «чтобы читаемо», не больше. Поэтому перед добавлением жмём прямо в браузере —
+   canvas, длинная сторона 1600 px, JPEG 0.82. На сервер потом уйдёт уже сжатое. */
+const PHOTO_MAX = 1600, PHOTO_Q = .82;
+function shrinkPhoto(src){
+  return new Promise(res=>{
+    const img = new Image();
+    img.onload = () => {
+      const w0 = img.naturalWidth || img.width, h0 = img.naturalHeight || img.height;
+      if(!w0 || !h0) return res({src,w:0,h:0});
+      const k = Math.min(1, PHOTO_MAX/Math.max(w0,h0));
+      const w = Math.max(1,Math.round(w0*k)), h = Math.max(1,Math.round(h0*k));
+      try{
+        const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+        const cx = cv.getContext('2d');
+        cx.fillStyle = '#FFFFFF'; cx.fillRect(0,0,w,h);   /* под прозрачность PNG — белый лист */
+        cx.drawImage(img,0,0,w,h);
+        res({src:cv.toDataURL('image/jpeg',PHOTO_Q),w,h});
+      }catch(e){ res({src,w:w0,h:h0}); }                  /* не вышло сжать — кладём как есть */
+    };
+    img.onerror = () => res({src,w:0,h:0});
+    img.src = src;
+  });
+}
 function addPhotos(rid,i,el){
   const list = [...el.files].slice(0,8); if(!list.length) return;
-  let left = list.length;
-  list.forEach(f=>{
+  Promise.all(list.map(f=>new Promise(res=>{
     const rd = new FileReader();
-    const done = () => { if(!--left){ el.value=''; render(); } };
-    rd.onload = () => { const r=S.requests.find(x=>x.id===rid);
-      if(r) r.devices[i].photos.push({src:rd.result,name:f.name,t:new Date().toTimeString().slice(0,5)}); done(); };
-    rd.onerror = done;
+    rd.onload = () => shrinkPhoto(rd.result).then(p=>res({...p,name:f.name}));
+    rd.onerror = () => res(null);
     rd.readAsDataURL(f);
+  }))).then(ps=>{
+    const r = S.requests.find(x=>x.id===rid);
+    const t = new Date().toTimeString().slice(0,5);
+    if(r && r.devices[i]) ps.filter(Boolean).forEach(p=>
+      r.devices[i].photos.push({src:p.src,name:p.name,t,w:p.w,h:p.h}));
+    el.value = ''; render();
   });
 }
 function closeStop(id,i){
