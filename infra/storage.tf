@@ -2,6 +2,11 @@
 # Публичного доступа нет ни на чтение, ни на список — всё только подписанными
 # ссылками. Версионирование включено, автоудаления нет: срок хранения фото —
 # не менее шести лет, записей разговоров — бессрочно (arch, раздел 7).
+#
+# Оба содержат персональные данные: на фотографии акта видны фамилия, адрес и
+# подпись, в записи разговора — голос и всё, что клиент назвал по телефону.
+# Поэтому шифрование не облачным ключом, а своим, из KMS (kms.tf): право на
+# расшифровку выдаётся отдельной ролью и видно в журнале аудита.
 
 resource "yandex_storage_bucket" "acts" {
   bucket    = local.acts_bucket
@@ -15,6 +20,15 @@ resource "yandex_storage_bucket" "acts" {
 
   versioning {
     enabled = true
+  }
+
+  server_side_encryption_configuration {
+    rule {
+      apply_server_side_encryption_by_default {
+        kms_master_key_id = yandex_kms_symmetric_key.data.id
+        sse_algorithm     = "aws:kms"
+      }
+    }
   }
 
   lifecycle_rule {
@@ -49,6 +63,15 @@ resource "yandex_storage_bucket" "calls" {
 
   versioning {
     enabled = true
+  }
+
+  server_side_encryption_configuration {
+    rule {
+      apply_server_side_encryption_by_default {
+        kms_master_key_id = yandex_kms_symmetric_key.data.id
+        sse_algorithm     = "aws:kms"
+      }
+    }
   }
 
   lifecycle_rule {

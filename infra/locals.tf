@@ -14,8 +14,13 @@ locals {
   bucket_suffix = var.bucket_suffix == "" ? "" : "-${var.bucket_suffix}"
   acts_bucket   = "${local.prefix}-acts${local.bucket_suffix}"
   calls_bucket  = "${local.prefix}-calls${local.bucket_suffix}"
+  audit_bucket  = "${local.prefix}-audit${local.bucket_suffix}"
 
   use_alb = var.ingress_mode == "alb"
+
+  # Smart Web Security привязывается только к виртуальному хосту ALB.
+  # Без балансировщика профиль не к чему прикрепить, поэтому он не создаётся.
+  use_sws = local.use_alb && var.enable_sws
 
   # Зона DNS: по умолчанию совпадает с адресом системы.
   dns_zone_domain = var.dns_zone_domain != "" ? var.dns_zone_domain : var.app_domain

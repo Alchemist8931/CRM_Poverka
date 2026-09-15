@@ -126,6 +126,11 @@ variable "ssh_allowed_cidrs" {
   EOT
   type        = list(string)
   default     = []
+
+  validation {
+    condition     = !contains(var.ssh_allowed_cidrs, "0.0.0.0/0")
+    error_message = "SSH открытым всему интернету не бывает: 0.0.0.0/0 в ssh_allowed_cidrs запрещён. Нужен доступ откуда угодно — серийная консоль или OS Login."
+  }
 }
 
 variable "ssh_public_keys" {
@@ -409,4 +414,165 @@ variable "lockbox_deletion_protection" {
   description = "Защита секретов от удаления."
   type        = bool
   default     = false
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Безопасность: ключи шифрования, аудит, периметр, правила входа
+# Пункт плана cloud-sec. Подробности — в docs/security.md.
+# ─────────────────────────────────────────────────────────────────────────────
+
+variable "kms_algorithm" {
+  description = "Алгоритм ключа шифрования данных в KMS."
+  type        = string
+  default     = "AES_256"
+
+  validation {
+    condition     = contains(["AES_128", "AES_192", "AES_256"], var.kms_algorithm)
+    error_message = "kms_algorithm может быть AES_128, AES_192 или AES_256."
+  }
+}
+
+variable "kms_rotation_period" {
+  description = <<-EOT
+    Как часто KMS сам меняет версию ключа. Старые версии никуда не деваются —
+    объекты, зашифрованные прежней версией, читаются по-прежнему.
+    Формат Terraform: 8760h — год.
+  EOT
+  type        = string
+  default     = "8760h"
+}
+
+variable "kms_deletion_protection" {
+  description = "Защита ключа от удаления. Удалить ключ — значит потерять всё, что им зашифровано."
+  type        = bool
+  default     = true
+}
+
+variable "audit_trail_enabled" {
+  description = <<-EOT
+    Собирать журнал действий в облаке и обращений к объектам в хранилище
+    (Audit Trails). Выключать имеет смысл только в dev ради экономии.
+  EOT
+  type        = bool
+  default     = true
+}
+
+variable "audit_retain_days" {
+  description = "Сколько дней хранится журнал аудита облака."
+  type        = number
+  default     = 365
+
+  validation {
+    condition     = var.audit_retain_days >= 90
+    error_message = "Журнал аудита короче трёх месяцев бесполезен: к моменту вопроса в нём уже ничего нет."
+  }
+}
+
+variable "audit_cold_after_days" {
+  description = "Через сколько дней журнал аудита уходит в холодное хранилище."
+  type        = number
+  default     = 30
+}
+
+variable "enable_sws" {
+  description = <<-EOT
+    Ставить перед балансировщиком профиль Smart Web Security: WAF и защита от ботов.
+    Работает только вместе с ingress_mode = "alb" — привязка у профиля одна,
+    виртуальный хост ALB.
+  EOT
+  type        = bool
+  default     = true
+}
+
+variable "sws_smart_protection_mode" {
+  description = "Режим умной защиты от ботов: FULL — с браузерной проверкой, API — только оценка запроса."
+  type        = string
+  default     = "FULL"
+
+  validation {
+    condition     = contains(["FULL", "API"], var.sws_smart_protection_mode)
+    error_message = "sws_smart_protection_mode может быть FULL или API."
+  }
+}
+
+variable "waf_paranoia_level" {
+  description = <<-EOT
+    Уровень строгости базового набора OWASP, 1–4. Выше уровень — больше правил
+    и больше ложных срабатываний на живых пользователях.
+  EOT
+  type        = number
+  default     = 1
+
+  validation {
+    condition     = var.waf_paranoia_level >= 1 && var.waf_paranoia_level <= 4
+    error_message = "waf_paranoia_level — целое от 1 до 4."
+  }
+}
+
+variable "waf_anomaly_score" {
+  description = "Порог аномальности, при котором WAF считает запрос атакой. Рекомендуемое значение — 25."
+  type        = number
+  default     = 25
+}
+
+variable "enable_oslogin" {
+  description = <<-EOT
+    Вход по SSH через учётные записи облака (OS Login): ключ берётся из профиля
+    пользователя, право входа — из роли compute.osLogin, вместе с обязательной
+    двухфакторной аутентификацией вход на машину тоже становится двухфакторным.
+    При включении ключи из ssh_public_keys перестают действовать —
+    переключаться на OS Login нужно осознанно и не вслепую.
+  EOT
+  type        = bool
+  default     = false
+}
+
+variable "serial_port_enable" {
+  description = <<-EOT
+    Серийная консоль — запасной вход на машину, когда белый список для SSH пуст.
+    Идёт не по сети, а через API облака и закрывается ролями. Когда ключи
+    и адреса выданы, её стоит выключить.
+  EOT
+  type        = bool
+  default     = true
+}
+
+variable "app_auth_policy" {
+  description = <<-EOT
+    Правила входа и журналирования в самом приложении. Уезжают на ВМ в
+    /etc/uchetkin/app.env и оттуда читаются сервером — реализуют их пункты
+    плана be-api (вход, пароли, сессии) и be-audit (журнал действий).
+    Значения — из политики обработки персональных данных, раздел «Меры защиты».
+  EOT
+  type = object({
+    password_min_length    = number
+    password_classes       = number
+    password_max_age_days  = number
+    max_failed_attempts    = number
+    lockout_minutes        = number
+    session_idle_minutes   = number
+    session_absolute_hours = number
+    audit_retain_days      = number
+  })
+
+  default = {
+    password_min_length    = 10
+    password_classes       = 3
+    password_max_age_days  = 180
+    max_failed_attempts    = 5
+    lockout_minutes        = 15
+    session_idle_minutes   = 30
+    session_absolute_hours = 12
+    audit_retain_days      = 1095
+  }
+
+  validation {
+    condition     = var.app_auth_policy.password_min_length >= 8
+    error_message = "Пароль короче восьми знаков не проходит ни по одному требованию к ИСПДн."
+  }
+
+  validation {
+    condition     = var.app_auth_policy.max_failed_attempts >= 1 && var.app_auth_policy.max_failed_attempts <= 10
+    error_message = "Порог блокировки — от 1 до 10 неудачных попыток; в политике заявлено 5."
+  }
 }

@@ -39,6 +39,23 @@ calls_ice_after_days  = 365
 ssh_allowed_cidrs = []
 ssh_public_keys   = []
 
+# Безопасность (пункт cloud-sec, сводка — docs/security.md).
+# Журнал аудита облака хранится три года: столько же живут события в журнале
+# действий пользователей, чтобы разбирать спорный случай по обеим лентам сразу.
+audit_trail_enabled     = true
+audit_retain_days       = 1095
+audit_cold_after_days   = 30
+kms_deletion_protection = true
+
+# Профиль Smart Web Security описан и включён, но в тракт встаёт только вместе
+# с балансировщиком: ingress_mode = "alb". Сейчас режим vm — защиту периметра
+# держат группа безопасности и Caddy, см. docs/security.md.
+enable_sws = true
+
+# Серийная консоль — запасной вход, пока не выданы ключи и адреса для SSH.
+# После выдачи выключить: serial_port_enable = false.
+serial_port_enable = true
+
 labels = {
   contour = "prod"
 }

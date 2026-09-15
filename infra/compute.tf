@@ -35,10 +35,21 @@ resource "yandex_compute_instance" "app" {
     security_group_ids = [yandex_vpc_security_group.app.id]
   }
 
+  # enable-oslogin переводит вход по SSH на учётные записи облака: ключ
+  # подтягивается из профиля пользователя, право входа выдаётся ролью
+  # compute.osLogin, и вместе с обязательной двухфакторной аутентификацией в
+  # облаке вход на машину тоже становится двухфакторным. Пока ключи в метаданных
+  # (enable_oslogin = false), ssh-keys и OS Login одновременно не работают:
+  # при включённом OS Login ключи из метаданных игнорируются.
+  #
+  # serial-port-enable — запасной вход, когда белый список для SSH пуст.
+  # Он идёт не по сети, а через API облака, и закрывается ролями; когда ключи
+  # и адреса выданы, его стоит выключить (serial_port_enable = false).
   metadata = {
     user-data          = local.cloud_init
-    ssh-keys           = join("\n", [for key in var.ssh_public_keys : "${var.vm_user}:${key}"])
-    serial-port-enable = "1"
+    ssh-keys           = var.enable_oslogin ? "" : join("\n", [for key in var.ssh_public_keys : "${var.vm_user}:${key}"])
+    enable-oslogin     = var.enable_oslogin ? "true" : "false"
+    serial-port-enable = var.serial_port_enable ? "1" : "0"
   }
 }
 
@@ -47,6 +58,8 @@ locals {
     vm_user                   = var.vm_user
     timezone                  = var.timezone
     env                       = var.env
+    enable_oslogin            = var.enable_oslogin
+    auth                      = var.app_auth_policy
     folder_id                 = var.folder_id
     app_domain                = var.app_domain
     public_base_url           = local.public_base_url

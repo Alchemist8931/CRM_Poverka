@@ -34,6 +34,17 @@ calls_ice_after_days  = 90
 ssh_allowed_cidrs = []
 ssh_public_keys   = []
 
+# Безопасность (пункт cloud-sec, сводка — docs/security.md).
+# Журнал аудита в dev живёт три месяца: правило должно проверяться,
+# а хранить годами события тестового контура незачем.
+audit_trail_enabled   = true
+audit_retain_days     = 90
+audit_cold_after_days = 15
+
+# Ключ шифрования dev удаляется вместе с контуром — данных, которые нельзя
+# потерять, здесь нет.
+kms_deletion_protection = false
+
 labels = {
   contour = "dev"
 }

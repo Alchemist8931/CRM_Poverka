@@ -52,6 +52,18 @@ write_files:
       LOCKBOX_DB_SECRET_ID=${lockbox_db_secret_id}
       LOCKBOX_APP_SECRET_ID=${lockbox_app_secret_id}
       LOCKBOX_STORAGE_SECRET_ID=${lockbox_storage_secret_id}
+      # Правила входа и журналирования в самом приложении. Значения приходят из
+      # Terraform (переменная app_auth_policy), а не зашиты в код: пункт 152-ФЗ
+      # проверяется по конфигурации контура, а не по чтению исходников.
+      # Реализует их сервер — пункты плана be-api и be-audit.
+      AUTH_PASSWORD_MIN_LENGTH=${auth.password_min_length}
+      AUTH_PASSWORD_CLASSES=${auth.password_classes}
+      AUTH_PASSWORD_MAX_AGE_DAYS=${auth.password_max_age_days}
+      AUTH_MAX_FAILED_ATTEMPTS=${auth.max_failed_attempts}
+      AUTH_LOCKOUT_MINUTES=${auth.lockout_minutes}
+      SESSION_IDLE_MINUTES=${auth.session_idle_minutes}
+      SESSION_ABSOLUTE_HOURS=${auth.session_absolute_hours}
+      AUDIT_RETAIN_DAYS=${auth.audit_retain_days}
 %{ for name, id in lockbox_external_secrets ~}
       LOCKBOX_${upper(name)}_SECRET_ID=${id}
 %{ endfor ~}
@@ -76,6 +88,34 @@ write_files:
     content: |
       SITE_ADDRESS=${tls_by_caddy ? app_domain : ":80"}
       API_UPSTREAM=api:3000
+
+  # ── Вход на машину: только по ключу и только этим пользователем.
+  #    Файл кладётся в sshd_config.d — его подхватывает Include из штатного
+  #    конфигурации Ubuntu, а сам конфигурации не правится: так настройка
+  #    переживает обновление пакета openssh-server.
+  - path: /etc/ssh/sshd_config.d/10-uchetkin.conf
+    permissions: "0644"
+    owner: root:root
+    content: |
+      # Пароли выключены полностью: ни пользователю, ни root.
+      PasswordAuthentication no
+      KbdInteractiveAuthentication no
+      PermitEmptyPasswords no
+      PermitRootLogin no
+%{ if enable_oslogin ~}
+      # Вход идёт через OS Login: список пользователей и их ключи ведёт облако,
+      # поэтому AllowUsers здесь не задаётся — иначе он перекроет права из IAM.
+%{ else ~}
+      AuthenticationMethods publickey
+      AllowUsers ${vm_user}
+%{ endif ~}
+      MaxAuthTries 3
+      LoginGraceTime 30
+      X11Forwarding no
+      AllowAgentForwarding no
+      # Забытая открытой сессия закрывается сама через десять минут молчания.
+      ClientAliveInterval 300
+      ClientAliveCountMax 2
 
   # ── Ротация журналов Docker: иначе они съедают диск ВМ.
   - path: /etc/docker/daemon.json
@@ -157,6 +197,9 @@ write_files:
       Секреты лежат в Lockbox и читаются приложением при старте.
 
 runcmd:
+  # Конфигурация SSH применяется сразу и только если она разбирается: сломанный
+  # sshd на машине без пароля — это потеря доступа.
+  - [sh, -c, "sshd -t && (systemctl restart ssh || systemctl restart sshd)"]
   - [mkdir, -p, /opt/uchetkin/config, /var/lib/yandex/unified_agent/main]
   - [chown, -R, "${vm_user}:${vm_user}", /opt/uchetkin]
   - [systemctl, enable, --now, docker]

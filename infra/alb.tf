@@ -91,6 +91,16 @@ resource "yandex_alb_virtual_host" "app" {
   http_router_id = yandex_alb_http_router.app[0].id
   authority      = [var.app_domain]
 
+  # Профиль Smart Web Security (sws.tf) — запросы проходят проверку до того,
+  # как попадут на ВМ.
+  dynamic "route_options" {
+    for_each = local.use_sws ? [1] : []
+
+    content {
+      security_profile_id = yandex_sws_security_profile.app[0].id
+    }
+  }
+
   route {
     name = "all"
 
