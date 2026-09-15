@@ -17,6 +17,7 @@
   --btnA:#1B1B1B; --btnB:#343434; --btnFg:#F2F2F0;
   --gridA:rgba(23,23,23,.05); --gridB:rgba(23,23,23,.024);
   --glow:rgba(255,255,255,.6); --scan:rgba(23,23,23,.06);
+  --veil:rgba(14,14,14,.36);
   --shSoft:0 6px 18px -10px rgba(20,20,20,.16);
   --shCard:0 16px 32px -14px rgba(20,20,20,.2);
 }
@@ -29,6 +30,7 @@
   --btnA:rgba(236,236,236,.97); --btnB:#C9C9C9; --btnFg:#0B0B0B;
   --gridA:rgba(231,231,231,.025); --gridB:rgba(231,231,231,.012);
   --glow:rgba(231,231,231,.045); --scan:rgba(231,231,231,.07);
+  --veil:rgba(0,0,0,.66);
   --shSoft:0 6px 18px -8px rgba(0,0,0,.45);
   --shCard:0 16px 32px -12px rgba(0,0,0,.55);
 }
@@ -608,6 +610,22 @@ tfoot td{border-top:1px solid var(--border);border-bottom:0;color:var(--ink);fon
 .lb .bar .ib:hover{border-color:#E7E7E7}
 .lb .cls{position:absolute;top:22px;right:22px}
 
+/* ---------- нет связи ----------
+   Работы без связи не предусмотрено: пока сети нет, интерфейс заперт под
+   размытием — так состояние читается с одного взгляда даже на телефоне.
+   Слой выше модальных окон (90) и просмотра фото (110), клики держит на себе. */
+.offw{position:fixed;inset:0;z-index:200;display:grid;place-items:center;padding:24px;
+  background:var(--veil);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:wsFade .2s ease}
+.offc{width:min(360px,94vw);background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  box-shadow:var(--shCard);padding:24px 22px 20px;text-align:center;animation:wsPop .2s ease}
+.offc .spin{width:34px;height:34px;margin:0 auto 15px;border:2px solid var(--border);border-top-color:var(--ink);
+  border-radius:50%;animation:wsSpin .85s linear infinite}
+.offc h3{font-size:15px;margin-bottom:6px}
+.offc .note{margin-bottom:12px}
+.offc .ago{font-size:12px;color:var(--ink2);margin-bottom:16px}
+.offc .b{width:100%}
+@keyframes wsSpin{to{transform:rotate(360deg)}}
+
 /* Кнопка, сворачивающая чат маршрута, живёт только на телефоне: на компьютере
    чат стоит рядом с карточкой маршрута и прятать его незачем. */
 .mchatt{display:none}
@@ -668,6 +686,10 @@ tfoot td{border-top:1px solid var(--border);border-bottom:0;color:var(--ink);fon
   .modal{width:100%;padding:14px 12px 16px}
   .mask{padding:16px 10px}
   .toast{left:12px;right:12px;bottom:70px;max-width:none}
+  /* Карточка «нет связи» сжимается: на 390 px она не должна упираться в края. */
+  .offw{padding:16px}
+  .offc{width:100%;padding:18px 14px 16px}
+  .offc .spin{width:30px;height:30px;margin-bottom:12px}
   /* ---- карточка маршрута: точки крупнее, чат — в кнопку ---- */
   /* Точки крупнее, но список остаётся прокручиваемым: иначе на маршруте
      из двух десятков адресов до акта пришлось бы листать полэкрана. */
@@ -717,6 +739,9 @@ tfoot td{border-top:1px solid var(--border);border-bottom:0;color:var(--ink);fon
 <div class="fx fx-glow"></div><div class="fx fx-grid"></div><div class="fx-scan"></div>
 <div id="root"></div>
 <div id="intro"><canvas id="introCv"></canvas></div>
+<!-- Слой «нет связи» живёт вне #root: перерисовка страницы его не трогает,
+     а он не заставляет перерисовывать страницу каждую секунду. -->
+<div id="offline" hidden></div>
 <script>
 /* ============================================================
    CRM «Учёткин» · прототип
@@ -3648,9 +3673,79 @@ function render(){
   if(ss!=null && typeof el.setSelectionRange==='function'){ try{ el.setSelectionRange(ss,se); }catch(e){} }
 }
 
+/* ──────────────────────────────────────────────────────────
+   СВЯЗЬ
+   Офлайн-режима нет: без сети работать нельзя, поэтому интерфейс просто
+   запирается под размытием до восстановления. Ничего не сбрасывается —
+   открытое модальное окно и введённые значения ждут под слоем.
+   ────────────────────────────────────────────────────────── */
+const NET = (()=>{
+  const PING = 10000;      // опрос раз в 10 секунд
+  const GRACE = 3000;      // первые 3 секунды после открытия молчим
+  const START = Date.now();
+  let off=false, since=0, busy=false;
+
+  /* Единственное место, где прототип щупает сеть. Сервера у прототипа нет,
+     поэтому запрашиваем собственный адрес; после переезда на API (be-fe-wire)
+     тело заменяется на fetch('/health') — остальной код не меняется. */
+  async function probe(){
+    if(typeof navigator==='object' && navigator && navigator.onLine===false) return false;
+    if(typeof fetch!=='function') return true;
+    try{
+      const r = await fetch(location.pathname+'?ping='+Date.now(),{method:'HEAD',cache:'no-store'});
+      return !!r && r.ok;
+    }catch(e){ return false; }
+  }
+
+  function paint(){
+    const el = document.getElementById('offline'); if(!el) return;
+    if(!off){ el.hidden=true; el.innerHTML=''; return; }
+    el.hidden=false;
+    el.innerHTML = `<div class="offw"><div class="offc">
+      <div class="spin"></div>
+      <h3>Нет связи</h3>
+      <p class="note">Ждём восстановления соединения…</p>
+      <div class="ago mono" id="offAgo">Без связи ${ms(0)}</div>
+      <button class="b" onclick="NET.check()">Проверить сейчас</button>
+    </div></div>`;
+  }
+  /* Раз в секунду обновляем только строку времени: перерисовывать всю
+     страницу нельзя — под слоем может быть заполненная форма акта. */
+  function tick(){
+    if(!off) return;
+    const el = document.getElementById('offAgo');
+    if(el) el.textContent = 'Без связи '+ms(Math.floor((Date.now()-since)/1000));
+  }
+  function down(){
+    if(off || Date.now()-START < GRACE) return;   // окно тишины после открытия
+    off=true; since=Date.now(); paint();
+  }
+  function up(){
+    if(!off) return;
+    off=false; paint();
+    toast('Связь восстановлена.');                // toast сам перерисовывает экран
+  }
+  async function check(){
+    if(busy) return;
+    busy=true;
+    let ok; try{ ok = await probe(); } finally { busy=false; }
+    ok?up():down();
+  }
+  function start(){
+    if(typeof window!=='object' || !window || !window.addEventListener) return;
+    window.addEventListener('offline',()=>{ down(); });
+    window.addEventListener('online',()=>{ check(); });
+    setInterval(check,PING);
+    setInterval(tick,1000);
+    setTimeout(check,GRACE);   // если связи нет с самого открытия — покажем сразу после окна тишины
+  }
+  return {start,check,isOff:()=>off};
+})();
+
 if(typeof document==='object' && document && document.addEventListener){
   document.addEventListener('click',e=>{ if(S.dd && !e.target.closest('[data-fld]')){ S.dd=null; render(); } });
   document.addEventListener('keydown',e=>{
+    if(NET.isOff()) return;   // под слоем «нет связи» клавиши тоже не работают
     if(e.key==='Escape'){
       if(S.dd){ S.dd=null; render(); return; }
       if(S.lb){ S.lb=null; render(); return; }
@@ -3668,6 +3763,7 @@ S.day = Array.from({length:21},(_,i)=>iso(addDays(today,i)))
 S.intake.city = dayCities(S.day)[0] || CITIES[0];
 render();
 if(typeof setInterval==='function') setInterval(opTick,1000);
+NET.start();
 if(typeof INTRO!=='undefined' && typeof document==='object' && document.getElementById)
   INTRO.start(()=>{ S.introDone=true; });
 </script>
