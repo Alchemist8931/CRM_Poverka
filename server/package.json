@@ -13,9 +13,12 @@
     "seed": "tsx src/seed/index.ts",
     "db:reset": "node-pg-migrate down 0 && node-pg-migrate up && tsx src/seed/index.ts",
     "typecheck": "tsc --noEmit",
-    "check": "npm run check:model && npm run check:schema",
+    "check": "npm run check:model && npm run check:docs && npm run check:tables && npm run check:schema && npm run check:seed-cli",
     "check:model": "tsx scripts/check-model-sync.mts",
-    "check:schema": "tsx scripts/check-schema.ts"
+    "check:docs": "tsx scripts/check-docs.mts",
+    "check:tables": "tsx scripts/check-tables.mts",
+    "check:schema": "tsx scripts/check-schema.ts",
+    "check:seed-cli": "tsx scripts/check-seed-cli.mts"
   },
   "dependencies": {
     "dotenv": "^17.2.3",
