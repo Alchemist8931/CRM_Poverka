@@ -1,0 +1,27 @@
+# Локальная база для разработки. В облаке её место занимает Managed PostgreSQL
+# (см. infra/postgres.tf) — версия здесь держится той же, чтобы расхождений в
+# поведении между машиной разработчика и dev-контуром не было.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: uchetkin-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: uchetkin
+      POSTGRES_USER: uchetkin
+      POSTGRES_PASSWORD: uchetkin
+      # Сортировка русских строк: улицы и города в списках должны идти по-русски.
+      LANG: ru_RU.UTF-8
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C.UTF-8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U uchetkin -d uchetkin"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  pgdata:
