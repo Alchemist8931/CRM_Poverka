@@ -23,5 +23,30 @@ services:
       timeout: 3s
       retries: 20
 
+  # API. Поднимается после базы и только когда та отвечает: миграции и первый
+  # же запрос идут в неё сразу, а не когда-нибудь потом.
+  api:
+    build: .
+    container_name: uchetkin-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://uchetkin:uchetkin@postgres:5432/uchetkin
+      PORT: 3000
+      # На машине разработчика ключ подписи сессий нужен только чтобы cookie
+      # пережила перезапуск. В облаке он приходит из Lockbox (infra/lockbox.tf).
+      SESSION_SECRET: dev-session-secret-uchetkin
+      # Приёмник вебхуков без ключа отвечает 503 — так и задумано.
+      NOVOFON_WEBHOOK_SECRET: dev-novofon-secret
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
 volumes:
   pgdata:

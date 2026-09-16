@@ -10,6 +10,7 @@
  */
 import { randomUUID } from 'node:crypto';
 import { normPhone, stampAt, stampOn } from '../db.ts';
+import { hashPassword } from '../password.ts';
 import { buildDemoState } from './prototype-model.mjs';
 import type { DemoRequest } from './prototype-model.mjs';
 
@@ -51,6 +52,10 @@ const CITY_WEEKDAYS: Record<string, number[]> = {
 
 /** Норматив адресов на одного поверителя в смене — из расчёта плана в прототипе. */
 const NORM_PER_VERIFIER = 25;
+
+/** Пароль демо-учёток. Тот же, что стоял в форме входа прототипа: набор нужен,
+ *  чтобы открыть API на своей машине и в тестовом контуре, а не чтобы им жить. */
+const DEMO_PASSWORD = '1234';
 
 /** Поверка кончается решением «годен / не годен»; у остальных услуг результата нет. */
 const VERIFICATION_SERVICES = new Set(['wv', 'hv']);
@@ -158,10 +163,17 @@ export async function seedDemoData(
       }));
 
     // ── люди ──────────────────────────────────────────────────────
+    // Логин совпадает с идентификатором сотрудника (sv, o0, v0), пароль у всех
+    // один и задаётся переменной SEED_PASSWORD. Это демо-набор для разработки и
+    // тестового контура: без учётных данных в базе API нечем даже открыть.
+    // Выдача, смена и сброс паролей у настоящих сотрудников — пункт be-users.
+    const passwordHash = await hashPassword(process.env.SEED_PASSWORD || DEMO_PASSWORD);
     await insertMany(db, 'staff',
-      ['id', 'full_name', 'role', 'phone', 'ext', 'pattern', 'anchor', 'extra_days'],
+      ['id', 'full_name', 'role', 'phone', 'ext', 'pattern', 'anchor', 'extra_days',
+       'login', 'password_hash', 'must_change_password'],
       S.staff.map((p) => [p.id, p.name, p.role, p.phone ?? null, p.ext ?? null,
-                          p.pattern ?? null, p.anchor ?? null, p.extra ?? []]));
+                          p.pattern ?? null, p.anchor ?? null, p.extra ?? [],
+                          p.id, passwordHash, false]));
 
     await insertMany(db, 'staff_skills', ['staff_id', 'service_id'],
       S.staff.flatMap((p) => (p.svcs ?? []).map((sid) => [p.id, sid])));

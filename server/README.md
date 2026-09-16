@@ -1,25 +1,36 @@
 # Серверная часть CRM «Учёткин»
 
-Схема базы, миграции и наполнение демо-данными прототипа. Описание таблиц и связей —
+REST API с доступом по ролям, схема базы, миграции и наполнение демо-данными
+прототипа. Описание API — в [`../docs/api.md`](../docs/api.md), таблиц и связей —
 в [`../docs/schema.md`](../docs/schema.md).
 
-Стек по архитектурному решению: Node.js 22, TypeScript, PostgreSQL 16 (в облаке —
-Managed Service for PostgreSQL). REST API на Fastify появится пунктом **be-api**.
+Стек по архитектурному решению: Node.js 22, TypeScript, Fastify, PostgreSQL 16
+(в облаке — Managed Service for PostgreSQL).
 
 ## Начать
 
 ```bash
-docker compose up -d      # PostgreSQL на localhost:5432
+docker compose up -d      # PostgreSQL на localhost:5432 и API на localhost:3000
+curl -s localhost:3000/health
+```
+
+Руками, без Docker:
+
+```bash
 cp env.example .env
 npm install
 npm run migrate:up
-npm run seed
+npm run seed              # заодно заводит демо-учётки: логин = id сотрудника, пароль 1234
+npm start                 # API на localhost:3000, описание по /docs
 ```
 
 ## Команды
 
 | Команда | Что делает |
 |---|---|
+| `npm start` | поднять API (`PORT`, по умолчанию 3000) |
+| `npm run dev` | то же с перезапуском по правкам |
+| `npm test` | правила и весь API на PostgreSQL в WebAssembly, без Docker |
 | `npm run migrate:up` | применить непринятые миграции |
 | `npm run migrate:down` | откатить последнюю |
 | `npm run migrate:redo` | откатить последнюю и применить заново |
@@ -48,7 +59,12 @@ migrations/                 SQL-миграции, node-pg-migrate
   …_reference.sql           города, услуги, типы приборов, сотрудники, компетенции
   …_operations.sql          дни, отсутствия, клиенты, заявки, маршруты, акты, деньги
   …_comms_and_audit.sql     звонки, переписка по маршруту, журнал действий
+  …_api.sql                 открытый конструктор маршрутов — замок даты на сервере
 src/
+  rules.ts                  бизнес-правила прототипа: чистые функции, без базы
+  password.ts               хеш пароля (scrypt из Node)
+  api/                      приложение: сборка, сессия, доступ, обработчики
+    routes/                 вход, справочники, день, заявки, маршруты, акт, деньги, связь
   db.ts                     соединение, нормализация телефона, время в поясе заказчика
   seed/
     prototype-model.mjs     дословные куски index.html — НЕ ПРАВИТЬ РУКАМИ

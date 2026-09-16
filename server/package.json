@@ -2,10 +2,15 @@
   "name": "uchetkin-server",
   "version": "0.1.0",
   "private": true,
-  "description": "CRM «Учёткин» — серверная часть: схема базы, миграции, наполнение демо-данными",
+  "description": "CRM «Учёткин» — серверная часть: REST API с ролями, схема базы, миграции, наполнение демо-данными",
   "type": "module",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
+    "start": "tsx src/api/server.ts",
+    "dev": "tsx watch src/api/server.ts",
+    "test": "node --import tsx --test test/*.test.ts",
     "migrate": "node-pg-migrate",
     "migrate:up": "node-pg-migrate up",
     "migrate:down": "node-pg-migrate down 1",
@@ -21,16 +26,19 @@
     "check:seed-cli": "tsx scripts/check-seed-cli.mts"
   },
   "dependencies": {
+    "@fastify/cookie": "^11.1.2",
+    "@fastify/swagger": "^9.8.1",
     "dotenv": "^17.2.3",
+    "fastify": "^5.12.4",
     "node-pg-migrate": "^9.0.0",
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "tsx": "^4.19.2"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.3.8",
     "@electric-sql/pglite-socket": "^0.0.13",
     "@types/node": "^22.10.2",
     "@types/pg": "^8.11.10",
-    "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   }
 }
