@@ -516,3 +516,44 @@ describe('вебхук звонков', () => {
     await st.close();
   });
 });
+
+describe('фотографии акта', () => {
+  it('приходят подписанной ссылкой: по ней снимок отдаётся без сессии, с подделанной подписью — нет', async () => {
+    const st = await makeStand();
+    const op = as(st.app, await login(st.app, 'o1'));
+    const sv = as(st.app, await login(st.app, 'sv'));
+    const a = body(await op.post('/api/requests', draft({ date: AFTER, phone: '9120009001' }))).request;
+    const b = body(await op.post('/api/requests', draft({ date: AFTER, phone: '9120009002' }))).request;
+    // Маршрут собирается минимум из двух точек — это правило прототипа.
+    const route = await sv.post('/api/routes', { date: AFTER, request_ids: [a.id, b.id], verifier_id: 'v1' });
+    assert.equal(route.statusCode, 200, route.body);
+
+    const vf = as(st.app, await login(st.app, 'v1'));
+    const made = await vf.post(`/api/requests/${a.id}/devices`, {
+      service_id: 'wv', device_type: 'Бетар СХВ-15', carrier: 'ХВС', serial: '77-123456',
+    });
+    assert.equal(made.statusCode, 200, made.body);
+    const dev = body(made).device;
+    // Снимок кладём прямо в базу: загрузка — пункт be-photos, здесь проверяется выдача.
+    await st.db.query(
+      `INSERT INTO photos (device_id, storage_key, name, taken_at) VALUES ($1, $2, 'IMG_1.jpg', '12:30')`,
+      [dev.id, `acts/2026/${a.id}/${dev.id}/1.jpg`]);
+
+    const card = body(await vf.get(`/api/requests/${a.id}`));
+    const photo = card.devices[0].photos[0];
+    assert.match(photo.url, /^\/api\/photos\/\d+\/file\?exp=\d+&sig=/, 'ссылка подписана и со сроком');
+
+    // Тег <img> не носит cookie и не умеет показывать 401 — ссылка работает без сессии.
+    const open = await st.app.inject({ method: 'GET', url: photo.url });
+    assert.equal(open.statusCode, 200, open.body);
+    assert.match(String(open.headers['content-type']), /image\//);
+    assert.match(open.body, /77-123456/, 'на заглушке виден заводской номер прибора');
+
+    const forged = await st.app.inject({ method: 'GET', url: photo.url.replace(/sig=.*/, 'sig=подделка') });
+    assert.equal(forged.statusCode, 403, 'подделанная подпись не пускает');
+
+    const stale = await st.app.inject({ method: 'GET', url: photo.url.replace(/exp=\d+/, 'exp=1000') });
+    assert.equal(stale.statusCode, 403, 'просроченная ссылка не пускает');
+    await st.close();
+  });
+});
