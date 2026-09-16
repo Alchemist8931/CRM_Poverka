@@ -10,7 +10,7 @@ REST API с доступом по ролям, схема базы, миграц�
 ## Начать
 
 ```bash
-docker compose up -d      # PostgreSQL на localhost:5432 и API на localhost:3000
+docker compose up -d      # из корня репозитория: база, API и фронт
 curl -s localhost:3000/health
 ```
 
@@ -22,6 +22,13 @@ npm install
 npm run migrate:up
 npm run seed              # заодно заводит демо-учётки: логин = id сотрудника, пароль 1234
 npm start                 # API на localhost:3000, описание по /docs
+```
+
+Без Docker и без PostgreSQL на машине — тот же API на встроенной базе
+(PostgreSQL, собранный в WebAssembly); этим стендом проверяется фронт:
+
+```bash
+npx tsx scripts/dev-pglite.mts 3000   # миграции, демо-набор и API за полминуты
 ```
 
 ## Команды

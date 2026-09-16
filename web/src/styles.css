@@ -1,0 +1,736 @@
+[data-theme="light"]{
+  --bg:#F2F2F0; --bg2:#ECECEA; --surface:#FAFAF8; --card:#FFFFFF;
+  --border:#DCDCD7; --border2:#E6E6E2;
+  --ink:#171717; --ink2:#575757; --ink3:#8D8D8D;
+  --wash:rgba(23,23,23,.045); --mark:rgba(23,23,23,.22);
+  --success:#16A34A; --error:#DC2626; --warning:#D97706; --cold:#2563EB;
+  --btnA:#1B1B1B; --btnB:#343434; --btnFg:#F2F2F0;
+  --gridA:rgba(23,23,23,.05); --gridB:rgba(23,23,23,.024);
+  --glow:rgba(255,255,255,.6); --scan:rgba(23,23,23,.06);
+  --veil:rgba(14,14,14,.36);
+  --shSoft:0 6px 18px -10px rgba(20,20,20,.16);
+  --shCard:0 16px 32px -14px rgba(20,20,20,.2);
+}
+[data-theme="dark"]{
+  --bg:#0A0A0A; --bg2:#101010; --surface:#141414; --card:#181818;
+  --border:#252525; --border2:#1C1C1C;
+  --ink:#E7E7E7; --ink2:#A0A0A0; --ink3:#6B6B6B;
+  --wash:rgba(231,231,231,.05); --mark:rgba(231,231,231,.17);
+  --success:#22C55E; --error:#EF4444; --warning:#F59E0B; --cold:#60A5FA;
+  --btnA:rgba(236,236,236,.97); --btnB:#C9C9C9; --btnFg:#0B0B0B;
+  --gridA:rgba(231,231,231,.025); --gridB:rgba(231,231,231,.012);
+  --glow:rgba(231,231,231,.045); --scan:rgba(231,231,231,.07);
+  --veil:rgba(0,0,0,.66);
+  --shSoft:0 6px 18px -8px rgba(0,0,0,.45);
+  --shCard:0 16px 32px -12px rgba(0,0,0,.55);
+}
+:root{ --r:10px; --r-in:7px; --W:1400px; }
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:400 14px/1.5 'SN Pro',ui-sans-serif,system-ui,sans-serif;overflow:hidden;transition:background .4s ease,color .4s ease}
+::selection{background:var(--ink);color:var(--bg)}
+::placeholder{color:var(--ink3)}
+:focus-visible{outline:1px solid var(--ink3);outline-offset:2px}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:var(--r)}
+::-webkit-scrollbar-thumb:hover{background:var(--ink3)}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.01em}
+a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--mark)}
+a:hover{color:var(--ink2)}
+@keyframes wsFade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes wsPop{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+@keyframes wsPulse{0%,100%{opacity:.45;transform:scale(1)}50%{opacity:1;transform:scale(1.2)}}
+@keyframes wsScan{0%{top:0;opacity:0}6%{opacity:1}94%{opacity:1}100%{top:100%;opacity:0}}
+@keyframes wsBreath{0%,100%{box-shadow:0 0 0 0 transparent}50%{box-shadow:0 0 22px -4px var(--mark)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.mono{font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.lbl{font-size:9.5px;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3)}
+.note{font-size:11.5px;color:var(--ink3);line-height:1.5}
+
+/* ---------- фон ---------- */
+.fx{position:fixed;inset:0;pointer-events:none;z-index:0}
+.fx-glow{background:radial-gradient(ellipse 75% 50% at 50% -14%,var(--glow) 0%,transparent 60%)}
+.fx-grid{background-image:linear-gradient(var(--gridA) 1px,transparent 1px),linear-gradient(90deg,var(--gridA) 1px,transparent 1px),linear-gradient(var(--gridB) 1px,transparent 1px),linear-gradient(90deg,var(--gridB) 1px,transparent 1px);
+  background-size:96px 96px,96px 96px,24px 24px,24px 24px;
+  -webkit-mask-image:radial-gradient(ellipse 95% 90% at 50% 0%,#000 25%,transparent 80%);mask-image:radial-gradient(ellipse 95% 90% at 50% 0%,#000 25%,transparent 80%)}
+.fx-scan{position:fixed;left:0;right:0;height:1px;z-index:1;pointer-events:none;background:linear-gradient(90deg,transparent,var(--scan),transparent);animation:wsScan 11s linear infinite}
+
+/* ---------- интро ---------- */
+#intro{position:fixed;inset:0;z-index:120;background:var(--bg);display:block}
+#intro canvas{display:block;width:100%;height:100%}
+
+/* ============ ПОЛЯ ============ */
+.f{margin-bottom:12px;min-width:0}
+.f > label{display:block;font-size:9.5px;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px}
+.fld{display:flex;align-items:center;gap:8px;width:100%;height:38px;padding:0 11px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  font-size:13px;color:var(--ink);text-align:left;outline:none;transition:border-color .2s ease,box-shadow .2s ease}
+textarea.fld{height:auto;padding:9px 11px;resize:vertical;min-height:76px;line-height:1.5}
+.fld:hover{border-color:var(--mark)}
+.fld:focus{border-color:var(--ink);box-shadow:0 0 0 3px var(--wash)}
+.fld.sm{height:32px;padding:0 9px;font-size:12px}
+.sel{position:relative;min-width:0}
+.sel .fld{cursor:pointer}
+.sel.open > .fld{border-color:var(--ink);box-shadow:0 0 0 3px var(--wash)}
+.sel .v{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sel .v.ph{color:var(--ink3)}
+.sel .cv{color:var(--ink3);flex-shrink:0;transition:transform .2s ease}
+.sel.open .cv{transform:rotate(180deg)}
+.pop{position:absolute;z-index:40;top:calc(100% + 5px);left:0;min-width:100%;background:var(--card);border:1px solid var(--border);
+  border-radius:var(--r);box-shadow:var(--shCard);padding:5px;max-height:268px;overflow-y:auto;animation:wsPop .16s ease}
+.pop.right{left:auto;right:0}
+.o{display:flex;align-items:center;gap:9px;width:100%;padding:7px 9px;border:0;border-radius:var(--r-in);background:transparent;color:var(--ink2);font-size:12.5px;text-align:left;white-space:nowrap}
+.o:hover{background:var(--wash);color:var(--ink)}
+.o[aria-selected="true"]{color:var(--ink);font-weight:500}
+.o .tail{margin-left:auto;display:flex;align-items:center;gap:7px;flex-shrink:0}
+.o .hint{font-size:10.5px;color:var(--ink3)}
+.o .ck{opacity:0;color:var(--ink)}
+.o[aria-selected="true"] .ck{opacity:1}
+.chk{display:inline-flex;align-items:center;gap:8px;background:none;border:0;padding:0;color:var(--ink3);font-size:12.5px;white-space:nowrap}
+.chk i{width:17px;height:17px;flex-shrink:0;border:1px solid var(--border);border-radius:var(--r-in);background:var(--card);display:grid;place-items:center;transition:all .2s ease}
+.chk i svg{width:11px;height:11px;opacity:0;transition:opacity .15s ease}
+.chk:hover i{border-color:var(--mark)}
+.chk[aria-checked="true"]{color:var(--ink)}
+.chk[aria-checked="true"] i{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.chk[aria-checked="true"] i svg{opacity:1}
+.seg{display:inline-flex;gap:3px;padding:3px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r)}
+.seg button{padding:6px 13px;border:0;border-radius:var(--r-in);background:transparent;color:var(--ink3);font-size:12px;transition:all .2s ease;white-space:nowrap}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--card);color:var(--ink);font-weight:500;box-shadow:var(--shSoft)}
+.seg.sm{padding:2px}
+.seg.sm button{padding:4px 9px;font-size:11px}
+.seg.sm button[aria-pressed="true"].bad{color:var(--error)}
+.opt{display:inline-flex;align-items:center;gap:8px;padding:0 13px;height:38px;border:1px solid var(--border);border-radius:var(--r);background:var(--card);color:var(--ink2);font-size:12.5px;transition:all .2s ease}
+.opt:hover{border-color:var(--mark);color:var(--ink)}
+.opt[aria-pressed="true"]{border-color:var(--ink);background:var(--wash);color:var(--ink)}
+.cal{width:250px;padding:10px}
+.cal-h{display:flex;align-items:center;gap:5px;margin-bottom:9px}
+.cal-h b{flex:1;text-align:center;font-size:12.5px}
+.cal-w{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:5px}
+.cal-w span{text-align:center;font-size:9px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+.cal-g{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cal-g button{height:28px;border:1px solid transparent;border-radius:var(--r-in);background:transparent;color:var(--ink2);font-size:11.5px;font-variant-numeric:tabular-nums}
+.cal-g button:hover{background:var(--wash);color:var(--ink)}
+.cal-g button.out{color:var(--border)}
+.cal-g button.tdy{border-color:var(--border)}
+.cal-g button.on{background:var(--ink);color:var(--bg)}
+
+/* ---------- кнопки ---------- */
+.b{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:0 15px;height:38px;border:none;border-radius:var(--r);
+  background:linear-gradient(180deg,var(--btnA),var(--btnB));color:var(--btnFg);font-size:12.5px;font-weight:600;box-shadow:var(--shSoft);transition:all .25s ease}
+.b:hover{transform:translateY(-1px);box-shadow:0 8px 22px -8px var(--mark)}
+.b:disabled{opacity:.35;transform:none;box-shadow:none;cursor:not-allowed}
+.b.wide{width:100%}
+.b.sm{height:30px;font-size:11.5px;padding:0 12px}
+.g{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 14px;height:38px;border:1px solid var(--border);border-radius:var(--r);background:transparent;color:var(--ink2);font-size:11.5px;transition:all .25s ease}
+.g:hover{color:var(--ink);border-color:var(--mark)}
+.g.sm{height:30px;padding:0 11px;font-size:11px}
+.g:disabled{opacity:.35;cursor:not-allowed;color:var(--ink2);border-color:var(--border)}
+.ib{width:32px;height:32px;border:1px solid var(--border);border-radius:var(--r);background:transparent;color:var(--ink2);display:inline-flex;align-items:center;justify-content:center;transition:all .25s ease;flex-shrink:0}
+.ib.sm{width:28px;height:28px;border-radius:var(--r-in)}
+.ib:hover{color:var(--ink);border-color:var(--mark)}
+.ib:disabled{opacity:.3;cursor:not-allowed}
+.ib.ok:hover{color:var(--success)} .ib.no:hover{color:var(--error)} .ib.wr:hover{color:var(--warning)}
+
+/* ---------- каркас 1400 ---------- */
+.stage{position:relative;z-index:2;height:100vh;display:flex;justify-content:center}
+.app{display:flex;width:100%;max-width:var(--W);height:100vh;overflow:hidden;border-left:1px solid var(--border2);border-right:1px solid var(--border2)}
+.rail{width:64px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding:14px 0 16px;border-right:1px solid var(--border2);position:relative;z-index:5;gap:6px}
+.rail .logo{width:38px;height:38px;border-radius:var(--r);background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;margin-bottom:14px;animation:wsBreath 5s ease-in-out infinite}
+.nb{position:relative;width:40px;height:40px;border-radius:var(--r);border:1px solid transparent;background:transparent;color:var(--ink3);display:flex;align-items:center;justify-content:center;transition:all .25s ease}
+.nb:hover{color:var(--ink);background:var(--wash)}
+.nb[aria-current="true"]{color:var(--ink);background:var(--wash);border-color:var(--border)}
+.nb .bdg{position:absolute;top:-2px;right:-2px;min-width:16px;height:16px;padding:0 4px;border-radius:var(--r-in);background:var(--ink);color:var(--bg);font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.rail .foot{margin-top:auto;display:flex;flex-direction:column;align-items:center;gap:8px}
+.ava{position:relative;width:36px;height:36px;border-radius:var(--r);background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;letter-spacing:.04em}
+.ava i{position:absolute;bottom:-2px;right:-2px;width:9px;height:9px;border-radius:3px;background:var(--success);border:2px solid var(--bg)}
+
+.col{flex:1;min-width:0;display:flex;flex-direction:column}
+.hd{height:56px;flex-shrink:0;display:flex;align-items:center;gap:12px;padding:0 20px;border-bottom:1px solid var(--border2)}
+.hd .ttl{display:flex;align-items:baseline;gap:9px;white-space:nowrap}
+.hd .ttl b{font-size:14.5px;font-weight:600}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border:1px solid var(--border2);border-radius:var(--r);font-size:9.5px;font-weight:500;letter-spacing:.13em;color:var(--ink3);white-space:nowrap}
+.chip .dot{width:6px;height:6px;border-radius:2px;background:var(--success);animation:wsPulse 2.2s ease-in-out infinite}
+
+.body{flex:1;min-height:0;display:flex;animation:wsFade .3s ease}
+.side{width:250px;flex-shrink:0;border-right:1px solid var(--border2);padding:14px 12px;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+.side .sb{display:flex;align-items:center;gap:9px;width:100%;padding:8px 10px;border:1px solid transparent;border-radius:var(--r);background:transparent;color:var(--ink2);font-size:12.5px;text-align:left;transition:all .2s ease}
+.side .sb:hover{background:var(--wash);color:var(--ink)}
+.side .sb[aria-current="true"]{background:var(--wash);color:var(--ink);border-color:var(--border)}
+.side .sb .n{margin-left:auto;font-size:10.5px;color:var(--ink3);flex-shrink:0;font-variant-numeric:tabular-nums}
+.main{flex:1;min-width:0;overflow-y:auto;padding:18px 20px 44px}
+.cap{font-size:12px;color:var(--ink3);line-height:1.5;margin:0 0 14px;max-width:78ch}
+
+/* ---------- карточки ---------- */
+.c{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;margin-bottom:14px}
+.c > h3{font-size:14px;margin-bottom:4px}
+.c > h3 + .cap{margin-bottom:12px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.row .f{margin-bottom:0}
+
+/* ---------- лента ёмкости ---------- */
+.rib{display:flex;gap:4px;align-items:flex-end}
+.rib4{display:flex;flex-direction:column;gap:9px}
+.wk{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.wk.wkd{margin-bottom:-4px}
+.wk.wkd span{font-size:9px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);padding-left:2px}
+.wkh{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}
+.wkh .lbl{letter-spacing:.14em}
+.wkh .rg{font-size:10.5px;color:var(--ink3);font-variant-numeric:tabular-nums}
+.wkh .now{color:var(--cold)}
+.wkh .tot{margin-left:auto;font-size:10.5px;color:var(--ink3);font-variant-numeric:tabular-nums}
+.rib4 .day{min-width:0}
+.rib4 .day .bar{height:46px}
+.rib4 .day .pct{top:4px;font-size:10px}
+.rib4 .day .dd{margin-top:4px}
+.rib4 .day.past{opacity:.42}
+.rib4 .day.tdy .dd{color:var(--cold);font-weight:600}
+.rib4 .day .cts{font-size:9.5px;color:var(--ink3);margin-top:2px;line-height:1.3;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;letter-spacing:.02em}
+.rib4 .day[aria-pressed="true"] .cts{color:var(--ink2)}
+/* горизонтальная ячейка дня: узкая шкала слева, дата с процентом сверху, города столбцом под ними */
+.rib4.ribh .day{display:flex;align-items:stretch;gap:7px;height:96px;padding:4px 6px 4px 4px;text-align:left;border-radius:var(--r)}
+.rib4.ribh .day .bar{flex:0 0 18%;min-width:13px;height:auto}
+.rib4.ribh .day .inf{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:flex-start;gap:3px}
+.rib4.ribh .day .dt{display:flex;align-items:baseline;gap:5px}
+.rib4.ribh .day .dd{margin-top:0;font-size:9.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rib4.ribh .day .pct{position:static;margin-left:auto;font-size:9.5px;color:var(--ink3);flex-shrink:0}
+.rib4.ribh .day .cts{margin-top:0;display:flex;flex-direction:column;gap:1px;overflow:hidden}
+/* Город и его наполняемость: название слева, счёт прижат к правой границе ячейки. */
+.rib4.ribh .day .ct{display:flex;align-items:baseline;gap:5px;font-size:9px;line-height:1.45}
+.rib4.ribh .day .ct b{font-weight:400;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rib4.ribh .day .ct i{margin-left:auto;font-style:normal;color:var(--ink3);font-variant-numeric:tabular-nums;flex-shrink:0}
+.rib4.ribh .day[aria-pressed="true"] .ct b,.rib4.ribh .day[aria-pressed="true"] .ct i{color:var(--ink2)}
+/* На узком экране ячейка уже — поджимаем шрифт, чтобы длинные названия городов не обрезались. */
+@media (max-width:1500px){
+  .rib4.ribh .day .dd{font-size:8.5px}
+  .rib4.ribh .day .pct{font-size:8.5px}
+  .rib4.ribh .day .ct{font-size:8px;gap:4px}
+}
+/* Дата ушла под маршруты: приём по ней оператору закрыт. */
+.rib4.ribh .day.lk .bar{border-style:dashed;border-color:var(--ink3)}
+.rib4.ribh .day.lk .dd{color:var(--ink3)}
+.rib4.ribh .day[aria-pressed="true"]{box-shadow:0 0 0 1px var(--ink)}
+.rib4.ribh .day[aria-pressed="true"] .bar{box-shadow:none}
+.rib4.ribh .day[aria-pressed="true"] .pct{color:var(--ink2)}
+.day{flex:1 0 0;min-width:42px;background:none;border:0;padding:0}
+.day .bar{height:94px;border:1px solid var(--border);border-radius:var(--r);background:var(--card);position:relative;overflow:hidden;transition:all .2s ease}
+.day .fill{position:absolute;left:0;right:0;bottom:0;background:var(--ink3);opacity:.3;transition:height .3s ease}
+.day[data-s="fill"] .fill{background:var(--cold);opacity:.45}
+.day[data-s="full"] .fill{background:var(--ink);opacity:.72}
+.day[data-s="over"] .fill{background:var(--error);opacity:.6}
+.day .bar::after{content:"";position:absolute;left:0;right:0;bottom:90.9%;border-top:1px dashed var(--mark);opacity:.5}
+.day .pct{position:absolute;left:0;right:0;top:6px;font-size:10.5px;color:var(--ink2);font-variant-numeric:tabular-nums}
+.day .dd{font-size:10.5px;margin-top:6px;color:var(--ink2);font-variant-numeric:tabular-nums}
+.day .wd{font-size:9px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);margin-top:2px}
+.day:hover .bar{border-color:var(--mark)}
+.day[aria-pressed="true"] .bar{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+.lg{display:flex;gap:14px;margin-top:12px;flex-wrap:wrap;font-size:11px;color:var(--ink3)}
+.lg i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+
+/* ---------- календарь плана ---------- */
+.ptop{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.ptop b{font-size:15px;min-width:150px;text-align:center}
+.phead{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px}
+.phead span{font-size:9.5px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);padding-left:2px}
+.pgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.pd{display:flex;flex-direction:column;gap:7px;text-align:left;min-height:106px;padding:9px 10px 10px;
+  border:1px solid var(--border);border-radius:var(--r);background:var(--card);transition:all .2s ease}
+.pd.wknd{background:var(--bg2)}
+.pd.out{opacity:.35}
+.pd:hover{border-color:var(--mark)}
+.pd[aria-pressed="true"]{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+.pd .h{display:flex;align-items:baseline;gap:6px}
+.pd .dn{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+.pd.tdy .dn{color:var(--cold)}
+.pd .cr{margin-left:auto;font-size:10px;color:var(--ink3);font-variant-numeric:tabular-nums}
+.pd .big{font-size:13.5px;font-weight:500;font-variant-numeric:tabular-nums;display:flex;align-items:baseline;gap:5px}
+.pd .big em{font-style:normal;font-size:10px;font-weight:400;margin-left:auto}
+.pd .pb{height:5px;border-radius:3px;background:var(--wash);position:relative;overflow:hidden}
+.pd .pb i{position:absolute;left:0;top:0;bottom:0;background:var(--ink3);opacity:.4;border-radius:3px}
+.pd[data-s="fill"] .pb i{background:var(--cold);opacity:.55}
+.pd[data-s="full"] .pb i{background:var(--ink);opacity:.75}
+.pd[data-s="over"] .pb i{background:var(--error);opacity:.7}
+.pd .pb s{position:absolute;top:-1px;bottom:-1px;width:1px;background:var(--mark);text-decoration:none}
+.pd .cs{font-size:10px;color:var(--ink3);font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.pd .off{font-size:10.5px;color:var(--ink3)}
+
+/* ---------- таблицы ---------- */
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{font-size:9.5px;font-weight:500;letter-spacing:.13em;text-transform:uppercase;color:var(--ink3);text-align:left;padding:0 10px 8px;border-bottom:1px solid var(--border2);white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid var(--border2);color:var(--ink2)}
+tbody tr:hover td{background:var(--wash)}
+tbody tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+td b{color:var(--ink);font-weight:600}
+.tg{display:inline-flex;align-items:center;padding:2px 9px;border:1px solid currentColor;border-radius:var(--r-in);font-size:9.5px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+.t-ok{color:var(--success)} .t-warn{color:var(--warning)} .t-err{color:var(--error)}
+.t-cold{color:var(--cold)} .t-ink{color:var(--ink)} .t-mut{color:var(--ink3)}
+.empty{padding:34px 10px;text-align:center;color:var(--ink3);font-size:12.5px}
+
+/* ---------- маршрут ---------- */
+.tl{display:flex;height:26px;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;background:var(--card);margin:12px 0}
+.tl div{flex:1;border-right:1px solid var(--border2);font-size:9.5px;line-height:24px;text-align:center;color:var(--ink3);font-variant-numeric:tabular-nums}
+.tl div:last-child{border-right:0}
+.tl div.busy{background:var(--wash);color:var(--ink)}
+.tl div.done{background:var(--ink);color:var(--bg)}
+.stops{max-height:320px;overflow-y:auto}
+.stop{display:grid;grid-template-columns:24px 1fr auto;gap:10px;align-items:center;padding:8px 2px;border-bottom:1px solid var(--border2);font-size:12.5px}
+.stop:last-child{border-bottom:0}
+.stop.sel{background:var(--wash);border-radius:var(--r-in);box-shadow:inset 2px 0 0 var(--ink);padding-left:9px}
+.stop .n{font-size:10.5px;color:var(--ink3);font-variant-numeric:tabular-nums}
+.stop small{display:block;font-size:10.5px;color:var(--ink3);margin-top:2px;font-variant-numeric:tabular-nums}
+.stop.fin b{color:var(--ink3);text-decoration:line-through}
+.stamp{position:absolute;right:18px;bottom:16px;width:88px;height:88px;border:1.5px solid var(--mark);border-radius:50%;color:var(--ink3);display:grid;place-content:center;text-align:center;transform:rotate(-11deg);opacity:.6;pointer-events:none}
+.stamp::after{content:"";position:absolute;inset:5px;border:1px dashed var(--mark);border-radius:50%}
+.stamp b{font-size:10px;font-weight:600;letter-spacing:.16em;display:block;color:var(--ink2)}
+.stamp span{font-size:9px;display:block;margin-top:3px}
+
+/* ---------- лист ожидания ---------- */
+.wtr small{display:block;font-size:10.5px;color:var(--ink3);margin-top:2px;line-height:1.4}
+.wtr.off td{opacity:.5}
+.wact{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+
+/* ---------- прочее ---------- */
+.chat{border:1px solid var(--border);border-radius:var(--r);background:var(--card);height:236px;overflow-y:auto;padding:12px}
+.msg{margin-bottom:11px;font-size:12.5px;line-height:1.45;color:var(--ink2)}
+.msg b{font-size:12px;color:var(--ink)}
+.msg small{font-size:10px;color:var(--ink3);margin-left:6px}
+.msg.v{padding-left:9px;border-left:2px solid var(--border)}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:12px;margin-bottom:14px}
+.kpi > div{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px}
+.kpi .v{font-size:22px;font-weight:500;font-variant-numeric:tabular-nums}
+.kpi .k{font-size:9.5px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);margin-top:5px;line-height:1.4}
+.toast{position:fixed;right:22px;bottom:22px;background:var(--card);border:1px solid var(--border);border-left:2px solid var(--ink);border-radius:var(--r);padding:12px 16px;font-size:12.5px;z-index:60;max-width:390px;box-shadow:var(--shCard);animation:wsFade .25s ease}
+.dev{display:grid;grid-template-columns:1.45fr .7fr 1fr .8fr auto 32px;gap:6px;margin-bottom:6px;align-items:center}
+
+/* ---------- вход ---------- */
+.login-wrap{position:relative;z-index:2;height:100vh;display:grid;place-items:center;padding:24px}
+.login{width:400px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:30px 30px 26px;box-shadow:var(--shCard)}
+.login .brand{display:flex;align-items:center;gap:13px;margin-bottom:24px}
+.login .logo{width:44px;height:44px;flex-shrink:0;border-radius:var(--r);background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center}
+.login h1{font-size:19px;font-weight:600;letter-spacing:-.01em}
+.login .hint{margin-top:16px;padding:11px 12px;border:1px solid var(--border2);border-radius:var(--r);background:var(--card)}
+
+/* ---------- рельса: группы по ролям ---------- */
+.rail .nav{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;padding-bottom:6px}
+.rail .nav::-webkit-scrollbar{width:0}
+.rail .nav .nb{height:36px}
+.rail .logo{margin-bottom:10px}
+/* Подпись роли стоит над каждой группой, включая первую; линия-разделитель — только между группами. */
+.grp{display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;padding-top:11px;position:relative}
+.grp + .grp{margin-top:9px}
+.grp + .grp::before{content:"";position:absolute;top:2px;left:11px;right:11px;height:1px;background:var(--border)}
+.grp::after{content:attr(data-g);position:absolute;top:-3px;left:50%;transform:translateX(-50%);
+  font-size:7.5px;font-weight:600;letter-spacing:.12em;color:var(--ink3);background:var(--bg);padding:0 4px;line-height:11px}
+
+/* ---------- шаговый обход страниц ---------- */
+.step{display:flex;align-items:center;gap:5px;padding:3px 4px;border:1px solid var(--border2);border-radius:var(--r)}
+.step span{font-size:10.5px;color:var(--ink3);font-variant-numeric:tabular-nums;min-width:44px;text-align:center}
+.ib.xs{width:24px;height:24px;border:0;border-radius:var(--r-in)}
+
+/* ---------- телефон с вызовом ---------- */
+.phone{display:flex;align-items:center;gap:6px;height:38px;padding:0 4px 0 11px;background:var(--card);
+  border:1px solid var(--border);border-radius:var(--r);transition:border-color .2s ease,box-shadow .2s ease}
+.phone:hover{border-color:var(--mark)}
+.phone:focus-within{border-color:var(--ink);box-shadow:0 0 0 3px var(--wash)}
+.phone input{flex:1;min-width:0;height:36px;border:0;background:transparent;outline:none;font-size:13px;padding:0}
+.phone .call{display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 9px;flex-shrink:0;
+  border:1px solid var(--border);border-radius:var(--r-in);background:var(--surface);color:var(--ink2);font-size:10.5px;
+  font-weight:500;letter-spacing:.06em;text-transform:uppercase;transition:all .2s ease}
+.phone .call:hover:not(:disabled){color:var(--success);border-color:var(--success)}
+.phone .call:disabled{opacity:.3;cursor:not-allowed}
+.chkbox{display:flex;align-items:center;height:38px;padding:0 11px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);transition:border-color .2s ease}
+.chkbox:hover{border-color:var(--mark)}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.b.long{min-width:236px}
+
+/* ---------- пульт оператора ---------- */
+.opbar{display:flex;align-items:stretch;gap:0;border:1px solid var(--border);border-radius:var(--r);
+  background:var(--card);overflow:hidden;transition:border-color .3s ease,box-shadow .3s ease}
+.opbar.ring{border-color:var(--warning);animation:opRing 1.5s ease-in-out infinite}
+.opbar.live{border-color:var(--success);box-shadow:0 0 0 2px rgba(22,163,74,.12)}
+@keyframes opRing{0%,100%{box-shadow:0 0 0 0 rgba(217,119,6,0)}50%{box-shadow:0 0 0 4px rgba(217,119,6,.22)}}
+.opsw{display:flex;align-items:center;gap:10px;padding:0 16px;border-right:1px solid var(--border2);flex-shrink:0;
+  border-width:0 1px 0 0;background:none;height:58px;text-align:left}
+.opsw .tr{width:40px;height:22px;flex-shrink:0;border-radius:11px;background:var(--wash);border:1px solid var(--border);position:relative;transition:all .25s ease}
+.opsw .tr i{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--ink3);transition:all .25s ease}
+.opsw[aria-pressed="true"] .tr{background:var(--success);border-color:var(--success)}
+.opsw[aria-pressed="true"] .tr i{left:20px;background:var(--bg)}
+.opsw b{font-size:12.5px;font-weight:500}
+.opsw small{display:block;font-size:10px;color:var(--ink3);margin-top:1px}
+.opline{flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:0 14px;height:58px}
+.opline .ic{width:28px;height:28px;flex-shrink:0;border-radius:var(--r-in);display:grid;place-items:center;color:var(--ink3)}
+.opbar.ring .opline .ic{color:var(--warning);animation:wsPulse 1.1s ease-in-out infinite}
+.opbar.live .opline .ic{color:var(--success)}
+.opline .info{flex:1;min-width:0}
+.opline .st{font-size:9px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
+.opline .no{font-size:14px;font-weight:500;font-variant-numeric:tabular-nums;margin-top:1px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.opline .no.idle{font-size:12px;font-weight:400;color:var(--ink3)}
+.opline .tm{font-size:18px;font-weight:500;font-variant-numeric:tabular-nums;flex-shrink:0}
+.opline .acts{display:flex;gap:6px;flex-shrink:0}
+.opline .acts .b,.opline .acts .g{height:32px;font-size:11.5px}
+.opline .g.end{border-color:var(--error);color:var(--error)}
+.opline .g.end:hover{background:var(--error);color:var(--bg);border-color:var(--error)}
+.opline .b.ans{background:linear-gradient(180deg,var(--success),#12833C);color:#fff}
+
+/* ---------- мини-окно звонка ---------- */
+.callw{position:fixed;left:22px;bottom:22px;z-index:70;width:272px;background:var(--card);border:1px solid var(--border);
+  border-left:2px solid var(--success);border-radius:var(--r);box-shadow:var(--shCard);padding:14px 15px;animation:wsFade .22s ease}
+.callw .top{display:flex;align-items:center;gap:9px;margin-bottom:11px}
+.callw .dot{width:8px;height:8px;border-radius:3px;background:var(--warning);animation:wsPulse 1.4s ease-in-out infinite;flex-shrink:0}
+.callw .st{font-size:9.5px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
+.callw .sec{margin-left:auto;font-size:11.5px;color:var(--ink2);font-variant-numeric:tabular-nums}
+.callw b{font-size:13.5px;display:block}
+.callw .num{font-size:12.5px;color:var(--ink2);font-variant-numeric:tabular-nums;margin-top:2px}
+.callw .who{font-size:10.5px;color:var(--ink3);margin-top:6px;line-height:1.45}
+.callw .acts{display:flex;gap:6px;margin-top:12px}
+.callw .acts .g{flex:1;height:32px;font-size:11px}
+.callw .acts .end{border-color:var(--error);color:var(--error)}
+.callw .acts .end:hover{background:var(--error);color:var(--bg);border-color:var(--error)}
+
+/* ---------- акт: приборы и фото ---------- */
+.wrow{border:1px solid var(--border2);border-radius:var(--r);background:var(--card);padding:11px 12px;margin-bottom:8px}
+.wrow.new{border-color:var(--mark)}
+.wrow.bad{border-left:2px solid var(--error)}
+.wrow.swap{border-left:2px solid var(--cold)}
+.wtop{display:grid;grid-template-columns:1.25fr 1.05fr .7fr .95fr .95fr .8fr auto auto auto 32px;gap:6px;align-items:center}
+.wbot{display:flex;align-items:center;gap:7px;margin-top:9px;flex-wrap:wrap}
+/* Непригодный прибор: причина, бумажный бланк и решение по замене — отдельной
+   полосой под строкой, чтобы годные приборы оставались одной строкой. */
+.wbad{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:9px;padding:9px 10px;
+  border:1px dashed var(--border);border-radius:var(--r-in);background:var(--wash)}
+.wbad .lbl{color:var(--error)}
+.wbad .sel{width:210px}
+.wbad input.fld{width:190px}
+.wbad input.fld.no{width:150px}
+.wswap{margin-top:8px;font-size:11px;color:var(--cold);line-height:1.45}
+.wbot .lbl{margin-right:2px}
+.phw{position:relative;width:58px;height:44px;flex-shrink:0}
+.phw img{width:100%;height:100%;object-fit:cover;border:1px solid var(--border);border-radius:var(--r-in);display:block;cursor:zoom-in}
+.phw img:hover{border-color:var(--ink)}
+.phw .x{position:absolute;top:-6px;right:-6px;width:17px;height:17px;border-radius:50%;border:1px solid var(--border);
+  background:var(--card);color:var(--ink3);display:grid;place-items:center;opacity:0;transition:all .18s ease}
+.phw:hover .x{opacity:1}
+.phw .x:hover{color:var(--error);border-color:var(--error)}
+.addph{cursor:pointer}
+.nophoto{font-size:10.5px;color:var(--error)}
+.actnote{padding:10px 12px;border:1px solid var(--border2);border-left:2px solid var(--warning);border-radius:var(--r);
+  background:var(--card);font-size:12px;color:var(--ink2);line-height:1.5;margin-bottom:12px}
+.actnote b{display:block;font-size:9.5px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);margin-bottom:4px}
+
+/* ---------- оплата на месте ---------- */
+.payb{border:1px solid var(--border2);border-left:2px solid var(--success);border-radius:var(--r);
+  background:var(--card);padding:11px 12px;margin-top:12px}
+.payb.none{border-left-color:var(--warning)}
+.payh{display:flex;align-items:baseline;gap:10px;margin-bottom:9px;flex-wrap:wrap}
+.payh .note{flex:1;min-width:180px}
+.payg{display:grid;grid-template-columns:1.2fr .8fr 2.2fr;gap:8px;align-items:flex-end}
+.paysum{margin-top:9px;font-size:11.5px;color:var(--ink3);line-height:1.5}
+.paysum b{color:var(--ink);font-weight:600}
+/* Подотчёт: строка итога по бригаде отделена от строк поверителей. */
+tfoot td{border-top:1px solid var(--border);border-bottom:0;color:var(--ink);font-weight:600}
+
+/* ---------- знакомый клиент ---------- */
+.known{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:-4px 0 14px;padding:9px 12px;
+  border:1px solid var(--border2);border-left:2px solid var(--cold);border-radius:var(--r);
+  background:var(--card);font-size:11.5px;color:var(--ink2);line-height:1.5}
+.known b{color:var(--ink);font-weight:600}
+.known .last{color:var(--ink3)}
+.known .g{margin-left:auto;flex-shrink:0}
+.chist{margin-top:16px;border-top:1px solid var(--border);padding-top:13px}
+.chist>b{display:block;font-size:9.5px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink3);margin-bottom:8px}
+.chist .same{color:var(--cold)}
+
+/* ---------- поддержка маршрутов: шкала дня ---------- */
+.rrow{display:flex;align-items:center;gap:4px}
+.rrow .sb{flex:1;min-width:0}
+.rrow .ib{flex-shrink:0;position:relative}
+.rrow .ib .cnt{position:absolute;top:-4px;right:-4px;min-width:14px;height:14px;padding:0 3px;border-radius:5px;
+  background:var(--ink);color:var(--bg);font-size:8.5px;font-weight:600;display:grid;place-items:center}
+.tlg{display:flex;flex-direction:column;margin-top:4px}
+.tlh{display:grid;grid-template-columns:64px 1fr;gap:10px;align-items:stretch;min-height:42px}
+.tlh .hh{position:relative;padding:8px 12px 0 0;font-size:11.5px;color:var(--ink3);text-align:right;font-variant-numeric:tabular-nums}
+.tlh .hh i{position:absolute;right:0;top:14px;bottom:-1px;width:1px;background:var(--border)}
+.tlh:last-child .hh i{display:none}
+.tlh.now .hh{color:var(--cold);font-weight:600}
+.tlh.now .hh i{background:var(--cold);width:1.5px}
+/* дорожка часа — колонка: одна заявка в строку, карточки во всю ширину */
+.tlh .lane{display:flex;flex-direction:column;align-items:stretch;gap:6px;padding:6px 0 8px;border-top:1px dashed var(--border2)}
+.tlh:first-child .lane{border-top:0}
+.tlh .lane.empty{padding:4px 0}
+.tlh .lane .none{font-size:10.5px;color:var(--border);letter-spacing:.05em}
+.tlh .lane .chip2{width:100%;min-width:0}
+/* фиксированный слот тега — теги и кнопки соседних карточек встают в колонку */
+.tlh .lane .chip2 .tg{min-width:112px;justify-content:center}
+.chip2{display:flex;align-items:center;gap:9px;padding:6px 8px 6px 10px;border:1px solid var(--border);
+  border-radius:var(--r);background:var(--card);min-width:300px;transition:border-color .2s ease,box-shadow .2s ease}
+.chip2:hover{border-color:var(--mark);box-shadow:var(--shSoft)}
+.chip2.fin{opacity:.55}
+.chip2.fin .ad b{text-decoration:line-through}
+.chip2 .rt{font-size:9.5px;color:var(--ink3);flex-shrink:0}
+.chip2 .ad{min-width:0;flex:1}
+.chip2 .ad b{display:block;font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip2 .ad small{display:block;font-size:11px;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip2 .ctl{display:flex;align-items:center;gap:4px;flex-shrink:0}
+
+/* ---------- календарь планирования ---------- */
+.pcell{display:flex;flex-direction:column;gap:6px;text-align:left;min-height:104px;padding:8px 9px 9px;
+  border:1px solid var(--border);border-radius:var(--r);background:var(--card);transition:all .2s ease}
+.pcell.out{opacity:.32}
+.pcell.off{background:var(--bg2)}
+.pcell:hover{border-color:var(--ink);box-shadow:var(--shSoft)}
+.pcell .h{display:flex;align-items:baseline;gap:6px}
+.pcell .dn{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+.pcell.tdy .dn{color:var(--cold)}
+.pcell .cr{margin-left:auto;font-size:10px;color:var(--ink3)}
+.pcell .pb{height:4px;border-radius:3px;background:var(--wash);position:relative;overflow:hidden}
+.pcell .pb i{position:absolute;left:0;top:0;bottom:0;background:var(--ink3);opacity:.4;border-radius:3px}
+.pcell[data-s="fill"] .pb i{background:var(--cold);opacity:.55}
+.pcell[data-s="full"] .pb i{background:var(--ink);opacity:.75}
+.pcell[data-s="over"] .pb i{background:var(--error);opacity:.7}
+.pcell .pb s{position:absolute;top:-1px;bottom:-1px;width:1px;background:var(--mark);text-decoration:none}
+.pcell .tags{display:flex;flex-wrap:wrap;gap:3px}
+/* Города и доступные работы — списками прямо в миниатюре дня, без сокращений. */
+.pcell .lst{display:flex;flex-direction:column;gap:1px;min-width:0}
+.pcell .lst b{font-size:8px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);margin-bottom:2px}
+.pcell .lst i{font-style:normal;font-size:9px;line-height:1.45;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcell .lst i.none{color:var(--ink3)}
+.pcell.off .lst i{color:var(--ink3)}
+.tag{display:inline-flex;align-items:center;padding:1px 6px;border:1px solid var(--border);border-radius:var(--r-in);
+  background:var(--surface);font-size:9.5px;font-style:normal;color:var(--ink2);letter-spacing:.02em;white-space:nowrap}
+.tag.more{color:var(--ink3)}
+.tag.empty{border-style:dashed;color:var(--ink3)}
+.pcell .crew{display:flex;gap:8px;margin-top:auto;align-items:center;font-size:10.5px;color:var(--ink3);font-variant-numeric:tabular-nums}
+.pcell .crew i{display:inline-flex;align-items:center;gap:3px;font-style:normal}
+.pcell .crew i.none{color:var(--warning)}
+.tgls{display:flex;flex-wrap:wrap;gap:5px;max-height:168px;overflow-y:auto;padding:1px}
+.tgl{padding:5px 10px;border:1px solid var(--border);border-radius:var(--r-in);background:var(--card);
+  color:var(--ink2);font-size:11.5px;white-space:nowrap;transition:all .18s ease}
+/* Наведение не должно перекрашивать текст уже нажатого переключателя — он сливался с заливкой. */
+.tgl:hover:not(:disabled):not([aria-pressed="true"]){border-color:var(--mark);color:var(--ink)}
+.tgl[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg);font-weight:500}
+.tgl.ab{opacity:.35;text-decoration:line-through;cursor:not-allowed}
+/* Компетенции в строке сотрудника — компактнее обычных переключателей. */
+.tgls.sk{max-height:none;gap:4px;min-width:330px}
+.tgls.sk .tgl{padding:3px 7px;font-size:10.5px}
+/* Подсказка дат под выбранные услуги живёт справа от календаря в его же выпадашке. */
+.pop.cal.wide{display:flex;gap:11px;width:max-content;max-height:none;overflow:visible}
+.pop.cal.wide .cal-c{width:232px;flex:none}
+.pop.cal.wide .cal-s{width:252px;flex:none;display:flex;flex-direction:column;
+  border-left:1px solid var(--border2);padding-left:11px}
+.cal-s .lbl{margin-bottom:7px}
+.cal-s .slotlist{flex:1;min-height:0;max-height:252px;overflow-y:auto;display:flex;flex-direction:column;gap:1px}
+.cal-s .slotlist::-webkit-scrollbar{width:3px}
+.cal-s .slotlist::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.cal-s .slot{display:flex;align-items:baseline;gap:6px;width:100%;padding:5px 7px;border:0;border-radius:var(--r-in);background:none;text-align:left}
+.cal-s .slot:hover{background:var(--wash)}
+.cal-s .slot.on{background:var(--ink)}
+.cal-s .slot b{font-size:11.5px;font-weight:500;color:var(--ink2);white-space:nowrap}
+.cal-s .slot i{margin-left:auto;font-style:normal;font-size:10px;color:var(--ink3);white-space:nowrap}
+.cal-s .slot:hover b{color:var(--ink)}
+.cal-s .slot.on b,.cal-s .slot.on i{color:var(--bg)}
+.cal-s .none{display:block;padding:5px 7px;font-size:10.5px;color:var(--ink3);line-height:1.4}
+.g.end{border-color:var(--error);color:var(--error)}
+.g.end:hover{background:var(--error);color:var(--bg);border-color:var(--error)}
+
+/* ---------- конструктор маршрутов ---------- */
+.rcm{width:min(1240px,97vw)}
+.rchd{display:flex;align-items:flex-end;gap:16px;padding-bottom:14px;margin-bottom:14px;border-bottom:1px solid var(--border2)}
+.rcst{min-width:0}
+.rcst > div{font-size:12.5px}
+.rcst b{font-size:15px}
+.rcst .who{font-size:11px;color:var(--ink3);margin-top:3px;line-height:1.45;max-width:420px}
+.rchd .b{margin-left:auto;flex-shrink:0}
+.rcbody{display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:start}
+.rcmap{border:1px solid var(--border);border-radius:var(--r);background:var(--card);overflow:hidden}
+.rcmap svg{display:block;width:100%;height:auto}
+.mcity circle{fill:var(--ink3);opacity:.5}
+.mcity text{font-size:11.5px;fill:var(--ink2);font-weight:600;letter-spacing:.02em}
+.mline{fill:none;stroke:var(--ink);stroke-width:2;stroke-linejoin:round;stroke-linecap:round;opacity:.7;stroke-dasharray:6 4}
+.mline.halo{stroke:var(--card);stroke-width:5;opacity:.9;stroke-dasharray:none}
+.mlg rect{fill:var(--card);stroke:var(--border2);stroke-width:1}
+.mlg text{font-size:10.5px;fill:var(--ink3)}
+.mlg .d1{fill:var(--cold);opacity:.6}
+.mlg .d2{fill:var(--ink)}
+.mlg .d3{fill:var(--ink3);opacity:.22}
+.mp{cursor:pointer}
+.mp .hit{fill:transparent}
+.mp .dot{fill:var(--cold);opacity:.6;transition:all .15s ease}
+.mp:hover .dot{opacity:1;r:6}
+.mp.on .dot{fill:var(--ink);opacity:1}
+.mp.on text{font-size:10px;font-weight:600;fill:var(--ink)}
+.mp.taken{cursor:default}
+.mp.taken .dot{fill:var(--ink3);opacity:.22}
+.mp.taken:hover .dot{opacity:.3}
+.rclist{max-height:620px;overflow-y:auto;padding-right:2px}
+.rcr{border:1px solid var(--border);border-radius:var(--r);background:var(--card);padding:10px 11px;margin-bottom:8px}
+.rch{display:flex;align-items:center;gap:8px}
+.rch .note{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rcs{margin-top:8px;max-height:132px;overflow-y:auto}
+.rcs > div{display:flex;align-items:center;gap:7px;padding:3px 0;font-size:11.5px;color:var(--ink2);border-bottom:1px solid var(--border2)}
+.rcs > div:last-child{border-bottom:0}
+.rcs .n{color:var(--ink3);font-size:10px;flex-shrink:0}
+.rcs .a{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---------- модальный слой ---------- */
+.mask{position:fixed;inset:0;z-index:90;padding:36px 22px;overflow-y:auto;
+  background:rgba(12,12,12,.4);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);
+  display:flex;justify-content:center;align-items:flex-start;animation:wsFade .2s ease}
+[data-theme="dark"] .mask{background:rgba(0,0,0,.6)}
+.modal{width:min(1120px,96vw);background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+  box-shadow:0 40px 90px -30px rgba(0,0,0,.55);padding:18px 20px 20px;animation:wsPop .2s ease}
+.mhd{display:flex;align-items:center;gap:12px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border2)}
+.mhd h3{font-size:15px}
+.mhd .note{flex:1}
+.mhd .ib{flex-shrink:0}
+
+/* ---------- просмотр фото ---------- */
+.lb{position:fixed;inset:0;z-index:110;background:rgba(0,0,0,.82);display:grid;place-items:center;padding:40px;animation:wsFade .2s ease}
+.lb img{max-width:min(880px,86vw);max-height:76vh;border-radius:var(--r);display:block;box-shadow:0 30px 70px -20px #000}
+.lb .bar{display:flex;align-items:center;gap:10px;justify-content:center;margin-top:14px;color:#E7E7E7;font-size:12px}
+.lb .bar .ib{border-color:rgba(231,231,231,.28);color:#E7E7E7}
+.lb .bar .ib:hover{border-color:#E7E7E7}
+.lb .cls{position:absolute;top:22px;right:22px}
+
+/* ---------- нет связи ----------
+   Работы без связи не предусмотрено: пока сети нет, интерфейс заперт под
+   размытием — так состояние читается с одного взгляда даже на телефоне.
+   Слой выше модальных окон (90) и просмотра фото (110), клики держит на себе. */
+.offw{position:fixed;inset:0;z-index:200;display:grid;place-items:center;padding:24px;
+  background:var(--veil);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:wsFade .2s ease}
+.offc{width:min(360px,94vw);background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  box-shadow:var(--shCard);padding:24px 22px 20px;text-align:center;animation:wsPop .2s ease}
+.offc .spin{width:34px;height:34px;margin:0 auto 15px;border:2px solid var(--border);border-top-color:var(--ink);
+  border-radius:50%;animation:wsSpin .85s linear infinite}
+.offc h3{font-size:15px;margin-bottom:6px}
+.offc .note{margin-bottom:12px}
+.offc .ago{font-size:12px;color:var(--ink2);margin-bottom:16px}
+.offc .b{width:100%}
+@keyframes wsSpin{to{transform:rotate(360deg)}}
+
+/* Кнопка, сворачивающая чат маршрута, живёт только на телефоне: на компьютере
+   чат стоит рядом с карточкой маршрута и прятать его незачем. */
+.mchatt{display:none}
+
+/* ============ ТЕЛЕФОН (до 768 px) ============
+   Поверитель работает на адресе клиента с телефона: ему нужны страница
+   «Мой маршрут» и акт. Остальные роли сидят за компьютером, поэтому всё
+   ниже заперто в медиазапрос и десктопную вёрстку не трогает. */
+@media (max-width:768px){
+  /* ---- каркас: боковой рейл уходит вниз панелью ---- */
+  .stage,.app{height:100dvh}
+  .app{border-left:0;border-right:0}
+  .rail{position:fixed;left:0;right:0;bottom:0;z-index:50;width:auto;height:58px;
+    flex-direction:row;align-items:center;justify-content:space-between;gap:4px;padding:0 10px;
+    border-right:0;border-top:1px solid var(--border);background:var(--bg)}
+  .rail .logo{display:none}
+  .rail .nav{flex:1;flex-direction:row;align-items:center;justify-content:flex-start;
+    gap:4px;height:100%;overflow-x:auto;overflow-y:hidden;padding-bottom:0}
+  /* В панели — иконки только текущей роли: чужие страницы с телефона не листают. */
+  .rail .grp:not(.cur){display:none}
+  .rail .grp{flex-direction:row;width:auto;gap:4px;padding-top:0}
+  .rail .grp + .grp{margin-top:0}
+  .rail .grp::after,.rail .grp + .grp::before{display:none}
+  .rail .nav .nb,.rail .nb{width:44px;height:44px;flex-shrink:0}
+  .rail .foot{margin-top:0;flex-direction:row;align-items:center;gap:4px}
+  .rail .ava{display:none}
+  .col{min-width:0}
+  .body{flex-direction:column}
+  .side{width:auto;flex-direction:row;gap:6px;padding:10px 12px;overflow-x:auto;
+    border-right:0;border-bottom:1px solid var(--border2)}
+  .side .sb{width:auto;white-space:nowrap;min-height:44px}
+  .main{padding:14px 12px 78px}            /* снизу место под нижнюю панель */
+  /* ---- шапка: название страницы и дата ---- */
+  .hd{height:52px;padding:0 12px;gap:8px}
+  .hd .ttl .lbl,.hd .ttl .tg,.hd .step,.hd .chip,.hd .ib{display:none}
+  .hd .ttl b{font-size:15px}
+  .hd .mono{margin-left:auto}
+  /* ---- палец вместо мыши: нажимаемое не меньше 44 px ---- */
+  .b,.g,.opt{min-height:44px;height:auto}
+  .b.sm,.g.sm{min-height:44px;height:auto;font-size:12.5px;padding:0 12px}
+  .ib,.ib.sm{width:44px;height:44px}
+  .fld,.fld.sm{min-height:44px}
+  textarea.fld{min-height:88px}
+  .phone{min-height:44px}
+  .phone .call{height:36px}
+  .chk{min-height:44px}
+  .seg button,.seg.sm button{min-height:44px}
+  .pop .o{min-height:44px}
+  .cal-g button{height:38px}
+  .tgl{min-height:40px}
+  /* ---- всё в одну колонку ---- */
+  .c{padding:12px}
+  .g2,.g3,.g4,.payg,.rcbody,.kpi{grid-template-columns:1fr}
+  .dev{grid-template-columns:1fr 1fr}
+  .main .f{width:100%!important;min-width:0}
+  .chip2,.tgls.sk{min-width:0}
+  .login{width:100%;max-width:400px}
+  .modal{width:100%;padding:14px 12px 16px}
+  .mask{padding:16px 10px}
+  .toast{left:12px;right:12px;bottom:70px;max-width:none}
+  /* Карточка «нет связи» сжимается: на 390 px она не должна упираться в края. */
+  .offw{padding:16px}
+  .offc{width:100%;padding:18px 14px 16px}
+  .offc .spin{width:30px;height:30px;margin-bottom:12px}
+  /* ---- карточка маршрута: точки крупнее, чат — в кнопку ---- */
+  /* Точки крупнее, но список остаётся прокручиваемым: иначе на маршруте
+     из двух десятков адресов до акта пришлось бы листать полэкрана. */
+  .stops{max-height:52vh}
+  .stop{grid-template-columns:26px 1fr;gap:8px;padding:11px 2px;font-size:14px}
+  .stop small{font-size:12px}
+  .stop > div:last-child{grid-column:1/-1;flex-wrap:wrap}
+  /* Чат свёрнут в кнопку: на телефоне он мешает акту, но нужен под рукой. */
+  .mchat{display:flex;flex-direction:column}
+  .mchat > h3{order:-2}
+  .mchatt{order:-1;display:inline-flex;align-self:stretch;margin-top:10px}
+  .mchat:not(.open) > .cap,.mchat:not(.open) > .chat,.mchat:not(.open) > .row{display:none}
+  .chat{height:200px}
+  /* Шапка акта: адрес во всю ширину, статус и звонок клиенту — строкой ниже. */
+  .acthd{flex-wrap:wrap}
+  .acthd > div:first-child{flex:1 1 100%}
+  /* ---- акт: строка прибора в три ряда ----
+     Первые два ряда держат проценты в flex-basis, третий (место, пломба,
+     пенсионер, результат, удаление) переносится сам по ширине экрана. */
+  .wtop{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+  .wtop > *{min-width:0}
+  .wtop > *:nth-child(1),.wtop > *:nth-child(2){flex:1 1 calc(50% - 3px)}
+  .wtop > *:nth-child(3){flex:1 1 calc(26% - 4px)}
+  .wtop > *:nth-child(4),.wtop > *:nth-child(5){flex:1 1 calc(37% - 4px)}
+  .wtop > *:nth-child(6){flex:1 1 calc(25% - 6px)}
+  .wtop > *:nth-child(n+7){flex:0 0 auto}
+  .wtop .chk{font-size:11.5px;gap:6px}
+  /* Результат поверки уходит полосой под три ряда: «годен / не годен» рядом
+     с пломбой и пенсионером на 390 px уже не помещается. */
+  .wtop > *:nth-child(9){order:1;flex:1 1 100%}
+  .wtop > *:last-child{margin-left:auto}
+  .wbad .sel,.wbad input.fld,.wbad input.fld.no{width:100%}
+  /* ---- фото: сетка по три в ряд, съёмка во всю ширину ---- */
+  .wbot{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-items:center;margin-top:10px}
+  .wbot > .lbl,.wbot > .note,.wbot > .nophoto,.wbot .addph{grid-column:1/-1}
+  .phw{width:100%;height:104px}
+  /* Крестик кадра — тоже под палец: наведения на телефоне нет, поэтому он виден
+     всегда. Нажимается угол 44×44, а закрашен из него только кружок. */
+  .phw .x{top:0;right:0;width:44px;height:44px;opacity:1;border:0;background:transparent}
+  .phw .x svg{width:11px;height:11px;box-sizing:content-box;padding:6px;
+    background:var(--card);border:1px solid var(--border);border-radius:50%}
+  .addph{justify-content:center}
+}
+
+/* ---------- загрузка и ошибка среза (рабочий режим) ---------- */
+/* Данные экрана приходят с сервера не мгновенно. Подменять всю страницу
+   прелоадером нельзя: под ним уже может быть заполненная форма — поэтому
+   над содержимым висит узкая полоса. В демо-режиме её не бывает. */
+.loading-screen,.load-error{display:flex;align-items:center;gap:10px;margin-bottom:12px;
+  padding:9px 14px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);
+  font-size:12.5px;color:var(--ink2)}
+.loading-screen .spin{width:15px;height:15px;border-width:2px;margin:0}
+.load-error{border-color:var(--error);color:var(--error)}
+.load-error button{margin-left:auto}

@@ -1,6 +1,12 @@
-# Локальная база для разработки. В облаке её место занимает Managed PostgreSQL
-# (см. infra/postgres.tf) — версия здесь держится той же, чтобы расхождений в
-# поведении между машиной разработчика и dev-контуром не было.
+# Всё приложение на машине разработчика: база, API и фронт.
+#
+#   docker compose up -d --build
+#   http://localhost:8080          — CRM, вход sv / o2 / v0, пароль 1234
+#   http://localhost:8080/?demo=1  — прежний прототип, без сервера и без базы
+#
+# В облаке места этих трёх служб занимают Managed PostgreSQL, контейнер API на
+# ВМ и раздача статики за балансировщиком (см. infra/). Версии держим теми же,
+# чтобы расхождений в поведении между машиной и dev-контуром не было.
 services:
   postgres:
     image: postgres:16-alpine
@@ -25,9 +31,9 @@ services:
 
   # API. Поднимается после базы и только когда та отвечает: миграции и первый
   # же запрос идут в неё сразу, а не когда-нибудь потом.
-  api:
-    build: .
-    container_name: uchetkin-api
+  server:
+    build: ./server
+    container_name: uchetkin-server
     restart: unless-stopped
     depends_on:
       postgres:
@@ -44,6 +50,24 @@ services:
       - "3000:3000"
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # Фронт: собранные файлы за nginx, который проксирует /api и /health на API.
+  # Один адрес на всё — иначе сессионная cookie (SameSite=Lax) до сервера не
+  # доедет, а слой «нет связи» поднимется на ровном месте.
+  web:
+    build: ./web
+    container_name: uchetkin-web
+    restart: unless-stopped
+    depends_on:
+      server:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
       interval: 10s
       timeout: 3s
       retries: 5

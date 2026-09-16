@@ -7,6 +7,7 @@
 import type { Db } from './db.ts';
 import type { DayPlan, Role, Service, SlotDay } from '../rules.ts';
 import { dayLock } from '../rules.ts';
+import { withLinks } from './routes/photos.ts';
 
 export interface ServiceRow extends Service {
   grp: string;
@@ -153,8 +154,35 @@ export async function nextId(db: Db, table: string, prefix: string): Promise<str
 }
 
 /** Приборы акта одной заявки, по порядку строк. */
-export async function loadDevices(db: Db, requestId: string) {
+export async function loadDevices(db: Db, requestId: string, secret?: string) {
+  const byRequest = await loadDevicesFor(db, [requestId], secret);
+  return byRequest.get(requestId) ?? [];
+}
+
+/** Приборы сразу по нескольким заявкам: экран заработка и сдельная считаются по
+ *  строкам приборов, и запрашивать их заявка за заявкой — это сотни запросов.
+ *  С ключом подписи к каждому прибору прикладываются ссылки на снимки. */
+export async function loadDevicesFor(db: Db, requestIds: string[], secret?: string) {
+  const out = new Map<string, Record<string, unknown>[]>();
+  if (!requestIds.length) return out;
   const { rows } = await db.query<Record<string, unknown>>(
-    'SELECT * FROM devices WHERE request_id = $1 ORDER BY position', [requestId]);
-  return rows;
+    'SELECT * FROM devices WHERE request_id = ANY($1) ORDER BY request_id, position', [requestIds]);
+  if (secret && rows.length) {
+    const { rows: photos } = await db.query<Record<string, unknown>>(
+      'SELECT id, device_id, name, taken_at::text AS taken_at FROM photos WHERE device_id = ANY($1) ORDER BY id',
+      [rows.map((d) => d.id)]);
+    const byDevice = new Map<string, Record<string, unknown>[]>();
+    for (const p of photos) {
+      const key = String(p.device_id);
+      if (!byDevice.has(key)) byDevice.set(key, []);
+      byDevice.get(key)!.push(p);
+    }
+    for (const d of rows) d.photos = withLinks(byDevice.get(String(d.id)) ?? [], secret);
+  }
+  for (const d of rows) {
+    const key = String(d.request_id);
+    if (!out.has(key)) out.set(key, []);
+    out.get(key)!.push(d);
+  }
+  return out;
 }

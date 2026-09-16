@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CRM «Учёткин»</title>
+<!-- Значка у прототипа нет: пустой data-URI избавляет консоль от 404 на favicon. -->
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=SN+Pro:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="fx fx-glow"></div><div class="fx fx-grid"></div><div class="fx-scan"></div>
+<div id="root"></div>
+<div id="intro"><canvas id="introCv"></canvas></div>
+<!-- Слой «нет связи» живёт вне #root: перерисовка страницы его не трогает,
+     а он не заставляет перерисовывать страницу каждую секунду. -->
+<div id="offline" hidden></div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

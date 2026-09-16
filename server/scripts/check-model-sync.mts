@@ -11,15 +11,28 @@
  * Без --expect печатает отпечаток набора; с --expect сверяет его с тем, что
  * снято с прототипа в браузере, и валится на первом расхождении.
  */
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildDemoState } from '../src/seed/prototype-model.mjs';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
-const prototype = readFileSync(root + 'index.html', 'utf8');
 const model = readFileSync(root + 'server/src/seed/prototype-model.mjs', 'utf8');
 
-// ── 1. каждый перенесённый блок обязан лежать в index.html дословно ──
+/* Исходники прототипа с пункта be-fe-wire лежат модулями в web/src (в корневом
+   index.html — собранный демо-режим, искать в нём нечего). Блок ищется внутри
+   одного файла: перенесённый кусок обязан и там остаться сплошным, иначе от
+   «дословно» ничего не остаётся. */
+function sources(dir: string): string[] {
+  return readdirSync(dir).flatMap((name) => {
+    const path = join(dir, name);
+    return statSync(path).isDirectory() ? sources(path) : (path.endsWith('.js') ? [readFileSync(path, 'utf8')] : []);
+  });
+}
+const files = sources(root + 'web/src');
+const somewhere = (text: string) => files.some((f) => f.includes(text));
+
+// ── 1. каждый перенесённый блок обязан лежать в исходниках прототипа дословно ──
 const MARKER = /^\/\* ── (.+?) ─+ \*\/$/gm;
 const marks = [...model.matchAll(MARKER)];
 if (!marks.length) throw new Error('в перенесённой модели не найдено ни одного блока');
@@ -29,18 +42,18 @@ for (const [i, mark] of marks.entries()) {
   const from = mark.index! + mark[0].length;
   const to = i + 1 < marks.length ? marks[i + 1]!.index! : model.indexOf('\n/* Единственное добавление');
   const block = model.slice(from, to).trim();
-  if (prototype.includes(block)) continue;
+  if (somewhere(block)) continue;
   drifted++;
-  console.error(`Блок «${mark[1]}» не найден в index.html дословно.`);
+  console.error(`Блок «${mark[1]}» не найден в web/src дословно.`);
   // Показываем первую разошедшуюся строку — по ней сразу видно, что случилось.
-  const stray = block.split('\n').find((line) => line.trim() && !prototype.includes(line));
+  const stray = block.split('\n').find((line) => line.trim() && !somewhere(line));
   if (stray) console.error(`  первая расходящаяся строка: ${stray.trim().slice(0, 100)}`);
 }
 if (drifted) {
-  console.error(`\nРазошлись блоки: ${drifted}. Перенесите их из index.html заново целиком.`);
+  console.error(`\nРазошлись блоки: ${drifted}. Перенесите их из web/src заново целиком.`);
   process.exit(1);
 }
-console.log(`Блоков перенесено: ${marks.length}, все совпадают с index.html дословно.`);
+console.log(`Блоков перенесено: ${marks.length}, все совпадают с исходниками прототипа дословно.`);
 
 // ── 2. отпечаток набора ──
 const sum = <T>(a: T[], f: (x: T) => number) => a.reduce((n, x) => n + f(x), 0);

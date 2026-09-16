@@ -59,7 +59,10 @@ const plugin: FastifyPluginAsync = async (app) => {
     const { rows } = await app.db.query(
       `SELECT r.*, r.date::text AS date,
               (SELECT count(*)::int FROM stops s WHERE s.route_id = r.id) AS stops,
-              (SELECT count(*)::int FROM stops s WHERE s.route_id = r.id AND s.done) AS done
+              (SELECT count(*)::int FROM stops s WHERE s.route_id = r.id AND s.done) AS done,
+              -- Обзвонено: список маршрутов показывает готовность к выезду, а точки
+              -- в нём не приезжают — их грузят, когда маршрут открывают.
+              (SELECT count(*)::int FROM stops s WHERE s.route_id = r.id AND s.called IS NOT NULL) AS called
          FROM routes r
         WHERE ($1::date IS NULL OR r.date = $1)
           AND ($2::date IS NULL OR r.date >= $2) AND ($3::date IS NULL OR r.date <= $3)

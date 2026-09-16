@@ -8,7 +8,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { requireUser } from '../auth.ts';
 import { notFound, ruleError } from '../errors.ts';
-import { bookedIn, bookedOn, loadDay, loadDevices, lockFactsFor, nextId, slotDays } from '../store.ts';
+import { bookedIn, bookedOn, loadDay, loadDevices, loadDevicesFor, lockFactsFor, nextId, slotDays } from '../store.ts';
 import { normPhone } from '../../db.ts';
 import {
   SLOT_MAX, SLOT_MIN, canShift, cityCapProblem, dayState, lockedFor, reqProblem, slotsFor, type Role,
@@ -52,6 +52,13 @@ const plugin: FastifyPluginAsync = async (app) => {
           city: { type: 'string' }, status: { type: 'string' },
           route_id: { type: 'string' }, phone: { type: 'string' },
           free: { type: 'boolean', default: false },
+          // Свои заявки: оператору — принятые им, поверителю — выполненные им.
+          // Без этого экран заработка тянул бы весь месяц по всей конторе.
+          own: { type: 'boolean', default: false },
+          // Что приложить к каждой заявке: `devices`, `payment` или оба через запятую.
+          // Начисление и оплата считаются по строкам приборов, и запрашивать их
+          // заявка за заявкой — это сотни запросов на один экран.
+          with: { type: 'string' },
           limit: { type: 'integer', minimum: 1, maximum: 500, default: 100 },
           offset: { type: 'integer', minimum: 0, default: 0 },
         },
@@ -75,11 +82,27 @@ const plugin: FastifyPluginAsync = async (app) => {
           AND (NOT $8::boolean OR r.route_id IS NULL)
           AND ($9::text IS NULL OR r.verifier_id = $9
                OR r.route_id IN (SELECT id FROM routes WHERE verifier_id = $9))
+          AND ($10::text IS NULL OR r.operator_id = $10 OR r.verifier_id = $10)
         ORDER BY r.date DESC, r.time_slot, r.id
-        LIMIT $10 OFFSET $11`,
+        LIMIT $11 OFFSET $12`,
       [q.date ?? null, q.date_from ?? null, q.date_to ?? null, q.city ?? null, q.status ?? null,
        q.route_id ?? null, q.phone ? normPhone(String(q.phone)) : null, !!q.free, mine,
-       q.limit ?? 100, q.offset ?? 0]);
+       q.own ? user.id : null, q.limit ?? 100, q.offset ?? 0]);
+
+    const want = new Set(String(q.with ?? '').split(',').map((s) => s.trim()).filter(Boolean));
+    if (rows.length && want.size) {
+      const ids = rows.map((r) => String(r.id));
+      if (want.has('devices')) {
+        const byRequest = await loadDevicesFor(app.db, ids, app.sessionSecret);
+        for (const r of rows) r.devices = byRequest.get(String(r.id)) ?? [];
+      }
+      if (want.has('payment')) {
+        const { rows: pays } = await app.db.query<Record<string, unknown>>(
+          'SELECT * FROM payments WHERE request_id = ANY($1)', [ids]);
+        const byRequest = new Map(pays.map((p) => [String(p.request_id), p]));
+        for (const r of rows) r.payment = byRequest.get(String(r.id)) ?? null;
+      }
+    }
     return { requests: rows };
   });
 
@@ -101,7 +124,8 @@ const plugin: FastifyPluginAsync = async (app) => {
       'SELECT * FROM stops WHERE request_id = $1 ORDER BY id DESC LIMIT 1', [id]);
     const { rows: wait } = await app.db.query(
       'SELECT * FROM wait_list WHERE request_id = $1 ORDER BY at DESC', [id]);
-    return { request, devices: await loadDevices(app.db, id), payment: pay[0] ?? null, stop: stop[0] ?? null, waits: wait };
+    return { request, devices: await loadDevices(app.db, id, app.sessionSecret),
+      payment: pay[0] ?? null, stop: stop[0] ?? null, waits: wait };
   });
 
   app.get('/clients', {
@@ -118,8 +142,10 @@ const plugin: FastifyPluginAsync = async (app) => {
     const { rows: clients } = await app.db.query('SELECT * FROM clients WHERE phone_norm = $1', [norm]);
     // История ищется и по дополнительному номеру: в прототипе «тот же клиент» —
     // это тот же номер в основном или в запасном поле любой прежней заявки.
+    // Карточку целиком, а не выжимку: по истории оператор подставляет в новую
+    // заявку адрес, контакты и тип клиента — для этого нужны все поля.
     const { rows: history } = await app.db.query(
-      `SELECT id, date::text AS date, city, street, house, flat, status, svcs, name
+      `SELECT *, date::text AS date, created_date::text AS created_date
          FROM requests WHERE phone_norm = $1 OR regexp_replace(phone2, '\\D', '', 'g') LIKE '%' || $2
         ORDER BY date DESC, id DESC LIMIT 50`, [norm, norm.slice(-10)]);
     return { client: clients[0] ?? null, history };

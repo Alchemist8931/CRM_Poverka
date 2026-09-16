@@ -1,128 +1,16 @@
-/* Модель демо-данных прототипа, извлечённая из index.html без единой правки.
- *
- * Пункт задачи be-schema требует перенести seed() «без изменения распределений».
- * Поэтому код ниже — дословные куски index.html, а не пересказ: тот же генератор
- * с тем же зерном, тот же порядок обращений к нему, те же доли и округления.
- * Любая перестановка строк меняет поток случайных чисел, а с ним и весь набор.
- *
- * Правило сопровождения: этот файл не правится руками. Поменялась модель в
- * прототипе — блоки переносятся сюда заново целиком.
- *
- * Перенесённые блоки index.html (нумерация на момент переноса):
- *   976–1036   города, справочники услуг и приборов, признаки строки акта
- *   1041–1047  улицы и демонстрационные роли
- *   1071–1088  даты и форматирование
- *   1095–1110  генератор с фиксированным зерном, телефоны и почта
- *   1170–1186  состояние S и доступ к сотрудникам
- *   1188–1401  seed()
- *   1402–1505  словари текстов, клиенты, заявка, фото, акт
- *   1506–1516  обзвон, закрытие точки, закрытие маршрута
- *   1519–1526  смены, отсутствия, план дня
- *   1548–1553  услуги строки прибора и компетенции
- *   1566–1571  сдельные ставки и цены
- *   1580–1588  способы оплаты
- *   1612–1627  подотчёт поверителя за месяц
- *   2523–2526  отбор заявок под маршрут
- *   3014–3024  нарезка маршрутов по 25 адресов
- *
- * Из браузерного окружения нужен только Date: ни DOM, ни render() наполнение не трогает.
- */
+/* Демо-набор: тот же генератор с тем же зерном, что был в прототипе. */
 
-/* ── справочники ─────────────────────────────── */
-const LOCS = [
-  {n:'Екатеринбург',    s:'ЕКБ', big:true},
-  {n:'Нижний Тагил',    s:'НТ',  big:true},
-  {n:'Каменск-Уральский',s:'КУ', big:true},
-  {n:'Первоуральск',    s:'ПРВ'}, {n:'Верхняя Пышма',  s:'ВП'},
-  {n:'Берёзовский',     s:'БРЗ'}, {n:'Ревда',          s:'РВД'},
-  {n:'Полевской',       s:'ПЛВ'}, {n:'Асбест',         s:'АСБ'},
-  {n:'Заречный',        s:'ЗРЧ'}, {n:'Сухой Лог',      s:'СЛ'},
-  {n:'Богданович',      s:'БГД'}, {n:'Арамиль',        s:'АРМ'},
-  {n:'Среднеуральск',   s:'СРУ'}, {n:'Дегтярск',       s:'ДГТ'},
-  {n:'Верхняя Салда',   s:'ВС'},  {n:'Невьянск',       s:'НВЯ'},
-  {n:'Кировград',       s:'КРГ'}, {n:'Реж',            s:'РЕЖ'},
-  {n:'Артёмовский',     s:'АРТ'}, {n:'Алапаевск',      s:'АЛП'},
-  {n:'Серов',           s:'СРВ'}, {n:'Краснотурьинск', s:'КТР'},
-  {n:'Качканар',        s:'КЧК'}, {n:'Кушва',          s:'КШВ'},
-  {n:'Нижняя Тура',     s:'НТУ'}, {n:'Красноуфимск',   s:'КУФ'},
-  {n:'Ирбит',           s:'ИРБ'}, {n:'Талица',         s:'ТЛЦ'},
-  {n:'Новоуральск',     s:'НУР'}
-];
-const CITIES = LOCS.map(x=>x.n);
-const CSHORT = Object.fromEntries(LOCS.map(x=>[x.n,x.s]));
-const BIG = LOCS.filter(x=>x.big).map(x=>x.n);
-const SMALL = LOCS.filter(x=>!x.big).map(x=>x.n);
-/* ── доступ к записи дня ────────────────────── */
-/* День планируется руководителем целиком: города приёма, смена поверителей,
-   смена операторов и план заявок. Всё остальное считается от этой записи. */
-const dayRec = ds => S.days.find(d=>d.date===ds);
-const dayOrNew = ds => { let d=dayRec(ds); if(!d){ d={date:ds,cities:[],crew:[],ops:[],caps:{}}; S.days.push(d); } if(!d.caps) d.caps={}; return d; };
-/* План приёма задаётся по каждому городу дня отдельно; план дня — их сумма. */
-const capOf = (ds,c) => (dayRec(ds)?.caps||{})[c] ?? 0;
-const dayCities = ds => dayRec(ds)?.cities || [];
-/* ── справочники: услуги, приборы, строки акта ── */
-const SERVICES = [
-  {id:'wv',grp:'Вода', name:'Поверка счётчика воды',  sh:'Поверка воды',   pF:900, pP:760, pU:1200,rV:280, rO:45},
-  {id:'wr',grp:'Вода', name:'Замена счётчика воды',   sh:'Замена воды',    pF:2600,pP:2200,pU:3200,rV:750, rO:70},
-  {id:'hv',grp:'Тепло',name:'Поверка теплосчётчика',  sh:'Поверка тепла',  pF:3400,pP:2900,pU:4100,rV:950, rO:90},
-  {id:'hm',grp:'Тепло',name:'Монтаж теплосчётчика',   sh:'Монтаж тепла',   pF:7800,pP:6600,pU:9200,rV:2100,rO:120},
-  {id:'hd',grp:'Тепло',name:'Демонтаж теплосчётчика', sh:'Демонтаж тепла', pF:2200,pP:1900,pU:2700,rV:600, rO:60}
-];
-const SVC = Object.fromEntries(SERVICES.map(s=>[s.id,s]));
-const DEV_TYPES = [
-  {v:'Бетар СХВ-15',   grsi:'32245-11'}, {v:'Бетар СГВ-15', grsi:'32245-11'},
-  {v:'Ителма WFW20',   grsi:'31001-12'}, {v:'Пульсар М-15', grsi:'50480-12'},
-  {v:'Норма СВК-15',   grsi:'28151-09'}, {v:'ТСК-7 (тепло)',grsi:'44096-10'}
-];
-const ROOMS = ['Кухня','Санузел','Иное'];
-/* Почему точка осталась не обслуженной: причину выбирает поверитель на адресе,
-   «другое» требует текста — по нему оператор звонит клиенту. */
-const WAIT_REASONS = ['Нет дома','Отказ на месте','Нет доступа к прибору','Перенос по просьбе клиента','Другое'];
-/* Поверка кончается решением: прибор годен или непригоден. Непригодный списывается,
-   поверителю остаётся предложить замену. Причина нужна в свидетельстве о непригодности
-   и в записи ФГИС «Аршин»; «другое» требует текста. */
-const FAIL_REASONS = ['Погрешность выше допуска','Механическое повреждение','Нечитаемый номер','Другое'];
-/* Чем меняют непригодный прибор: воду — на новый счётчик воды, тепло — на монтаж
-   теплосчётчика. Демонтаж отдельной строкой не заводим: он входит в работу по замене. */
-const REPL_SVC = {'Вода':'wr','Тепло':'hm'};
-const replSvcOf = d => REPL_SVC[SVC[d.svc]?.grp] || 'wr';
-/* Результат «годен / не годен» бывает только у поверки: у замены, монтажа и
-   демонтажа поверять нечего. */
-const isCheck = d => d.svc==='wv' || d.svc==='hv';
-/* Заводской номер не спрашиваем там, где его как раз и не смогли прочитать. */
-const needSerial = d => !(d.bad && d.badWhy==='Нечитаемый номер');
-const badDevs = r => (r.devices||[]).filter(d=>d.bad);
+import { BIG, DEV_TYPES, FAIL_REASONS, ROLES, ROOMS, SMALL, STREETS, isCheck, replSvcOf } from '../refs.js';
+import { CUR_M, MN, TODAY, addDays, iso, pad, ru, today } from '../util.js';
+import { S, dayCities, nameOf } from '../state.js';
+import { build } from '../screens/routes.js';
+import { crewOn, planFor, priceOf, subReport } from '../rules.js';
 
-/* ── улицы и роли ─────────────────────────────── */
-const STREETS = ['Ленина','Малышева','Победы','Крауля','Сурикова','Белинского','Уральская','Мира','Куйбышева','Гагарина','Есенина','Шевченко'];
-const ROLES = {
-  operator:{label:'Оператор',who:'Ефимова О.',id:'o2'},
-  senior:{label:'Старший оператор',who:'Кузнецова Е.',id:'o0'},
-  supervisor:{label:'Руководитель',who:'Панченко И.',id:'sv'},
-  verifier:{label:'Поверитель',who:'Алимпиев И.',id:'v0'}
-};
-
-/* ── даты ─────────────────────────────── */
-const pad = n => String(n).padStart(2,'0');
-const iso = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-const today = new Date(); today.setHours(0,0,0,0);
-const TODAY = iso(today);
-/* Текущий месяц: по нему считается подотчёт поверителей у руководителя. */
-const CUR_M = TODAY.slice(0,7);
-const addDays = (d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x;};
-const WD = ['вс','пн','вт','ср','чт','пт','сб'];
-const MN = ['январь','февраль','март','апрель','май','июнь','июль','август','сентябрь','октябрь','ноябрь','декабрь'];
-/* Не больше пяти городов на день: столько строк помещается в ячейку ленты ёмкости. */
-const MAX_CITIES = 5;
-/* Столько операторов помещается в столбец на миниатюре дня. */
-const MAX_OPS = 4;
-const MNG = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
-const ru = s => s.split('-').reverse().join('.');
-/* Полная дата прописью: «02 сентября 2026 г.» */
-const ruLong = s => { const [y,m,d] = s.split('-'); return `${d} ${MNG[+m-1]} ${y} г.`; };
-const money = n => Math.round(n).toLocaleString('ru-RU')+' ₽';
-
-/* ── генератор, телефоны, почта ─────────────────────────────── */
+/* Генератор с фиксированным зерном: тестовое наполнение должно быть одинаковым
+   при каждой загрузке. Умножение ведём через Math.imul — у обычного `*` результат
+   вылетает за 2^53, младшие биты теряются, и поток чисел замыкается в цикл
+   на десяти тысячах вызовов. Наполнению нужно на порядок больше, поэтому
+   короткий цикл заново раздавал бы те же имена, адреса и телефоны. */
 let sd = 20260803;
 const rr = () => {
   sd = (sd + 0x6D2B79F5) | 0;
@@ -140,26 +28,7 @@ const randMail = isU => isU
   ? (rr()<.85 ? rnd(['buh','info','office','director'])+rint(1,99)+'@'+rnd(MAIL_HOSTS) : '')
   : (rr()<.55 ? rnd(MAIL_NAMES)+rint(1,99)+'@'+rnd(MAIL_HOSTS) : '');
 
-/* ── состояние ─────────────────────────────── */
-const blankIntake = () => ({ctype:'Физлицо',name:'',inn:'',phone:'',contact:'',phone2:'',contact2:'',email:'',
-  city:'',street:STREETS[0],house:'',entrance:'',floor:'',flat:'',intercom:true,time:12,svcs:[],cmtOp:'',cmtVf:''});
-/* Пульт оператора: смена, входящая линия, накопленные за день минуты.
-   По этим двум счётчикам руководитель видит загрузку и решает, когда нанимать. */
-const blankOp = () => ({on:false,from:null,shiftSec:0,talkSec:0,calls:0,missed:0,
-  inc:null,live:null,acw:0,next:0});
-const S = {
-  view:'intake', page:0, auth:false, user:ROLES.operator.who, role:'operator', me:ROLES.operator.id,
-  theme:'light', dd:null, ddM:null,
-  city:CITIES[0], day:TODAY, staff:[], days:[], requests:[], routes:[], absences:[], waits:[], handovers:[], seq:1000,
-  toast:null, openRoute:null, openStop:null, call:null, lb:null, ukCity:'', ukSeal:'', pMonth:TODAY.slice(0,7), planTab:'day',
-  mMonth:TODAY.slice(0,7), meTab:'done', modal:null, edit:null, uns:null, ho:null, dupAsk:null, mchat:false,
-  intake:blankIntake(), op:blankOp()
-};
-const staffById = id => S.staff.find(s=>s.id===id);
-const nameOf = id => staffById(id)?.name || '—';
-
-
-/* ── seed ─────────────────────────────── */
+/* ============ ТЕСТОВЫЕ ДАННЫЕ ============ */
 function seed(){
   ['Алимпиев И.','Ковалёв Д.','Ситников П.','Нурмухаметов Р.','Гладких А.','Бабенко С.',
    'Тарасов В.','Юсупов М.','Черных К.','Ложкин Е.','Демидов А.','Рогов Н.'].forEach((n,i)=>
@@ -374,8 +243,6 @@ function seed(){
       period:prevM,amount,by:'sv',note:'Сдача за '+MN[+prevM.slice(5)-1]});
   });
 }
-
-/* ── словари, клиенты, заявка, акт ─────────────────────────────── */
 const CMT_OP = ['','','','Звонить только после 18:00, днём на работе','Второй перенос — уточнить актуальность',
   'Оплата по счёту, нужна закрывающая','Юрлицо: пропуск заказывать за сутки','Клиент просит смс за час до выезда'];
 const CMT_VF = ['','','','Собака во дворе, звонить с калитки','Счётчик в нише за люком, нужен ключ',
@@ -480,8 +347,6 @@ function actFor(r,ds){
   });
   r.services = [...new Set(r.devices.map(d=>d.svc))];
 }
-
-/* ── обзвон и закрытие ─────────────────────────────── */
 function callAll(rt){ rt.stops.forEach(s=>{ if(!s.called) s.called = rr()<.9?'подтверждена':(rr()<.6?'перенос':'отказ'); }); }
 function doneStop(rt,s){
   const r = S.requests.find(x=>x.id===s.req); if(!r) return;
@@ -494,85 +359,4 @@ function finishRoute(rt){
     else r.status = s.called==='отказ'?'отменена':'перенос'; });
 }
 
-/* ── смены и план ─────────────────────────────── */
-function absentOn(id,ds){ return S.absences.some(a=>a.staff===id&&a.status==='согласовано'&&ds>=a.from&&ds<=a.to); }
-/* Смена — это назначение руководителя на конкретную дату минус согласованные отсутствия. */
-const onShift = (p,ds) => !!dayRec(ds) && !absentOn(p.id,ds) &&
-  ((dayRec(ds).crew||[]).includes(p.id) || (dayRec(ds).ops||[]).includes(p.id));
-const crewOn = ds => (dayRec(ds)?.crew||[]).map(staffById).filter(p=>p&&!absentOn(p.id,ds));
-const opsOn  = ds => (dayRec(ds)?.ops||[]).map(staffById).filter(p=>p&&!absentOn(p.id,ds));
-const planFor = ds => dayCities(ds).reduce((a,c)=>a+capOf(ds,c),0);
-const bookedOn = ds => S.requests.filter(r=>r.date===ds&&r.status!=='отменена').length;
-
-/* ── услуги и компетенции ─────────────────────────────── */
-const worksOf = r => (r.devices||[]).map(d=>d.svc).filter(id=>SVC[id]);
-/* Компетенции поверителя: что он умеет делать. Услуга доступна на дату,
-   если в этот день в смене есть поверитель, закрывающий все выбранные услуги. */
-const skillsOf = p => p?.svcs || [];
-const canDoAll = (p,ids) => ids.every(id=>skillsOf(p).includes(id));
-const crewFor = (ds,ids) => crewOn(ds).filter(p=>canDoAll(p,ids));
-
-/* ── ставки и цены ─────────────────────────────── */
-const rateV = r => worksOf(r).reduce((a,id)=>a+SVC[id].rV,0);
-const rateO = r => worksOf(r).reduce((a,id)=>a+SVC[id].rO,0);
-/* Цена считается по строкам приборов: пенсионная скидка стоит на приборе, а не на заявке. */
-const priceOfDev = (r,d) => { const s = SVC[d.svc]; if(!s) return 0;
-  return r.clientType==='Юрлицо' ? s.pU : d.pens ? s.pP : s.pF; };
-const priceOf = r => (r.devices||[]).reduce((a,d)=>a+priceOfDev(r,d),0);
-
-/* ── оплата ─────────────────────────────── */
-const PAY_METHODS = ['наличные','перевод на карту','по счёту','не оплачено'];
-/* Счёт выставляется только юрлицу — физлицу этот способ не показываем. */
-const payMethods = r => PAY_METHODS.filter(m=>m!=='по счёту' || r.clientType==='Юрлицо');
-/* В подотчёт попадает лишь то, что поверитель забрал лично: деньги по счёту идут
-   сразу на расчётный счёт и через его руки не проходят. */
-const PAY_HAND = ['наличные','перевод на карту'];
-const paidWith = (r,m) => r.pay && r.pay.method===m ? (r.pay.amount||0) : 0;
-const handCash = r => r.pay && PAY_HAND.includes(r.pay.method) ? (r.pay.amount||0) : 0;
-const noPay = r => !r.pay || r.pay.method==='не оплачено';
-
-/* ── подотчёт ─────────────────────────────── */
-/* Подотчёт поверителя за месяц: что собрал на адресах, что ему начислено сдельной
-   и что уже сдал руководителю. Сдача привязана к месяцу, за который её принесли,
-   а не к дню приёмки: деньги за август обычно везут в первых числах сентября. */
-function subReport(vid,m){
-  const done = S.requests.filter(r=>r.status==='выполнена' && r.verifier===vid && r.date.slice(0,7)===m);
-  const cash = done.reduce((a,r)=>a+paidWith(r,'наличные'),0);
-  const card = done.reduce((a,r)=>a+paidWith(r,'перевод на карту'),0);
-  const acct = done.reduce((a,r)=>a+paidWith(r,'по счёту'),0);
-  const unpaid = done.filter(noPay);
-  const wage = done.reduce((a,r)=>a+rateV(r),0);
-  const hos = S.handovers.filter(h=>h.staff===vid && h.period===m).sort((a,b)=>a.at.localeCompare(b.at));
-  const given = hos.reduce((a,h)=>a+h.amount,0);
-  const last = S.handovers.filter(h=>h.staff===vid).sort((a,b)=>b.at.localeCompare(a.at))[0] || null;
-  const got = cash+card;
-  return {done,cash,card,acct,unpaid,wage,hos,given,got,left:got-wage-given,last};
-}
-
-/* ── отбор под маршрут ─────────────────────────────── */
-function poolOf(ds,city){
-  return S.requests.filter(r=>r.date===ds&&r.city===city&&!r.routeId&&r.status==='создана')
-    .sort((a,b)=>a.street.localeCompare(b.street,'ru')||(+a.house)-(+b.house));
-}
-
-/* ── нарезка маршрутов ─────────────────────────────── */
-function build(ds,city){
-  const pool = poolOf(ds,city), made=[];
-  for(let i=0;i<pool.length;i+=25){
-    const chunk = pool.slice(i,i+25), id='M'+(++S.seq);
-    chunk.forEach(r=>{r.routeId=id;r.status='в маршруте';});
-    const rt = {id,date:ds,city,verifier:null,status:'черновик',
-      stops:chunk.map(r=>({req:r.id,called:null,done:false})),chat:[],duty:null};
-    S.routes.push(rt); made.push(rt);
-  }
-  return made;
-}
-
-/* Единственное добавление к перенесённому коду: вызов наполнения и выдача
-   состояния наружу. В прототипе на этом месте стоит `seed();` и отрисовка. */
-export function buildDemoState() {
-  seed();
-  return { S, SERVICES, SVC, LOCS, DEV_TYPES, ROOMS, STREETS, ROLES,
-           TODAY, CUR_M, today, iso, addDays, pad,
-           priceOfDev, priceOf, rateV, rateO, worksOf, subReport };
-}
+export { CLIENT_POOL, CMT_OP, CMT_VF, CONTACTS, INITIALS, MAIL_HOSTS, MAIL_NAMES, ORG_NAMES, POOL_BY_CITY, SURNAMES, actFor, callAll, doneStop, finishRoute, mkClient, mkReading, mkReq, randMail, randPhone, rint, rnd, rr, sd, seed, stubPhoto };

@@ -19,6 +19,7 @@ import routeRoutes from './routes/routes.ts';
 import actRoutes from './routes/act.ts';
 import moneyRoutes from './routes/money.ts';
 import callRoutes from './routes/calls.ts';
+import photoRoutes from './routes/photos.ts';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -41,7 +42,11 @@ export interface AppOptions {
 }
 
 /** Открытые входы: до них сессия не спрашивается. */
-const PUBLIC = new Set(['/health', '/docs', '/api/auth/login', '/api/webhooks/novofon']);
+/* Выдача снимка открыта нарочно: тег <img> не носит cookie на чужой адрес и не
+   умеет показывать 401, поэтому доступ там даёт подписанная ссылка с коротким
+   сроком (`routes/photos.ts`), а не сессия. */
+const PUBLIC = new Set(['/health', '/docs', '/api/auth/login', '/api/webhooks/novofon',
+  '/api/photos/:id/file']);
 
 export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   const app = fastify({
@@ -161,6 +166,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   await app.register(actRoutes, { prefix: '/api' });
   await app.register(moneyRoutes, { prefix: '/api' });
   await app.register(callRoutes, { prefix: '/api' });
+  await app.register(photoRoutes, { prefix: '/api' });
 
   return app;
 }

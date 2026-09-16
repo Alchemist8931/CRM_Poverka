@@ -1,0 +1,6 @@
+node_modules/
+dist/
+dist-demo/
+
+# Снимки экранов кладутся в docs/screens — здесь им делать нечего.
+*.png
