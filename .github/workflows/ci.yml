@@ -1,0 +1,94 @@
+# Проверки на каждый push и на каждый pull request.
+#
+# Роль линтера здесь играют не правила оформления, а согласованность: типы
+# (tsc), сверка кода со схемой и документацией (server: npm run check),
+# правила и API на настоящем PostgreSQL в WebAssembly (npm test) и разбор
+# самих workflow (actionlint). Отдельного eslint в проекте нет намеренно:
+# на этом объёме он ловил бы то, что уже ловит компилятор.
+name: Проверки
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+# Новый push в ту же ветку отменяет предыдущий прогон: ждать проверок по
+# устаревшему коду незачем.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  server:
+    name: Сервер — типы, проверки, тесты
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - run: npm ci
+
+      - name: Типы
+        run: npm run typecheck
+
+      # Схема, модель, документация и запуск наполнения из командной строки.
+      # Базы снаружи не нужно: проверки поднимают PGlite сами.
+      - name: Согласованность схемы и документации
+        run: npm run check
+
+      - name: Тесты правил и API
+        run: npm test
+
+  web:
+    name: Фронт — сборка
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci
+
+      - name: Сборка рабочего режима
+        run: npm run build
+
+      # Демо-режим — это тот же код одним файлом, и ломается он отдельно от
+      # рабочего: собирается другим входом и без обращений к API.
+      - name: Сборка демо-режима
+        run: npm run build:demo
+
+  workflows:
+    name: Разбор workflow
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      # actionlint заодно прогоняет shellcheck по всем шагам run — на выкладке
+      # это важнее, чем на сборке: там shell-скрипты делают всю работу.
+      - name: actionlint
+        run: |
+          bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) 1.7.7
+          ./actionlint -color
+
+      - name: shellcheck по скрипту выкладки
+        run: shellcheck deploy/deploy.sh

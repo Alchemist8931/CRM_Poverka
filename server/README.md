@@ -41,6 +41,7 @@ npx tsx scripts/dev-pglite.mts 3000   # миграции, демо-набор и
 | `npm run migrate:up` | применить непринятые миграции |
 | `npm run migrate:down` | откатить последнюю |
 | `npm run migrate:redo` | откатить последнюю и применить заново |
+| `npm run migrate:cloud` | то же, что `migrate:up`, но строка подключения берётся из Lockbox — шаг выкладки, см. `docs/release.md` |
 | `npm run seed` | наполнить демо-данными прототипа (откажется, если база не пуста) |
 | `npm run seed -- --reset` | очистить таблицы и наполнить заново |
 | `npm run db:reset` | снести всё, применить миграции, наполнить |

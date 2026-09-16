@@ -1,0 +1,67 @@
+# dev едет сам: всё, что попало в main, через несколько минут работает в
+# контуре разработки. Тег образов — короткий SHA коммита, и это единственный
+# способ узнать, что именно выложено: плавающих тегов вроде latest здесь нет
+# намеренно — по ним не сделать ни откат, ни разбор «когда это сломалось».
+name: Выкладка в dev
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Сборка и публикация образов
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Тег сборки
+        id: tag
+        run: echo "tag=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+      # Ключ сервисного аккаунта выкладки (infra/registry.tf) — JSON целиком,
+      # в секретах репозитория. Больше никаких учётных данных сборке не нужно:
+      # свои секреты приложение читает из Lockbox уже на машине.
+      - name: Вход в Container Registry
+        env:
+          SA_KEY: ${{ secrets.YC_SA_KEY }}
+        run: printf '%s' "$SA_KEY" | docker login --username json_key --password-stdin cr.yandex
+
+      - name: Образ API
+        env:
+          IMAGE: cr.yandex/${{ vars.YC_REGISTRY_ID }}/uchetkin-api:${{ steps.tag.outputs.tag }}
+        run: |
+          docker build -t "$IMAGE" server
+          docker push "$IMAGE"
+
+      - name: Образ фронта
+        env:
+          IMAGE: cr.yandex/${{ vars.YC_REGISTRY_ID }}/uchetkin-web:${{ steps.tag.outputs.tag }}
+        run: |
+          docker build -t "$IMAGE" web
+          docker push "$IMAGE"
+
+      - name: Запись в итог прогона
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          {
+            echo "### Образы собраны"
+            echo ""
+            echo "Тег: \`$TAG\`. Этот же тег указывается при выкладке в prod и при откате."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    needs: build
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: dev
+      tag: ${{ needs.build.outputs.tag }}
+    secrets: inherit

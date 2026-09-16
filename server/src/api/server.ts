@@ -6,10 +6,17 @@
 import 'dotenv/config';
 import { buildApp } from './app.ts';
 import { pgDb } from './db.ts';
+import { loadSecrets } from '../secrets.ts';
 
 const port = Number(process.env.PORT || 3000);
 // Внутри контейнера слушать localhost бессмысленно: снаружи до него не достучаться.
 const host = process.env.HOST || '0.0.0.0';
+
+// Пароль к базе и ключ подписи сессий приходят из Lockbox — до первого
+// обращения к базе и до сборки приложения. На машине разработчика брать
+// нечего: там всё уже в окружении, и шаг проходит впустую (src/secrets.ts).
+const loaded = await loadSecrets();
+if (loaded.length) console.log(`Из Lockbox прочитано: ${loaded.join(', ')}`);
 
 const db = pgDb();
 const app = await buildApp({ db, logger: true });

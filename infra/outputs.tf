@@ -68,6 +68,24 @@ output "app_service_account_id" {
   value       = yandex_iam_service_account.app.id
 }
 
+output "registry_id" {
+  description = "Container Registry контура. Его значение кладётся в переменную GitHub YC_REGISTRY_ID."
+  value       = yandex_container_registry.main.id
+}
+
+output "deployer_service_account_id" {
+  description = "Сервисный аккаунт выкладки. Ключ к нему выпускается руками: yc iam key create."
+  value       = yandex_iam_service_account.deployer.id
+}
+
+output "images" {
+  description = "Имена образов, которые публикует сборка."
+  value = {
+    api = "cr.yandex/${yandex_container_registry.main.id}/uchetkin-api"
+    web = "cr.yandex/${yandex_container_registry.main.id}/uchetkin-web"
+  }
+}
+
 output "lockbox_secret_ids" {
   description = "Идентификаторы секретов. Значения внешних секретов вносятся в консоли."
   value = merge(

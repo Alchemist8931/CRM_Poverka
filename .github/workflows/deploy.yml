@@ -1,0 +1,106 @@
+# Выкладка на ВМ контура. Своим запуском не вызывается: её зовут deploy-dev.yml
+# (автоматически, на push в main) и deploy-prod.yml (руками, с выбором тега).
+# Шаги у обоих одни и те же — разные только контур и тег, и это не совпадение:
+# prod должен выкладываться ровно тем же способом, каким проверен dev.
+#
+# Подтверждение, ограничение веток и список тех, кто может выкладывать, живут
+# в настройках окружения GitHub (Settings → Environments), а не здесь: правило
+# «prod только по кнопке и с подтверждением» должно держаться платформой.
+name: Выкладка
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: Контур — имя окружения GitHub (dev или prod)
+        required: true
+        type: string
+      tag:
+        description: Тег образов в Container Registry (короткий SHA сборки)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: ${{ inputs.environment }} ← ${{ inputs.tag }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    # Имя окружения — не украшение: к нему привязаны подтверждение выкладки,
+    # список ветвей и секреты доступа на машину этого контура.
+    environment: ${{ inputs.environment }}
+    # Две выкладки в один контур одновременно — это гонка за миграции.
+    concurrency:
+      group: deploy-${{ inputs.environment }}
+      cancel-in-progress: false
+    env:
+      SSH_HOST: ${{ vars.DEPLOY_HOST }}
+      SSH_USER: ${{ vars.DEPLOY_USER }}
+      REGISTRY_ID: ${{ vars.YC_REGISTRY_ID }}
+      TAG: ${{ inputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Проверить, что контур настроен
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          missing=""
+          [ -n "$SSH_HOST" ]    || missing="$missing vars.DEPLOY_HOST"
+          [ -n "$SSH_USER" ]    || missing="$missing vars.DEPLOY_USER"
+          [ -n "$REGISTRY_ID" ] || missing="$missing vars.YC_REGISTRY_ID"
+          [ -n "$SSH_KEY" ]     || missing="$missing secrets.DEPLOY_SSH_KEY"
+          if [ -n "$missing" ]; then
+            echo "Не заданы:$missing — см. docs/release.md, раздел «Что должно быть настроено»" >&2
+            exit 1
+          fi
+
+      - name: Ключ доступа и известный хост
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          if [ -n "$KNOWN_HOSTS" ]; then
+            printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            # Ключ хоста берётся на веру — годится для первой выкладки в dev,
+            # но не для prod: подменённый хост получит доступ к базе.
+            echo "::warning::vars.DEPLOY_KNOWN_HOSTS не задан, ключ хоста принимается без проверки"
+            ssh-keyscan -T 10 "$SSH_HOST" > ~/.ssh/known_hosts 2>/dev/null
+          fi
+          chmod 600 ~/.ssh/known_hosts
+
+      # Скрипт и описание служб едут из репозитория на каждую выкладку: то, что
+      # лежит на машине, всегда соответствует выложенному коммиту.
+      - name: Доставить файлы выкладки
+        run: |
+          scp -i ~/.ssh/id_deploy -o BatchMode=yes \
+            deploy/compose.yml deploy/Caddyfile deploy/deploy.sh \
+            "$SSH_USER@$SSH_HOST:/opt/uchetkin/"
+
+      - name: Выложить и проверить
+        run: |
+          ssh -i ~/.ssh/id_deploy -o BatchMode=yes "$SSH_USER@$SSH_HOST" \
+            "bash /opt/uchetkin/deploy.sh '$REGISTRY_ID' '$TAG'"
+
+      - name: Запись в итог прогона
+        if: always()
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+        run: |
+          {
+            echo "### Выкладка в ${{ inputs.environment }}"
+            echo ""
+            echo "- тег: \`$TAG\`"
+            echo "- машина: \`$SSH_HOST\`"
+            echo "- адрес: ${APP_URL:-не задан (vars.APP_URL)}"
+            echo "- итог: ${{ job.status }}"
+            echo ""
+            echo "Откат — тот же workflow с тегом предыдущего релиза (docs/release.md)."
+          } >> "$GITHUB_STEP_SUMMARY"

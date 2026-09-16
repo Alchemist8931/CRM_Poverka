@@ -1,0 +1,38 @@
+# Единственная точка входа снаружи. Кладётся выкладкой в /opt/uchetkin/Caddyfile.
+#
+# SITE_ADDRESS и API_UPSTREAM приходят из /etc/uchetkin/caddy.env, который пишет
+# cloud-init: доменное имя — там, где TLS держит сама машина, и ":80" — там, где
+# перед ней стоит балансировщик с сертификатом (infra/alb.tf). По домену Caddy
+# сам получает и продлевает сертификат Let's Encrypt, настраивать нечего.
+#
+# Один адрес на фронт и API — требование, а не удобство: сессионная cookie
+# помечена SameSite=Lax и на чужое происхождение не поедет (см. web/nginx.conf).
+{$SITE_ADDRESS} {
+	encode zstd gzip
+
+	# API, проба живости и описание — на сервер.
+	handle /api/* {
+		reverse_proxy {$API_UPSTREAM}
+	}
+	handle /health {
+		reverse_proxy {$API_UPSTREAM}
+	}
+	handle /docs {
+		reverse_proxy {$API_UPSTREAM}
+	}
+
+	# Всё остальное — собранный фронт за nginx.
+	handle {
+		reverse_proxy {$WEB_UPSTREAM:web:80}
+	}
+
+	# Фотографии акта идут тем же путём и бывают тяжёлыми.
+	request_body {
+		max_size 25MB
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}

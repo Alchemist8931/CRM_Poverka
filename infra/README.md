@@ -25,6 +25,7 @@
 | `sws.tf` | Smart Web Security: WAF и защита от ботов перед балансировщиком |
 | `check_cloud_init.py` | проверка отрисованного cloud-init: YAML разбирается, меры на месте |
 | `compute.tf` | ВМ, cloud-init, расписание снимков диска |
+| `registry.tf` | Container Registry, правила очистки, сервисный аккаунт выкладки (порядок релиза — `docs/release.md`) |
 | `alb.tf` | Application Load Balancer и Certificate Manager — выключены, см. ниже |
 | `dns.tf` | публичная зона Cloud DNS и A-запись |
 | `outputs.tf` | адреса, идентификаторы секретов, что завести в DNS |

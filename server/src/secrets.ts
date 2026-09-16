@@ -1,0 +1,125 @@
+/* Секреты приложения: Lockbox при старте.
+ *
+ * Правило одно (arch, раздел 2): ни пароля, ни ключа ни в репозитории, ни в
+ * образе, ни в переменных выкладки. На ВМ лежит только конфигурация без
+ * секретов (`/etc/uchetkin/app.env`, её пишет cloud-init) и идентификаторы
+ * секретов в Lockbox. Значения приложение берёт само при старте: сначала
+ * IAM-токен из метаданных ВМ — по её сервисному аккаунту, без ключа на диске, —
+ * затем содержимое секретов.
+ *
+ * На машине разработчика ничего этого нет: там DATABASE_URL и SESSION_SECRET
+ * заданы в окружении (docker-compose.yml, server/env.example), и загрузчик
+ * молча ничего не делает. Правило простое: что уже задано в окружении,
+ * из Lockbox не тянется и не перетирается.
+ *
+ * Адреса вынесены в переменные не ради гибкости, а ради проверки: тест
+ * (`test/secrets.test.ts`) поднимает на них свой сервер и смотрит, что
+ * собралось в окружении.
+ */
+
+/** Метаданные ВМ: IAM-токен её сервисного аккаунта. */
+const TOKEN_URL = process.env.YC_METADATA_TOKEN_URL
+  || 'http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token';
+
+/** Содержимое секрета Lockbox: .../secrets/<id>/payload */
+const PAYLOAD_URL = process.env.YC_LOCKBOX_PAYLOAD_URL
+  || 'https://payload.lockbox.api.cloud.yandex.net/lockbox/v1/secrets';
+
+export type Entries = Record<string, string>;
+
+interface PayloadResponse {
+  entries?: { key: string; textValue?: string; binaryValue?: string }[];
+}
+
+async function fetchJson(url: string, init: RequestInit): Promise<unknown> {
+  let res: Response;
+  try {
+    res = await fetch(url, init);
+  } catch (err) {
+    throw new Error(`Не удалось обратиться к ${url}: ${(err as Error).message}`);
+  }
+  if (!res.ok) throw new Error(`${url} ответил ${res.status} ${res.statusText}`);
+  return res.json();
+}
+
+/** IAM-токен сервисного аккаунта ВМ. Заголовок обязателен: без него метаданные
+ *  не отдаются — так сервис защищён от случайного запроса из браузера. */
+export async function iamToken(): Promise<string> {
+  const body = await fetchJson(TOKEN_URL, { headers: { 'Metadata-Flavor': 'Google' } }) as { access_token?: string };
+  const token = body.access_token;
+  if (!token) throw new Error('Метаданные ВМ не отдали IAM-токен: у машины не назначен сервисный аккаунт?');
+  return token;
+}
+
+/** Содержимое секрета в виде «ключ → значение». Двоичные записи не
+ *  используются: всё, что нужно приложению, — строки. */
+export async function readSecret(id: string, token: string): Promise<Entries> {
+  const body = await fetchJson(`${PAYLOAD_URL}/${encodeURIComponent(id)}/payload`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }) as PayloadResponse;
+  const out: Entries = {};
+  for (const entry of body.entries ?? []) {
+    if (typeof entry.textValue === 'string') out[entry.key] = entry.textValue;
+  }
+  return out;
+}
+
+/** Строка подключения из записей секрета базы (infra/lockbox.tf, секрет `db`).
+ *  Пароль и имя экранируются: в них попадаются знаки, ломающие разбор адреса. */
+export function databaseUrlFrom(e: Entries): string {
+  const missing = ['host', 'port', 'database', 'username', 'password'].filter((k) => !e[k]);
+  if (missing.length) throw new Error(`В секрете базы нет записей: ${missing.join(', ')}`);
+  const user = encodeURIComponent(e.username!);
+  const password = encodeURIComponent(e.password!);
+  return `postgres://${user}:${password}@${e.host}:${e.port}/${e.database}`;
+}
+
+/** Чего не хватает окружению и из какого секрета это берётся. */
+function plan(env: NodeJS.ProcessEnv): { name: string; secretId: string }[] {
+  const wanted: [string, string | undefined, string | undefined][] = [
+    ['DATABASE_URL', env.DATABASE_URL, env.LOCKBOX_DB_SECRET_ID],
+    ['SESSION_SECRET', env.SESSION_SECRET, env.LOCKBOX_APP_SECRET_ID],
+    ['NOVOFON_WEBHOOK_SECRET', env.NOVOFON_WEBHOOK_SECRET, env.LOCKBOX_NOVOFON_SECRET_ID],
+  ];
+  return wanted
+    .filter(([, value, secretId]) => !value && secretId)
+    .map(([name, , secretId]) => ({ name, secretId: secretId! }));
+}
+
+/**
+ * Дочитывает окружение из Lockbox и возвращает имена заполненных переменных.
+ *
+ * Вызывается один раз при старте — до того, как приложение возьмётся за базу.
+ * Если брать нечего (машина разработчика, тесты) — возвращает пустой список и
+ * не ходит в сеть. Если брать есть откуда, но не получилось, — бросает ошибку:
+ * подняться без пароля к базе всё равно нельзя, и лучше упасть с внятной
+ * причиной, чем отвечать пятисотыми.
+ */
+export async function loadSecrets(env: NodeJS.ProcessEnv = process.env): Promise<string[]> {
+  const needed = plan(env);
+  if (!needed.length) return [];
+
+  const token = await iamToken();
+  const loaded: string[] = [];
+  for (const { name, secretId } of needed) {
+    const entries = await readSecret(secretId, token);
+    if (name === 'DATABASE_URL') {
+      env.DATABASE_URL = databaseUrlFrom(entries);
+    } else if (name === 'SESSION_SECRET') {
+      // Ключ подписи сессий лежит в секрете приложения. Отдельной записи под
+      // него нет — берётся jwt_secret, тот же по смыслу и той же длины.
+      const value = entries.session_secret || entries.jwt_secret;
+      if (!value) throw new Error('В секрете приложения нет ни session_secret, ни jwt_secret');
+      env.SESSION_SECRET = value;
+    } else {
+      // Секреты внешних служб заводятся человеком в консоли: до этого момента
+      // секрет существует, но пуст. Пустой ключ вебхука — это рабочее
+      // состояние («приёмник отвечает 503»), а не повод не подняться.
+      const value = entries.webhook_secret || Object.values(entries)[0];
+      if (!value) continue;
+      env.NOVOFON_WEBHOOK_SECRET = value;
+    }
+    loaded.push(name);
+  }
+  return loaded;
+}

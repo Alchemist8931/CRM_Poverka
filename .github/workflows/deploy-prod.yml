@@ -1,0 +1,27 @@
+# prod — только руками и только тем тегом, который уже проверен в dev.
+# Ничего не собирается: берётся готовый образ из Container Registry. Поэтому
+# этот же запуск и есть откат — с тегом предыдущего релиза (docs/release.md).
+#
+# Подтверждение даёт окружение prod в настройках репозитория (Settings →
+# Environments → prod → Required reviewers). Пока оно настроено, прогон
+# останавливается перед выкладкой и ждёт, когда человек нажмёт «Approve».
+name: Выкладка в prod
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Тег образов — короткий SHA. Для отката укажите тег предыдущего релиза
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: prod
+      tag: ${{ inputs.tag }}
+    secrets: inherit

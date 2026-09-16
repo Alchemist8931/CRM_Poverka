@@ -1,0 +1,79 @@
+# Приложение на ВМ. Этот файл кладёт на машину выкладка (docs/release.md),
+# лежит он в /opt/uchetkin/compose.yml рядом с платформенной частью, которую
+# положил cloud-init (агент мониторинга, infra/cloud-init.yaml.tftpl).
+#
+# Отличия от docker-compose.yml в корне репозитория — ровно два, и оба
+# намеренные: образы здесь не собираются, а приходят из Container Registry по
+# тегу выкладки, и секретов в файле нет. Пароль к базе и ключ подписи сессий
+# приложение читает само при старте из Lockbox (server/src/secrets.ts).
+#
+# Значения подставляются из /opt/uchetkin/.env, который пишет deploy.sh:
+#   REGISTRY=cr.yandex/<идентификатор реестра>
+#   IMAGE_TAG=<короткий SHA сборки>
+#   COMPOSE_PROFILES=localdb   — только там, где базы как сервиса нет (dev)
+name: uchetkin
+
+services:
+  # База контейнером — только в dev (infra/dev.tfvars: managed_postgres = false).
+  # В prod её место занимает Managed PostgreSQL, и профиль не включается.
+  postgres:
+    profiles: ["localdb"]
+    image: postgres:16-alpine
+    container_name: uchetkin-postgres
+    restart: unless-stopped
+    # Логин, база и пароль приходят из Lockbox: deploy.sh кладёт их в db.env
+    # (права 0600) перед запуском. В образ и в репозиторий они не попадают.
+    env_file: [/opt/uchetkin/db.env]
+    environment:
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C.UTF-8"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    image: ${REGISTRY}/uchetkin-api:${IMAGE_TAG}
+    container_name: uchetkin-api
+    restart: unless-stopped
+    # Конфигурация без секретов: адреса, идентификаторы секретов в Lockbox,
+    # правила входа. Файл пишет cloud-init, выкладка только копирует его себе.
+    env_file: [/opt/uchetkin/app.env]
+    # Наружу порт не выставляется: снаружи в систему ходят через caddy.
+    # Локально он нужен выкладке — по нему проверяется /health после запуска.
+    ports:
+      - "127.0.0.1:3000:3000"
+    networks:
+      default:
+        # Фронт собран с nginx.conf, где API зовут `server` (web/nginx.conf).
+        # Псевдоним дешевле, чем держать две версии конфигурации nginx.
+        aliases: [server]
+
+  web:
+    image: ${REGISTRY}/uchetkin-web:${IMAGE_TAG}
+    container_name: uchetkin-web
+    restart: unless-stopped
+
+  # Caddy: единственный, кто смотрит наружу. Сертификат Let's Encrypt он
+  # получает и продлевает сам; адрес сайта приходит из /etc/uchetkin/caddy.env
+  # (его пишет cloud-init, там же API_UPSTREAM).
+  caddy:
+    image: caddy:2-alpine
+    container_name: uchetkin-caddy
+    restart: unless-stopped
+    env_file: [/etc/uchetkin/caddy.env]
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - /opt/uchetkin/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:
