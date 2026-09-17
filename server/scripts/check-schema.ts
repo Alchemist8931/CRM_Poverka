@@ -28,9 +28,10 @@ import { fileURLToPath } from 'node:url';
 import { PGlite } from '@electric-sql/pglite';
 import { PGLiteSocketServer } from '@electric-sql/pglite-socket';
 import { formatCounts, seedDemoData } from '../src/seed/load.ts';
+import { freePort } from './free-port.mts';
 
 const serverDir = fileURLToPath(new URL('..', import.meta.url));
-const PORT = Number(process.env.CHECK_PORT || 55432);
+const PORT = await freePort();
 
 /** Шаг проверки: запуск команды с показом только ошибок и разбором кода возврата. */
 function step(title: string, args: string[], env: NodeJS.ProcessEnv): Promise<void> {

@@ -16,9 +16,10 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Client } from 'pg';
 import { REFS_TEMPLATE, writeClientBase, writeClientMap } from '../test/import-fixtures.ts';
+import { freePort } from './free-port.mts';
 
 const serverDir = fileURLToPath(new URL('..', import.meta.url));
-const PORT = Number(process.env.CHECK_PORT || 55470);
+const PORT = await freePort();
 const work = mkdtempSync(join(tmpdir(), 'uchetkin-check-import-'));
 
 /** База в соседнем процессе своей группой: `npx` разворачивается в цепочку,

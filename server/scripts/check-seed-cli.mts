@@ -11,9 +11,10 @@
  */
 import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { freePort } from './free-port.mts';
 
 const serverDir = fileURLToPath(new URL('..', import.meta.url));
-const PORT = Number(process.env.CHECK_PORT || 55460);
+const PORT = await freePort();
 
 /** Ждём, пока база в соседнем процессе назовёт свой адрес.
  *
