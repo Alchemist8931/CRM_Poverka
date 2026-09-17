@@ -82,6 +82,7 @@ function plan(env: NodeJS.ProcessEnv): { name: string; secretId: string }[] {
     ['S3_ACCESS_KEY_ID', env.S3_ACCESS_KEY_ID, env.LOCKBOX_STORAGE_SECRET_ID],
     ['NOVOFON_WEBHOOK_SECRET', env.NOVOFON_WEBHOOK_SECRET, env.LOCKBOX_NOVOFON_SECRET_ID],
     ['SMTP_PASSWORD', env.SMTP_PASSWORD, env.LOCKBOX_NOTIFY_SECRET_ID],
+    ['YANDEX_GEOCODER_KEY', env.YANDEX_GEOCODER_KEY, env.LOCKBOX_MAPS_SECRET_ID],
   ];
   return wanted
     .filter(([, value, secretId]) => !value && secretId)
@@ -133,6 +134,15 @@ export async function loadSecrets(env: NodeJS.ProcessEnv = process.env): Promise
       if (entries.sms_login) env.SMS_LOGIN = entries.sms_login;
       if (entries.sms_password) env.SMS_PASSWORD = entries.sms_password;
       if (!entries.smtp_password) continue;
+    } else if (name === 'YANDEX_GEOCODER_KEY') {
+      // Два ключа Яндекс Карт лежат в одном секрете: их заводит человек в
+      // кабинете разработчика, и живут они одной судьбой. Ключ JS API отсюда
+      // уходит в браузер (routes/refs.ts) — это нормально, его защищает
+      // ограничение по домену, а не секретность. Пустой секрет — рабочее
+      // состояние: конструктор рисует схематичную карту области.
+      if (entries.geocoder_key) env.YANDEX_GEOCODER_KEY = entries.geocoder_key;
+      if (entries.jsapi_key) env.YANDEX_JSAPI_KEY = entries.jsapi_key;
+      if (!entries.geocoder_key) continue;
     } else {
       // Секреты внешних служб заводятся человеком в консоли: до этого момента
       // секрет существует, но пуст. Пустой ключ вебхука — это рабочее

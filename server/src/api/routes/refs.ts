@@ -9,8 +9,33 @@ import { requireRole, requireUser } from '../auth.ts';
 import { ruleError, notFound } from '../errors.ts';
 import { loadServices, loadStaff } from '../store.ts';
 import { canEditPrices, type Role } from '../../rules.ts';
+import { canGeocode, mapsConfig } from '../../maps/config.ts';
 
 const plugin: FastifyPluginAsync = async (app) => {
+  /* Ключ JavaScript API — такой же справочник для экрана, как города и услуги:
+     фронт берёт его при входе вместе с остальными. В сборку он не попадает
+     намеренно — из репозитория ключ потом не вычистить, а сменить его в Lockbox
+     можно за минуту. Прятать его при этом не от кого: он и так виден в адресе
+     загрузки библиотеки, и защищает его ограничение по домену в кабинете
+     разработчика, а не секретность. Подробности — docs/maps.md. */
+  app.get('/maps/config', {
+    schema: {
+      tags: ['справочники'],
+      summary: 'Ключ JavaScript API Яндекс Карт и признак «карта доступна»',
+      security: [{ session: [] }],
+    },
+  }, async (req) => {
+    requireUser(req);
+    const cfg = mapsConfig();
+    return {
+      // Пустой ключ — рабочее состояние: конструктор рисует прежнюю схему области.
+      js_api_key: cfg.jsApiKey,
+      maps: !!cfg.jsApiKey,
+      geocoder: canGeocode(cfg),
+      cache_days: cfg.cacheDays,
+    };
+  });
+
   app.get('/cities', {
     schema: {
       tags: ['справочники'], summary: 'Города приёма', security: [{ session: [] }],

@@ -1,4 +1,19 @@
-/* Конструктор маршрутов на карте области. */
+/* Конструктор маршрутов на карте области.
+ *
+ * Карт здесь две, и это не переходное состояние.
+ *
+ *  — Настоящая карта Яндекса (JS API 3.0). Работает, когда у контура есть ключ
+ *    и у заявок есть координаты: адреса геокодирует сервер при сохранении
+ *    (server/src/maps/place.ts). По ней видно то, ради чего всё и затевалось:
+ *    попадёт ли адрес в один объезд с остальными или стоит на отшибе.
+ *
+ *  — Схематичная карта области. Остаётся ровно та, что была: города на условных
+ *    местах, адреса внутри города — подсолнухом. Она рисуется без ключа и без
+ *    координат, то есть в демо-режиме на GitHub Pages и на контуре, где ключ
+ *    ещё не завели. Убрать её означало бы показывать в демо пустое место.
+ *
+ * Порядок объезда в обеих один и тот же: клик по точке ставит её в очередь.
+ */
 
 import { DATE, SEL } from '../ui/controls.js';
 import { I, svg } from '../ui/icons.js';
@@ -10,6 +25,8 @@ import { isDemo } from '../api/mode.js';
 import { createRoute as apiCreateRoute, dropRoute as apiDropRoute, dropStop as apiDropStop,
   patchRoute as apiPatchRoute, closeBuilder, openBuilder } from '../api/actions.js';
 import { loadRequests, loadRoutes, reload } from '../api/load.js';
+import { hideMap, mapsOn, showPoints } from '../ui/ymaps.js';
+import { orderPoints, routeKm } from '../geo.js';
 
 /* ============ СБОРКА МАРШРУТОВ (руководитель) ============ */
 /* Карта: окно 7° долготы × 3.8° широты ≈ 423 × 422 км, поэтому кадр квадратный. */
@@ -46,13 +63,46 @@ function rcPoints(ds){
     clusters.push({city,cx,cy,R,n:list.length});
     list.forEach((r,k)=>{
       const rad = R*Math.sqrt((k+.5)/list.length), a = k*2.399963;
-      pts.push({r,city,x:clampM(cx+rad*Math.cos(a)),y:clampM(cy+rad*Math.sin(a)),taken:!!r.routeId});
+      /* Координаты от Геокодера идут рядом с условными: настоящая карта берёт
+         первые, схематичная — вторые, а точки и их порядок общие. */
+      pts.push({r,city,x:clampM(cx+rad*Math.cos(a)),y:clampM(cy+rad*Math.sin(a)),taken:!!r.routeId,
+        lat:r.lat??null,lon:r.lon??null,geo:r.geo||null,time:r.time});
     });
   });
   return {pts,clusters};
 }
+/** Точки, которые можно показать на настоящей карте. */
+const located = pts => pts.filter(p=>p.lat!=null && p.lon!=null);
+/** Оценка длины объезда по выбранному порядку, км. Без координат — null. */
+function selKm(pts,sel){
+  const line = sel.map(id=>pts.find(p=>p.r.id===id)).filter(p=>p&&p.lat!=null);
+  return line.length>1 && line.length===sel.length ? routeKm(line) : null;
+}
+/** Длина уже собранного маршрута: те же точки в порядке объезда. */
+function routeKmOf(rt){
+  const line = rt.stops.map(s=>S.requests.find(x=>x.id===s.req)).filter(r=>r&&r.lat!=null);
+  return line.length>1 && line.length===rt.stops.length ? routeKm(line) : null;
+}
+/** Точки на карту переставляются после перерисовки: живая карта живёт вне #root
+    и в разметке ей оставлено только гнездо (ui/ymaps.js). */
+let fitKey = '';
+function rcSync(){
+  const C = S.rc; if(!C) return;
+  const nest = document.getElementById('rcnest'); if(!nest) return;
+  const {pts} = rcPoints(C.date);
+  const on = located(pts);
+  const key = C.date+':'+on.map(p=>p.r.id).join(',');
+  const fit = key!==fitKey; fitKey = key;
+  const line = C.sel.map(id=>on.find(p=>p.r.id===id)).filter(Boolean).map(p=>[p.lon,p.lat]);
+  showPoints(nest,{
+    pts:on.map(p=>({id:p.r.id,lat:p.lat,lon:p.lon,n:C.sel.indexOf(p.r.id)+1,taken:p.taken,
+      title:`${p.r.city}, ${addrOf(p.r)} · ${pad(p.r.time-1)}:00–${pad(p.r.time+1)}:00`
+        +(p.taken?` · уже в маршруте ${p.r.routeId}`:'')})),
+    line, onPick:rcPick, fit,
+  }).catch(()=>{});
+}
 function openRC(ds){
-  S.rc = {date:ds||iso(addDays(today,1)), sel:[], made:[]};
+  S.rc = {date:ds||iso(addDays(today,1)), sel:[], made:[], km:{}};
   S.modal = {k:'rc'}; render();
   rcLoad(S.rc.date);
 }
@@ -77,15 +127,38 @@ function rcPick(id){
   if(i>=0) S.rc.sel.splice(i,1); else S.rc.sel.push(id);
   render();
 }
+/* Кнопка «Упорядочить»: разложить выбранные точки по окнам приезда и внутри
+   окна — ближайшим соседом (geo.js). Это подсказка, а не решение: руководитель
+   и дальше может снять точку или выбрать их заново в своём порядке. */
+function rcOrder(){
+  const C = S.rc; if(!C) return;
+  const {pts} = rcPoints(C.date);
+  const chosen = C.sel.map(id=>pts.find(p=>p.r.id===id)).filter(Boolean);
+  const blind = chosen.filter(p=>p.lat==null);
+  if(blind.length) return toast(`${blind.length} из ${chosen.length} выбранных адресов без координат — упорядочить можно только геокодированные адреса.`);
+  if(chosen.length<2) return toast('Выберите хотя бы две точки.');
+  const sorted = orderPoints(chosen.map(p=>({id:p.r.id,lat:p.lat,lon:p.lon,time:p.time})));
+  C.sel = sorted.map(p=>p.id);
+  const was = selKm(pts,chosen.map(p=>p.r.id)), now = selKm(pts,C.sel);
+  toast(was&&now
+    ? `Порядок пересобран по окнам приезда: ≈ ${now.toFixed(1)} км вместо ≈ ${was.toFixed(1)} км.`
+    : 'Порядок пересобран по окнам приезда.');
+  render();
+}
 function rcCreate(){
   const sel = S.rc.sel;
   if(sel.length<2) return toast('Выберите на карте хотя бы две точки — маршрут строится по последовательности.');
   const reqs = sel.map(id=>S.requests.find(x=>x.id===id)).filter(Boolean);
   const cities = [...new Set(reqs.map(r=>r.city))];
+  /* Оценка длины считается здесь, по выбранным точкам, и запоминается за
+     маршрутом: список маршрутов приходит с сервера счётчиками, без самих точек
+     (api/map.js, placeholders), и посчитать её потом уже не по чему. */
+  const km = selKm(rcPoints(S.rc.date).pts, sel);
   if(!isDemo()){
     apiCreateRoute(S.rc.date,cities[0],reqs.map(r=>r.id)).then(out=>{
       if(!out || !S.rc) return;
       S.rc.made.unshift(out.route.id); S.rc.sel = [];
+      if(km) (S.rc.km ||= {})[out.route.id] = km;
       rcLoad(S.rc.date);
     });
     return;
@@ -94,6 +167,7 @@ function rcCreate(){
     stops:reqs.map(r=>({req:r.id,called:null,done:false})),chat:[],duty:null};
   reqs.forEach(r=>{ r.routeId = rt.id; r.status = 'в маршруте'; });
   S.routes.push(rt); S.rc.made.unshift(rt.id); S.rc.sel = [];
+  if(km) (S.rc.km ||= {})[rt.id] = km;
   toast(`${rt.id}: ${reqs.length} адресов, ${cities.join(' · ')}. Назначьте поверителя справа.`);
 }
 function rcAssign(id,v){
@@ -131,6 +205,9 @@ function rcDisband(id){
 function closeRC(){
   const ds = S.rc?.date;
   S.rc=null; S.modal=null;
+  // Карту не разрушаем, а снимаем с экрана: следующее открытие конструктора
+  // получит ту же, уже загруженную (ui/ymaps.js).
+  hideMap(); fitKey = '';
   if(!isDemo() && ds) closeBuilder(ds).then(reload);
   render();
 }
@@ -144,6 +221,14 @@ function rcModal(){
   const line = selPts.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
   const made = C.made.map(id=>S.routes.find(r=>r.id===id)).filter(Boolean);
   const cs = dayCities(ds);
+  /* Настоящая карта — когда есть чем её показать и что на ней показывать.
+     Ключа нет (демо-режим, контур без ключа) или координат нет (Геокодер молчал)
+     — остаётся схематичная карта области. */
+  const on = located(pts);
+  const live = mapsOn() && on.length>0;
+  const lost = pts.length - on.length;
+  const dist = selKm(pts,C.sel);
+  if(live) queueMicrotask(rcSync);
   return `<div class="mask" onclick="if(event.target===this)closeRC()">
     <div class="modal rcm">
       <div class="mhd"><h3>Конструктор маршрутов</h3>
@@ -158,13 +243,21 @@ function rcModal(){
         </div>
         <div class="rcst">
           <div><b class="mono">${free}</b> свободных из ${pts.length} заявок${cs.length?` · ${cs.map(c=>esc(c)).join(' · ')}`:''}</div>
-          <div class="who">${C.sel.length?`выбрано ${C.sel.length} — идут в маршрут в порядке нажатия`:'точка = адрес заявки, повторный клик снимает выбор'}</div>
+          <div class="who">${C.sel.length
+            ? `выбрано ${C.sel.length} — идут в маршрут в порядке нажатия${dist?` · объезд ≈ ${dist.toFixed(1)} км`:''}`
+            : 'точка = адрес заявки, повторный клик снимает выбор'}${
+            lost?` · <span style="color:var(--warning)">${lost} без координат — ${live?'на карте их нет':'адрес не геокодирован'}</span>`:''}</div>
         </div>
+        <button class="g" onclick="rcOrder()" ${live&&C.sel.length>1?'':'disabled'}
+          title="Разложить выбранные точки по окнам приезда, внутри окна — ближайшим соседом">Упорядочить</button>
         <button class="b" onclick="rcCreate()" ${C.sel.length>1?'':'disabled'}>Создать маршрут${C.sel.length>1?` · ${C.sel.length}`:''}</button>
       </div>
 
       <div class="rcbody">
-        <div class="rcmap">
+        ${live?`<div class="rcmap"><div class="rcnest" id="rcnest"></div>
+          <div class="rcleg"><span class="d1"></span>свободна<span class="d2"></span>выбрана — цифра это порядок объезда<span class="d3"></span>занята
+            <span class="note" style="margin-left:auto">© Яндекс Карты</span></div>
+        </div>`:`<div class="rcmap">
           <svg viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Карта Свердловской области">
             <defs><pattern id="mg" width="40" height="40" patternUnits="userSpaceOnUse">
               <path d="M40 0H0v40" fill="none" stroke="var(--gridA)" stroke-width="1"/></pattern></defs>
@@ -194,12 +287,13 @@ function rcModal(){
               <circle cx="106" cy="13" r="5" class="d2"/><text x="116" y="17">в маршруте этой сессии</text>
               <circle cx="262" cy="13" r="4" class="d3"/><text x="272" y="17">занята</text></g>
           </svg>
-        </div>
+        </div>`}
         <div class="rclist">
           <div class="lbl" style="margin-bottom:8px">Маршруты этой сессии · ${made.length}</div>
           ${made.length?made.map(rt=>`<div class="rcr">
             <div class="rch"><b class="mono">${rt.id}</b>
-              <span class="note">${rt.stops.length} адр. · ${(rt.cities||[rt.city]).join(' · ')}</span>
+              <span class="note">${rt.stops.length} адр. · ${(rt.cities||[rt.city]).join(' · ')}${
+                (k=>k?` · ≈ ${k.toFixed(1)} км`:'')(C.km?.[rt.id] ?? routeKmOf(rt))}</span>
               <button class="ib sm no" title="Расформировать" onclick="rcDisband('${rt.id}')">${svg(I.no,12)}</button></div>
             <div class="f" style="margin:8px 0 0">
               ${SEL('rv'+rt.id,rt.verifier||'',[{v:'',l:'— поверитель не назначен —'},
@@ -216,4 +310,4 @@ function rcModal(){
     </div></div>`;
 }
 
-export { GEO, MV, OBLAST, clampM, closeRC, mLat, mLon, oblastPath, openRC, rcAssign, rcCreate, rcDate, rcDisband, rcDrop, rcModal, rcPick, rcPoints };
+export { GEO, MV, OBLAST, clampM, closeRC, mLat, mLon, oblastPath, openRC, rcAssign, rcCreate, rcDate, rcDisband, rcDrop, rcModal, rcOrder, rcPick, rcPoints, routeKmOf, selKm };

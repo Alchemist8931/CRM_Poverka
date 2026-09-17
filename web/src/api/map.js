@@ -84,6 +84,11 @@ export function requestFrom(row, extra = {}) {
     intercom: !!row.intercom, time: row.time_slot, notify: !!row.notify_consent,
     cmtOp: row.comment_operator || '', cmtVf: row.comment_verifier || '',
     svcs: row.svcs || [], services: [...new Set(devices.map((d) => d.svc))], devices,
+    /* Координаты адреса и точность ответа Геокодера (int-maps). Точность здесь
+       не меньше самой точки: по «exact» конструктор ведёт маршрут, а «street» —
+       это середина улицы, и точка на карте показывается бледной с оговоркой. */
+    lat: row.lat ?? null, lon: row.lon ?? null, geo: row.geo_precision || null,
+    geoAddr: row.geo_address || '', geoErr: row.geo_error || '',
     status: row.status, routeId: row.route_id, operator: row.operator_id,
     verifier: row.verifier_id, from: row.moved_from,
     pay: paymentFrom(extra.payment),

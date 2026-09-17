@@ -18,6 +18,7 @@ import { CUR_M, TODAY, addDays, iso, today } from '../util.js';
 import { render } from '../ui/render.js';
 import { dayLock } from '../rules.js';
 import { setNotify } from '../screens/services.js';
+import { setMaps } from '../ui/ymaps.js';
 
 /** Сколько заявок просим за раз. Потолок списка на сервере — 500. */
 const PAGE = 500;
@@ -35,9 +36,13 @@ function refill(target, items) {
 /** Города, услуги, приборы и сотрудники. Читаются один раз после входа:
  *  меняются они руководителем и редко, а нужны каждому экрану. */
 export async function loadRefs() {
-  const [cities, services, types, staff] = await Promise.all([
+  const [cities, services, types, staff, maps] = await Promise.all([
     api.get('/cities'), api.get('/services'), api.get('/device-types'), api.get('/staff'),
+    /* Ключ карты — такой же справочник, только его может не быть: контур без
+       ключа рисует схематичную карту области, и это рабочее состояние. */
+    api.get('/maps/config').catch(() => null),
   ]);
+  setMaps(maps);
   refill(LOCS, cities.cities.map((c) => ({ n: c.name, s: c.short, big: c.is_big })));
   refill(CITIES, LOCS.map((x) => x.n));
   refill(BIG, LOCS.filter((x) => x.big).map((x) => x.n));

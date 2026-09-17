@@ -60,6 +60,13 @@ function build(ds,city){
   return made;
 }
 
+/* «Открыть в Навигаторе» — кнопка на точке маршрута у поверителя.
+   Адрес геокодирован сервером при сохранении заявки (int-maps); без координат
+   кнопки нет, а не «есть, но никуда не ведёт»: неработающая кнопка в телефоне
+   на лестничной клетке хуже её отсутствия. */
+const naviBtn = r => (r.lat==null||r.lon==null ? ''
+  : `<button class="g sm" title="Маршрут до адреса в Яндекс Навигаторе${r.geo&&r.geo!=='exact'?' (точка на улице, не на доме)':''}"
+      onclick="openNavi(${r.lat},${r.lon})">${svg(I.nav,12)}Навигатор</button>`);
 function routeCard(rt){
   const vf = S.role==='verifier';
   const called = rt.stops.filter(s=>s.called).length, done = rt.stops.filter(s=>s.done).length;
@@ -92,7 +99,8 @@ function routeCard(rt){
           ${vf?s.unserved
               ? (waitOf(r.id)?`<button class="g sm" onclick="clearUnserved('${rt.id}',${i})">${svg(I.left,12)}Вернуть в работу</button>`
                              :'<span class="note">оператор уже обработал</span>')
-              : `<button class="g sm" onclick="S.openStop='${r.id}';render()">${svg(I.act,12)}${s.done?'Акт':'Работы'}</button>
+              : `${naviBtn(r)}
+                 <button class="g sm" onclick="S.openStop='${r.id}';render()">${svg(I.act,12)}${s.done?'Акт':'Работы'}</button>
                  ${s.done?'':`<button class="g sm" onclick="openUnserved('${rt.id}',${i})">${svg(I.no,12)}Не обслужена</button>`}`
             :`<button class="ib sm" title="Выше" onclick="move('${rt.id}',${i},-1)" ${i?'':'disabled'}>${svg(I.up,12)}</button>
               <button class="ib sm" title="Ниже" onclick="move('${rt.id}',${i},1)" ${i<rt.stops.length-1?'':'disabled'}>${svg(I.down,12)}</button>`}

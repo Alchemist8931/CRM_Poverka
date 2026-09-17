@@ -11,6 +11,7 @@ import { notFound, ruleError } from '../errors.ts';
 import { bookedIn, bookedOn, loadDay, loadDevices, loadDevicesFor, lockFactsFor, nextId, slotDays } from '../store.ts';
 import { normPhone } from '../../db.ts';
 import { enqueueQuietly } from '../../notify/events.ts';
+import { addressChanged, placeQuietly } from '../../maps/place.ts';
 import {
   SLOT_MAX, SLOT_MIN, canShift, cityCapProblem, dayState, lockedFor, reqProblem, slotsFor, type Role,
 } from '../../rules.ts';
@@ -246,6 +247,10 @@ const plugin: FastifyPluginAsync = async (app) => {
     // транзакции: упавшая почта не имеет права отменить приём — подтверждение
     // даты всё равно собирает оператор обзвоном накануне.
     enqueueQuietly(app.db, 'заявка', String(created.request!.id), {}, req.log);
+    // Координаты адреса — тоже после записи и тоже не в транзакции: конструктор
+    // маршрутов ставит точку на карту, а поверитель открывает её в Навигаторе.
+    // Молчащий Геокодер отменять приём заявки не вправе (src/maps/place.ts).
+    placeQuietly(app.db, String(created.request!.id), req.log);
     return created;
   });
 
@@ -316,6 +321,9 @@ const plugin: FastifyPluginAsync = async (app) => {
     // Правка телефона или комментария событием не считается: клиенту про неё
     // сказать нечего.
     if (moved) enqueueQuietly(app.db, 'перенос', id, { movedFrom: String(cur.date) }, req.log);
+    // Новая дата на координаты не влияет, а исправленный дом — влияет: старая
+    // точка увела бы поверителя к прежнему адресу.
+    if (addressChanged(b, cur)) placeQuietly(app.db, id, req.log);
     return patched;
   });
 

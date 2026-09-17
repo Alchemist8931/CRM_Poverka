@@ -55,6 +55,8 @@ function workSheet(rt,s){
         <div class="mono" style="font-size:11px;color:var(--ink3);margin-top:3px">${r.id} · ${esc(r.name)} · эт. ${r.floor||'—'} · ${r.intercom?'домофон работает':'домофон не работает'} · окно ${pad(r.time-1)}:00–${pad(r.time+1)}:00</div></div>
       <div style="display:flex;gap:6px;align-items:center">
         ${s.unserved?'<span class="tg t-err">не обслужена</span>':s.done?'<span class="tg t-ok">позиция закрыта</span>':'<span class="tg t-mut">в работе</span>'}
+        ${r.lat!=null&&r.lon!=null?`<button class="g sm" onclick="openNavi(${r.lat},${r.lon})"
+          title="Маршрут до адреса в Яндекс Навигаторе${r.geo&&r.geo!=='exact'?' (точка на улице, не на доме)':''}">${svg(I.nav,12)}Навигатор</button>`:''}
         <button class="g sm" onclick="startCall('${esc(r.phone)}','основной','${esc(r.name)}')">${svg(I.phone,12)}Клиент</button></div>
     </div>
     <p class="cap">Услуга, заводской номер и показания счётчика — в строке прибора. К каждому прибору — фото выполненных работ, несколько кадров.
