@@ -21,9 +21,9 @@ if (!url || !out) {
 
 /** Тот же список, что собирает GROUPS в справочниках: порядок страниц в меню. */
 const DEMO_VIEWS = ['intake', 'support', 'me', 'plan', 'routes', 'schedule', 'absence', 'payroll', 'services',
-  'myroute', 'absence', 'me'];
+  'audit', 'myroute', 'absence', 'me'];
 const BY_ROLE = {
-  sv: ['plan', 'routes', 'schedule', 'absence', 'payroll', 'services'],
+  sv: ['plan', 'routes', 'schedule', 'absence', 'payroll', 'services', 'audit'],
   o0: ['intake', 'support', 'me'],
   o2: ['intake', 'support', 'me'],
   v0: ['myroute', 'absence', 'me'],

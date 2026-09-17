@@ -14,6 +14,7 @@ import { S, dayCities } from './state.js';
 import { addDays, iso, today, TODAY } from './util.js';
 import { dayLock } from './rules.js';
 import { seed } from './demo/seed.js';
+import { seedAudit } from './demo/audit.js';
 import { INTRO } from './ui/brand.js';
 import { render, step } from './ui/render.js';
 import { closeModal } from './ui/modals.js';
@@ -39,6 +40,9 @@ document.addEventListener('keydown', (e) => {
 /** Демо-режим: наполнение в памяти, как в прототипе до переезда на API. */
 function bootDemo(){
   seed();
+  // Журнал действий: в демо он делается по уже разложенному наполнению, потому
+  // что писать его на самом деле некому — запросов к серверу здесь не бывает.
+  seedAudit();
   /* Ближайшие даты уже ушли под маршруты — приём открываем с первой свободной. */
   S.day = Array.from({length:21},(_,i)=>iso(addDays(today,i)))
     .find(ds=>dayCities(ds).length && !dayLock(ds)) || TODAY;

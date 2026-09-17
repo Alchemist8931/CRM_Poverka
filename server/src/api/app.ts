@@ -21,6 +21,8 @@ import actRoutes from './routes/act.ts';
 import moneyRoutes from './routes/money.ts';
 import callRoutes from './routes/calls.ts';
 import photoRoutes from './routes/photos.ts';
+import auditRoutes from './routes/audit.ts';
+import { installAudit } from './audit.ts';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -100,6 +102,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
         { name: 'акт', description: 'приборы, закрытие и возврат позиции, лист ожидания' },
         { name: 'деньги', description: 'оплата на месте, заработок, сдельная, подотчёт' },
         { name: 'связь', description: 'вебхуки телефонии' },
+        { name: 'журнал', description: 'журнал действий: кто что менял и смотрел' },
       ],
       components: {
         securitySchemes: {
@@ -129,6 +132,10 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     if (PUBLIC.has(path) || !path.startsWith('/api/')) return;
     if (!req.user) throw new ApiError(401, 'Нужен вход в систему.');
   });
+
+  // Журнал действий ставится до маршрутов и поверх всех сразу: обработчик,
+  // который забыли бы в него вписать, — это дыра в следе по персональным данным.
+  installAudit(app);
 
   app.setErrorHandler((err, req, reply) => {
     if (err instanceof ApiError) {
@@ -176,6 +183,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   await app.register(moneyRoutes, { prefix: '/api' });
   await app.register(callRoutes, { prefix: '/api' });
   await app.register(photoRoutes, { prefix: '/api' });
+  await app.register(auditRoutes, { prefix: '/api' });
 
   return app;
 }

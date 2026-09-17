@@ -52,6 +52,9 @@ export async function makeStand(opts: { storage?: PhotoStorage | null } = {}): P
   await fixture(db);
   const app = await buildApp({
     db, secret: 'проверочный-ключ-подписи-сессий', storage: opts.storage ?? null,
+    // «Внутренняя ошибка сервера» без причины — это полчаса гадания на ровном
+    // месте: TEST_LOG=1 включает журнал приложения на время проверки.
+    logger: !!process.env.TEST_LOG,
   });
   await app.ready();
   return { app, db, close: async () => { await app.close(); await pg.close(); } };

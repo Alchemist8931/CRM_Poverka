@@ -183,7 +183,7 @@ try {
   if (wanted('roles')) {
     console.log('\n1. Экраны трёх ролей');
     for (const [who, role, views] of [
-      ['sv', 'supervisor', ['plan', 'routes', 'schedule', 'absence', 'payroll', 'services']],
+      ['sv', 'supervisor', ['plan', 'routes', 'schedule', 'absence', 'payroll', 'services', 'audit']],
       ['o2', 'operator', ['intake', 'support', 'me']],
       ['v0', 'verifier', ['myroute', 'absence', 'me']],
     ]) {

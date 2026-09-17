@@ -35,11 +35,9 @@ const plugin: FastifyPluginAsync = async (app) => {
     if (row.blocked_at) throw new ApiError(403, 'Учётная запись заблокирована — обратитесь к руководителю.');
 
     setSessionCookie(reply, makeSession(row.id, secret));
-    await app.db.query(
-      `INSERT INTO audit_log (actor_id, actor_role, action, entity, entity_id, ip, user_agent)
-       VALUES ($1, $2, 'вход', 'staff', $1, $3, $4)`,
-      [row.id, row.role, req.ip, req.headers['user-agent'] ?? null]);
-
+    // Вход, выход и неудачная попытка входа попадают в журнал сами: их пишет
+    // промежуточный слой (`src/api/audit.ts`), и для этого ему нужен ответ —
+    // на входе человек ещё не известен по сессии, его называет как раз он.
     return {
       user: {
         id: row.id, role: row.role, full_name: row.full_name,

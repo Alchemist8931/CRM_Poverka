@@ -9,8 +9,12 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { FastifyPluginAsync } from 'fastify';
 import { requireUser } from '../auth.ts';
-import { ApiError } from '../errors.ts';
+import { ApiError, notFound } from '../errors.ts';
 import { normPhone } from '../../db.ts';
+
+/** Сколько живёт ссылка на запись разговора. Столько же, сколько ссылка на
+ *  снимок акта: её хватает, чтобы дослушать, и мало, чтобы передать дальше. */
+const RECORD_URL_TTL_S = 15 * 60;
 
 /** Подпись вебхука: HMAC-SHA256 по сырому телу общим ключом. Ключа нет —
  *  приёмник закрыт: открытый вебхук означает, что журнал звонков может написать
@@ -93,6 +97,36 @@ const plugin: FastifyPluginAsync = async (app) => {
         ORDER BY started DESC LIMIT $3`,
       [q.phone ? normPhone(q.phone) : null, q.operator_id ?? null, q.limit ?? 50]);
     return { calls: rows };
+  });
+
+  app.get('/calls/:id/record', {
+    schema: {
+      tags: ['связь'],
+      summary: 'Запись разговора: ссылка на прослушивание. Каждое обращение попадает в журнал',
+      security: [{ session: [] }],
+      params: { type: 'object', required: ['id'], properties: { id: { type: 'integer' } } },
+    },
+  }, async (req) => {
+    // Разговор с клиентом — персональные данные обеих сторон, и слушать его
+    // может не всякий вошедший. Само обращение пишется в журнал действий
+    // отдельным действием «прослушивание» (`src/api/audit.ts`): по 152-ФЗ
+    // обращение к записи должно быть видно, даже когда оно законно.
+    const user = requireUser(req);
+    if (user.role === 'verifier') throw new ApiError(403, 'Записи разговоров доступны операторам и руководителю.');
+    const { id } = req.params as { id: number };
+    const { rows } = await app.db.query<{ id: string; record_key: string | null; started: string }>(
+      'SELECT id, record_key, started FROM calls WHERE id = $1', [id]);
+    const call = rows[0];
+    if (!call) throw notFound(`Нет звонка №${id}.`);
+    // Запись докачивает worker уже после звонка (пункт int-novofon), поэтому
+    // «записи ещё нет» — обычное состояние свежего разговора, а не сбой.
+    if (!call.record_key) throw notFound(`У звонка №${id} записи разговора нет.`);
+    if (!app.photos) throw new ApiError(503, 'Хранилище записей не подключено к этому контуру.');
+    return {
+      call_id: call.id,
+      url: await app.photos.viewUrl(call.record_key, RECORD_URL_TTL_S, 'audio/mpeg'),
+      expires_in: RECORD_URL_TTL_S,
+    };
   });
 };
 

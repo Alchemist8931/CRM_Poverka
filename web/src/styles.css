@@ -734,3 +734,16 @@ tfoot td{border-top:1px solid var(--border);border-bottom:0;color:var(--ink);fon
 .loading-screen .spin{width:15px;height:15px;border-width:2px;margin:0}
 .load-error{border-color:var(--error);color:var(--error)}
 .load-error button{margin-left:auto}
+
+/* ---------- журнал действий (экран руководителя) ---------- */
+/* Строка журнала раскрывается в разницу по полям, поэтому она нажимается вся:
+   отдельная кнопка «подробнее» в таблице на семь столбцов только мешала бы. */
+.audit tbody tr.ln{cursor:pointer}
+.audit tbody tr.ln.on td{background:var(--wash);color:var(--ink)}
+.audit tbody tr.dif:hover td{background:transparent}
+.audit tbody tr.dif > td{padding:12px 10px 16px;background:var(--surface)}
+.audit .inner{margin:0;font-size:12px}
+.audit .inner th{padding-bottom:6px}
+.audit .inner td{border-bottom:1px solid var(--border2);vertical-align:top;word-break:break-word}
+.audit .inner td:first-child{color:var(--ink3);width:220px}
+.audit .inner td:last-child{color:var(--ink)}

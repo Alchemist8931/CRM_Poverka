@@ -44,8 +44,13 @@ for (let i = 0; i < pages; i++) {
   await page.evaluate((n) => window.goPage(n), i);
   await page.waitForTimeout(150);
 }
+// Последняя страница обхода — экран поверителя; журнал смотрим на его же
+// странице, иначе в разметке его просто нет.
+await page.evaluate(() => window.go('audit'));
+await page.waitForTimeout(250);
 const seen = await page.evaluate(() => ({
   requests: S.requests.length, routes: S.routes.length, staff: S.staff.length, page: S.page,
+  audit: (S.audit || []).length, auditRows: document.querySelectorAll('table.audit tbody tr.ln').length,
 }));
 
 await browser.close();
@@ -56,8 +61,12 @@ const check = (what, cond, why) => {
   if (cond) console.log(`  ок   ${what}`);
   else { bad++; console.error(`  ПЛОХО ${what}${why ? ' — ' + why : ''}`); }
 };
-check(`страниц пройдено: ${pages}`, pages === 12, `их ${pages}`);
+check(`страниц пройдено: ${pages}`, pages === 13, `их ${pages}`);
 check('наполнение в памяти есть', seen.requests > 1000 && seen.routes > 10 && seen.staff === 17,
+  JSON.stringify(seen));
+// Журнал действий в демо делается по наполнению: пустой экран у руководителя —
+// это не «журнал чист», а несобранное демо.
+check('журнал действий наполнен и нарисован', seen.audit > 20 && seen.auditRows === seen.audit,
   JSON.stringify(seen));
 check('в сеть за данными не ходили', toServer.length === 0, toServer.join(' '));
 check('ошибок консоли нет', errors.length === 0, errors.join(' | '));

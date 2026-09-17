@@ -260,22 +260,13 @@ const plugin: FastifyPluginAsync = async (app) => {
     if (!photo) throw notFound(`Нет фотографии №${id}.`);
     if (photo.deleted_at) throw ruleError('Этот кадр уже убран из акта.', 'photo-deleted');
 
-    return app.db.tx(async (db) => {
-      await db.query('UPDATE photos SET deleted_at = now(), deleted_by = $2 WHERE id = $1',
-        [id, user.id]);
-      // Журнал действий: по 152-ФЗ и руководителю. На фотографии акта видны
-      // фамилия, адрес и подпись — исчезновение кадра должно быть объяснимо.
-      await db.query(
-        `INSERT INTO audit_log (actor_id, actor_role, action, entity, entity_id, before, ip, user_agent)
-         VALUES ($1, $2, 'удаление', 'photos', $3, $4, $5, $6)`,
-        [user.id, user.role, String(id),
-         JSON.stringify({
-           device_id: photo.device_id, request_id: photo.request_id,
-           storage_key: photo.storage_key, name: photo.name,
-         }),
-         req.ip, req.headers['user-agent'] ?? null]);
-      return { ok: true, id, kept_in_storage: true };
-    });
+    // Журнал действий пишет промежуточный слой (`src/api/audit.ts`): по 152-ФЗ и
+    // руководителю. На фотографии акта видны фамилия, адрес и подпись —
+    // исчезновение кадра должно быть объяснимо, и в записи остаётся вся строка
+    // кадра целиком, вместе с ключом в хранилище.
+    await app.db.query('UPDATE photos SET deleted_at = now(), deleted_by = $2 WHERE id = $1',
+      [id, user.id]);
+    return { ok: true, id, kept_in_storage: true };
   });
 };
 

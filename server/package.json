@@ -26,6 +26,7 @@
     "check:schema": "tsx scripts/check-schema.ts",
     "check:seed-cli": "tsx scripts/check-seed-cli.mts",
     "check:photos": "tsx scripts/check-photo-roundtrip.mts",
+    "audit:prune": "tsx scripts/audit-prune.mts",
     "import": "tsx scripts/import/cli.mts",
     "check:import": "tsx scripts/check-import.mts"
   },

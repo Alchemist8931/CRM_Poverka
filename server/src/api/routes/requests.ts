@@ -144,10 +144,13 @@ const plugin: FastifyPluginAsync = async (app) => {
     // это тот же номер в основном или в запасном поле любой прежней заявки.
     // Карточку целиком, а не выжимку: по истории оператор подставляет в новую
     // заявку адрес, контакты и тип клиента — для этого нужны все поля.
+    // Порядок задаётся по столбцу таблицы, а не по одноимённому полю выборки:
+    // `date::text AS date` рядом с `ORDER BY date` — это «ORDER BY date is
+    // ambiguous», то есть 500 на каждый вызов. Поэтому у таблицы есть имя.
     const { rows: history } = await app.db.query(
-      `SELECT *, date::text AS date, created_date::text AS created_date
-         FROM requests WHERE phone_norm = $1 OR regexp_replace(phone2, '\\D', '', 'g') LIKE '%' || $2
-        ORDER BY date DESC, id DESC LIMIT 50`, [norm, norm.slice(-10)]);
+      `SELECT r.*, r.date::text AS date, r.created_date::text AS created_date
+         FROM requests r WHERE r.phone_norm = $1 OR regexp_replace(r.phone2, '\\D', '', 'g') LIKE '%' || $2
+        ORDER BY r.date DESC, r.id DESC LIMIT 50`, [norm, norm.slice(-10)]);
     return { client: clients[0] ?? null, history };
   });
 

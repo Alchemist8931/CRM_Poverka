@@ -3,6 +3,7 @@
 
 import { addViews } from '../ui/render.js';
 import { viewAbsence } from './absence.js';
+import { viewAudit } from './audit.js';
 import { viewIntake } from './intake.js';
 import { viewLogin } from './login.js';
 import { viewMe, viewPayroll } from './money.js';
@@ -17,5 +18,5 @@ addViews({
   login: viewLogin,
   intake: viewIntake, support: viewSupport, me: viewMe,
   plan: viewPlan, routes: viewRoutes, schedule: viewSchedule, payroll: viewPayroll,
-  services: viewServices, myroute: viewMyRoute, absence: viewAbsence,
+  services: viewServices, myroute: viewMyRoute, absence: viewAbsence, audit: viewAudit,
 });

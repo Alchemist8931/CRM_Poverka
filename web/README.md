@@ -61,8 +61,9 @@ web/src/
     shell.js       рельса, шапка, лента ёмкости, состояния загрузки и ошибки
     controls.js    общие контролы: SEL, DATE, CHK, SEG
     modals.js      модальный слой, phone.js, lightbox.js, icons.js, brand.js
-  screens/         по файлу на экран: intake, support, plan, routes, myroute, …
+  screens/         по файлу на экран: intake, support, plan, routes, myroute, audit, …
   demo/seed.js     наполнение прототипа — тот же генератор с тем же зерном
+  demo/audit.js    журнал действий для демо-режима (в прототипе его не было)
 ```
 
 Зависимость одна — Vite (плюс `vite-plugin-singlefile` для демо-сборки и
@@ -112,6 +113,9 @@ npm run e2e                       # API поднимает и роняет са�
 docker compose up -d minio minio-init   # из корня репозитория
 npm run build && npm run check:photo-ui
 
+# журнал действий руководителя против настоящего API
+npm run build && npm run check:audit-ui
+
 # снимки экранов на ширине 1600 и сверка компоновки с прежним прототипом
 npm run shots -- http://127.0.0.1:8812/index.html ../docs/screens/after
 node scripts/compare-shots.mjs ../docs/screens/before ../docs/screens/after
@@ -130,8 +134,13 @@ node scripts/compare-shots.mjs ../docs/screens/before ../docs/screens/after
 MinIO пускает любой источник по умолчанию. Круг со стороны сервера проверяет
 `server/scripts/check-photo-roundtrip.mts`.
 
+`scripts/check-audit-ui.mjs` проверяет экран «Журнал действий»: правка прайса и
+заявки через API появляются в журнале с разницей по полям, отбор по сущности
+сокращает таблицу, поиск находит записи по номеру заявки, строка раскрывается в
+диф, выгрузка отдаёт CSV и сама попадает в журнал, а оператору страницы журнала
+нет ни в меню, ни по адресу.
+
 ## Чего здесь нет
 
-Экрана журнала действий — **be-audit**.
 Учётных записей и смены пароля — **be-users**. Карточки при входящем звонке —
 **int-novofon**. Настоящей карты в конструкторе маршрутов — **int-maps**.

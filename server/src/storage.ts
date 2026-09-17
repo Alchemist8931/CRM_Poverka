@@ -119,8 +119,10 @@ export interface PhotoStorage {
   readonly bucket: string;
   /** Ссылка на загрузку кадра прямо в хранилище. */
   uploadUrl(key: string): Promise<string>;
-  /** Ссылка на просмотр: её сервер отдаёт браузеру ответом 302. */
-  viewUrl(key: string, ttlSeconds?: number): Promise<string>;
+  /** Ссылка на просмотр: её сервер отдаёт браузеру ответом 302.
+   *  Тип содержимого задаётся отдельно: по этим же ссылкам руководитель слушает
+   *  записи разговоров, а браузер играет mp3, а не картинку. */
+  viewUrl(key: string, ttlSeconds?: number, contentType?: string): Promise<string>;
   head(key: string): Promise<ObjectInfo | null>;
   read(key: string): Promise<Buffer>;
   write(key: string, body: Buffer, contentType?: string): Promise<void>;
@@ -146,10 +148,10 @@ export function photoStorage(cfg: StorageConfig): PhotoStorage {
       { expiresIn: PHOTO_URL_TTL_S },
     ),
 
-    viewUrl: (key, ttlSeconds = PHOTO_URL_TTL_S) => getSignedUrl(
+    viewUrl: (key, ttlSeconds = PHOTO_URL_TTL_S, contentType = PHOTO_CONTENT_TYPE) => getSignedUrl(
       s3, new GetObjectCommand({
         Bucket, Key: key,
-        ResponseContentType: PHOTO_CONTENT_TYPE,
+        ResponseContentType: contentType,
         // Снимок акта — персональные данные: промежуточным узлам его не кэшировать.
         ResponseCacheControl: `private, max-age=${ttlSeconds}`,
       }),

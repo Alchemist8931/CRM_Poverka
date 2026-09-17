@@ -133,6 +133,18 @@ export async function loadHandovers(staffId, month = CUR_M) {
   S.handovers = [...keep, ...rows.map(M.handoverFrom)];
 }
 
+/** Журнал действий по текущему отбору. Отбор считает сервер: три года журнала
+ *  во вкладку не помещаются, да и незачем — руководителю нужен срез. */
+export async function loadAudit() {
+  const F = S.auditF || {};
+  const { entries, total } = await api.get(q('/audit', {
+    actor_id: F.actor, entity: F.entity, action: F.action,
+    from: F.from, to: F.to, q: F.q, limit: 500,
+  }));
+  S.audit = entries;
+  S.auditTotal = total;
+}
+
 /* ── экран → что ему нужно ───────────────────────────────── */
 
 const MONTH_FROM = (m) => `${m}-01`;
@@ -197,6 +209,11 @@ const LOADERS = {
   },
   async services() {
     await Promise.all([loadRefs(), loadDays(TODAY, TODAY), loadStaffAndAbsences()]);
+  },
+  async audit() {
+    // Сотрудники — для отбора по человеку: в списке журнала имя приходит уже
+    // с записью, а вот выпадающий список собирается из справочника.
+    await Promise.all([loadRefs(), loadAudit()]);
   },
   async myroute() {
     await Promise.all([loadDays(TODAY, TODAY), loadRoutes({ date: TODAY })]);
