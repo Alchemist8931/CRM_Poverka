@@ -14,7 +14,8 @@
     "build:all": "npm run build && npm run build:demo && node scripts/publish-demo.mjs",
     "preview": "vite preview",
     "shots": "node scripts/shots.mjs",
-    "e2e": "node scripts/e2e.mjs"
+    "e2e": "node scripts/e2e.mjs",
+    "check:photo-ui": "node scripts/check-photo-ui.mjs"
   },
   "devDependencies": {
     "pixelmatch": "^7.2.0",

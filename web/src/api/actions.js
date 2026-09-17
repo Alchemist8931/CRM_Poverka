@@ -106,6 +106,28 @@ export const closeAct = (requestId, payment) => run(
   `Позиция закрыта, акт записан.`);
 export const reopenAct = (requestId) => run(() => api.post(`/requests/${requestId}/reopen`), 'Позиция возвращена в работу.');
 
+/* ── фото работ ──────────────────────────────────────────── */
+
+/* Кадр в хранилище идёт мимо сервера. Порядок такой: просим подписанную ссылку,
+   кладём снимок прямо в Object Storage, подтверждаем — и только тогда сервер
+   записывает кадр в акт и делает миниатюру. Между вторым и третьим шагом файл
+   в бакете уже лежит, но в акте его ещё нет: это и значит «кадр не долетел»,
+   если связь оборвалась. Повторная съёмка такой объект не трогает — у нового
+   кадра свой ключ. */
+export async function uploadPhoto(deviceId, blob, name) {
+  const slot = await api.post(`/devices/${deviceId}/photos/upload`,
+    { size: blob.size, content_type: blob.type || 'image/jpeg' });
+  const put = await fetch(slot.url, {
+    method: 'PUT', body: blob, headers: { 'content-type': slot.content_type },
+  }).catch(() => null);
+  if (!put || !put.ok) throw new Error('Кадр не ушёл в хранилище — попробуйте ещё раз.');
+  const t = new Date().toTimeString().slice(0, 5);
+  return api.post(`/devices/${deviceId}/photos`, { key: slot.key, name: name || '', taken_at: t });
+}
+
+/** Убрать кадр из акта. Доступно руководителю; файл в хранилище остаётся. */
+export const dropPhoto = (id) => run(() => api.del(`/photos/${id}`), 'Кадр убран из акта.');
+
 /* Поле прибора правится на месте и уходит на сервер с задержкой: перерисовывать
    страницу на каждую букву нельзя — каретка уедет из поля. Ответ картинку не
    трогает, а вот отказ сервера показываем и перечитываем экран. */

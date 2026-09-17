@@ -1,44 +1,57 @@
-/* Фотографии акта: подписанная ссылка и выдача файла.
+/* Фотографии акта: загрузка в Object Storage, миниатюра, выдача и удаление.
  *
- * Снимок в базе не лежит — там только ключ объекта (`photos.storage_key`).
- * Показать его в браузере нужно тегом `<img>`, а `<img>` не носит заголовков и
- * не умеет объяснять 401: поэтому ссылка подписывается отдельно и живёт недолго.
- * Подпись — HMAC от ключа фотографии и срока тем же секретом, что и сессия.
+ * Круг такой. Телефон поверителя жмёт кадр до 1600 px по длинной стороне и
+ * просит ссылку на загрузку; сервер проверяет право, лимиты и выдаёт
+ * подписанную ссылку на PUT в хранилище. Снимок идёт туда напрямую, минуя
+ * приложение. Дальше телефон подтверждает загрузку, и только тут сервер
+ * записывает кадр в акт: смотрит, что объект действительно лежит и весит
+ * сколько сказано, делает миниатюру 320 px и сохраняет ключ, размер и время.
  *
- * Чего здесь намеренно нет: загрузки, миниатюр, срока хранения и самого
- * Object Storage — это пункт be-photos. Пока бакет не подключён, выдача рисует
- * заглушку с заводским номером прибора: экран поверителя должен работать
- * целиком, а не наполовину.
+ * Показ — в два шага: наша подписанная ссылка `/api/photos/12/file` (сессия для
+ * неё не нужна, `<img>` её и не носит) отвечает 302 на подписанную ссылку
+ * хранилища с тем же сроком в пятнадцать минут. Адрес бакета не лежит ни в
+ * базе, ни в разметке, а утёкшая ссылка живёт четверть часа.
+ *
+ * Удаление — только руководителю и только пометкой: файл в хранилище остаётся
+ * (срок хранения не меньше шести лет, и права удалять у приложения нет), а в
+ * журнал действий идёт запись, кто и какой кадр убрал из акта.
+ *
+ * Пока хранилище не подключено (машина разработчика без MinIO, тестовый стенд),
+ * выдача рисует заглушку с заводским номером прибора, а загрузка честно
+ * отвечает 503: экран поверителя должен работать целиком, а не наполовину.
  */
-import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { FastifyPluginAsync } from 'fastify';
-import { notFound } from '../errors.ts';
+import sharp from 'sharp';
+import { requireRole } from '../auth.ts';
+import { ApiError, notFound, ruleError } from '../errors.ts';
+import { actorOr403 } from '../store.ts';
+import {
+  PHOTO_CONTENT_TYPE, PHOTO_MAX_BYTES, PHOTO_MAX_PER_DEVICE, PHOTO_URL_TTL_S, THUMB_PX,
+  keyBelongsTo, photoKey, thumbKey,
+} from '../../storage.ts';
+import { linkValid, photoLink, withLinks, type PhotoView } from '../photo-links.ts';
 
-/** Сколько живёт подписанная ссылка. Больше рабочего дня незачем: страница
- *  перерисовывается, ссылки выдаются заново. */
-export const PHOTO_LINK_TTL_MS = 60 * 60 * 1000;
+export { PHOTO_LINK_TTL_MS, photoLink, linkValid, withLinks } from '../photo-links.ts';
 
-const sign = (payload: string, secret: string) =>
-  createHmac('sha256', secret).update(payload).digest('base64url');
+const DEVICE_ID = {
+  type: 'object', required: ['id'], properties: { id: { type: 'integer' } },
+} as const;
 
-/** Ссылка на снимок: `/api/photos/12/file?exp=…&sig=…`. */
-export function photoLink(id: number | string, secret: string, now = Date.now()): string {
-  const exp = now + PHOTO_LINK_TTL_MS;
-  return `/api/photos/${id}/file?exp=${exp}&sig=${sign(`${id}.${exp}`, secret)}`;
+/** Строка прибора вместе с заявкой: без заявки не проверить право на акт. */
+async function deviceOr404(app: { db: import('../db.ts').Db }, id: number) {
+  const { rows } = await app.db.query<{ id: string; request_id: string; serial: string }>(
+    'SELECT id, request_id, serial FROM devices WHERE id = $1', [id]);
+  const device = rows[0];
+  if (!device) throw notFound(`Нет строки прибора №${id}.`);
+  return device;
 }
 
-export function linkValid(id: string, exp: string, sig: string, secret: string, now = Date.now()): boolean {
-  if (!exp || !sig || Number(exp) < now) return false;
-  const want = Buffer.from(sign(`${id}.${exp}`, secret));
-  const got = Buffer.from(String(sig));
-  return want.length === got.length && timingSafeEqual(want, got);
-}
-
-/** Строки фотографий прибора со свежими ссылками. */
-export function withLinks(rows: Record<string, unknown>[], secret: string) {
-  return rows.map((p) => ({
-    id: p.id, name: p.name, taken_at: p.taken_at, url: photoLink(String(p.id), secret),
-  }));
+/** Сколько кадров уже висит на приборе. Удалённые не в счёт: иначе руководитель,
+ *  убравший смазанный кадр, не дал бы поверителю переснять. */
+async function photoCount(db: import('../db.ts').Db, deviceId: string | number): Promise<number> {
+  const { rows } = await db.query<{ n: string }>(
+    'SELECT count(*)::text AS n FROM photos WHERE device_id = $1 AND deleted_at IS NULL', [deviceId]);
+  return Number(rows[0]?.n ?? 0);
 }
 
 /* Заглушка вместо снимка — тот же рисунок, что показывал прототип в демо-наборе. */
@@ -52,6 +65,139 @@ function stub(text: string): string {
 }
 
 const plugin: FastifyPluginAsync = async (app) => {
+  /** Хранилище не подключено — говорим об этом одинаково во всех местах. */
+  const storageOr503 = () => {
+    if (!app.photos) {
+      throw new ApiError(503,
+        'Хранилище снимков не подключено к этому контуру — акт закрывается и без фотографий.',
+        'storage');
+    }
+    return app.photos;
+  };
+
+  app.post('/devices/:id/photos/upload', {
+    schema: {
+      tags: ['акт'],
+      summary: 'Ссылка на загрузку кадра прямо в хранилище (подписанная, на 15 минут)',
+      security: [{ session: [] }],
+      params: DEVICE_ID,
+      body: {
+        type: 'object', required: ['size'],
+        properties: {
+          size: { type: 'integer' },
+          content_type: { type: 'string' },
+        },
+      },
+    },
+  }, async (req) => {
+    const user = requireRole(req, 'verifier', 'supervisor');
+    const { id } = req.params as { id: number };
+    const b = req.body as { size: number; content_type?: string };
+    const storage = storageOr503();
+    const device = await deviceOr404(app, id);
+    await actorOr403(app.db, user, device.request_id);
+
+    if (b.content_type && b.content_type !== PHOTO_CONTENT_TYPE) {
+      throw ruleError('В акт идут только снимки JPEG — телефон готовит кадр сам.', 'photo-type');
+    }
+    if (b.size > PHOTO_MAX_BYTES) {
+      throw ruleError(
+        `Кадр весит ${Math.round(b.size / 1024 / 1024 * 10) / 10} МБ, а в акт принимается не больше ` +
+        `${PHOTO_MAX_BYTES / 1024 / 1024} МБ. Снимите заново — телефон сожмёт кадр сам.`, 'photo-size');
+    }
+    if (b.size <= 0) throw ruleError('Пустой кадр в акт не идёт.', 'photo-size');
+
+    const already = await photoCount(app.db, device.id);
+    if (already >= PHOTO_MAX_PER_DEVICE) {
+      throw ruleError(
+        `На прибор в акте хватает трёх кадров, больше ${PHOTO_MAX_PER_DEVICE} не принимается. ` +
+        'Уберите лишние и снимите заново.', 'photo-count');
+    }
+
+    const key = photoKey(device.request_id, device.id);
+    return {
+      key,
+      url: await storage.uploadUrl(key),
+      expires_in: PHOTO_URL_TTL_S,
+      content_type: PHOTO_CONTENT_TYPE,
+      max_bytes: PHOTO_MAX_BYTES,
+      left: PHOTO_MAX_PER_DEVICE - already,
+    };
+  });
+
+  app.post('/devices/:id/photos', {
+    schema: {
+      tags: ['акт'],
+      summary: 'Подтвердить загрузку: сервер сверяет объект, делает миниатюру и пишет кадр в акт',
+      security: [{ session: [] }],
+      params: DEVICE_ID,
+      body: {
+        type: 'object', required: ['key'],
+        properties: {
+          key: { type: 'string' },
+          name: { type: 'string' },
+          taken_at: { type: 'string', pattern: '^\\d{2}:\\d{2}$' },
+        },
+      },
+    },
+  }, async (req) => {
+    const user = requireRole(req, 'verifier', 'supervisor');
+    const { id } = req.params as { id: number };
+    const b = req.body as { key: string; name?: string; taken_at?: string };
+    const storage = storageOr503();
+    const device = await deviceOr404(app, id);
+    await actorOr403(app.db, user, device.request_id);
+
+    // Ключ выдавал сервер — он же и проверяет, что вернулся тот самый: иначе
+    // подтверждением можно было бы записать в свой акт чужой объект.
+    if (!keyBelongsTo(b.key, device.request_id, device.id)) {
+      throw ruleError('Ключ снимка не из этого акта.', 'photo-key');
+    }
+    if (await photoCount(app.db, device.id) >= PHOTO_MAX_PER_DEVICE) {
+      throw ruleError(`Больше ${PHOTO_MAX_PER_DEVICE} кадров на прибор не принимается.`, 'photo-count');
+    }
+
+    const info = await storage.head(b.key);
+    if (!info) throw ruleError('Кадр не долетел до хранилища — попробуйте снять ещё раз.', 'photo-missing');
+    if (info.size > PHOTO_MAX_BYTES) {
+      // Объект больше лимита в акт не пойдёт. Стереть его приложение обычно не
+      // может (права на бакет — чтение и запись без удаления), поэтому пробуем
+      // и не считаем неудачу ошибкой: висящий объект уберёт правило бакета.
+      await storage.remove(b.key).catch(() => {});
+      throw ruleError(
+        `Кадр весит ${Math.round(info.size / 1024 / 1024 * 10) / 10} МБ — больше ` +
+        `${PHOTO_MAX_BYTES / 1024 / 1024} МБ в акт не принимается.`, 'photo-size');
+    }
+
+    // Миниатюра нужна списку кадров в акте: на телефоне их до десяти на прибор,
+    // и тянуть ради ряда квадратиков десять оригиналов — это мегабайты трафика.
+    let thumb: Buffer;
+    let meta: Awaited<ReturnType<ReturnType<typeof sharp>['metadata']>>;
+    try {
+      const original = await storage.read(b.key);
+      meta = await sharp(original).metadata();
+      thumb = await sharp(original)
+        .rotate()                                    // повёрнутый телефоном кадр — по метке EXIF
+        .resize({ width: THUMB_PX, height: THUMB_PX, fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 78 })
+        .toBuffer();
+    } catch {
+      await storage.remove(b.key).catch(() => {});
+      throw ruleError('Это не похоже на снимок: в акт идёт фотография, а не другой файл.', 'photo-type');
+    }
+    const thumbAt = thumbKey(b.key);
+    await storage.write(thumbAt, thumb);
+
+    const { rows } = await app.db.query<Record<string, unknown>>(
+      `INSERT INTO photos (device_id, storage_key, thumb_key, name, taken_at, size_bytes, width, height)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING id, name, taken_at::text AS taken_at, size_bytes, width, height, thumb_key`,
+      [device.id, b.key, thumbAt, (b.name ?? '').slice(0, 120), b.taken_at ?? null,
+       info.size, meta.width ?? null, meta.height ?? null]);
+
+    return { photo: withLinks(rows, app.sessionSecret)[0] };
+  });
+
   app.get('/photos/:id/file', {
     schema: {
       tags: ['акт'],
@@ -59,24 +205,77 @@ const plugin: FastifyPluginAsync = async (app) => {
       params: { type: 'object', required: ['id'], properties: { id: { type: 'string' } } },
       querystring: {
         type: 'object', required: ['exp', 'sig'],
-        properties: { exp: { type: 'string' }, sig: { type: 'string' } },
+        properties: {
+          exp: { type: 'string' }, sig: { type: 'string' },
+          v: { type: 'string', enum: ['full', 'thumb'] },
+        },
       },
     },
   }, async (req, reply) => {
     const { id } = req.params as { id: string };
-    const { exp, sig } = req.query as { exp: string; sig: string };
-    if (!linkValid(id, exp, sig, app.sessionSecret)) {
+    const { exp, sig, v } = req.query as { exp: string; sig: string; v?: PhotoView };
+    const view: PhotoView = v === 'thumb' ? 'thumb' : 'full';
+    if (!linkValid(id, view, exp, sig, app.sessionSecret)) {
       // Просроченная ссылка — не повод рассказывать, есть ли такая фотография.
       return reply.code(403).send({ error: 'Ссылка на снимок просрочена или подделана.' });
     }
-    const { rows } = await app.db.query<{ storage_key: string; serial: string }>(
-      `SELECT p.storage_key, d.serial FROM photos p JOIN devices d ON d.id = p.device_id WHERE p.id = $1`,
-      [id]);
+    const { rows } = await app.db.query<
+      { storage_key: string; thumb_key: string | null; serial: string; deleted_at: string | null }>(
+      `SELECT p.storage_key, p.thumb_key, p.deleted_at, d.serial
+         FROM photos p JOIN devices d ON d.id = p.device_id WHERE p.id = $1`, [id]);
     const photo = rows[0];
     if (!photo) throw notFound('Нет такой фотографии.');
-    // Бакета пока нет: отдаём заглушку с номером прибора, чтобы акт читался целиком.
-    return reply.type('image/svg+xml').header('cache-control', 'private, max-age=300')
-      .send(stub(photo.serial || 'без номера'));
+    if (photo.deleted_at) throw notFound('Кадр убран из акта руководителем.');
+
+    // Хранилища нет: отдаём заглушку с номером прибора, чтобы акт читался целиком.
+    if (!app.photos) {
+      return reply.type('image/svg+xml').header('cache-control', 'private, max-age=300')
+        .send(stub(photo.serial || 'без номера'));
+    }
+    // Ссылка в хранилище живёт ровно столько, сколько осталось нашей: перейти
+    // по ней позже, чем истекла та, по которой пришли, нельзя.
+    const left = Math.max(1, Math.min(PHOTO_URL_TTL_S, Math.ceil((Number(exp) - Date.now()) / 1000)));
+    const key = view === 'thumb' && photo.thumb_key ? photo.thumb_key : photo.storage_key;
+    return reply
+      .header('cache-control', `private, max-age=${left}`)
+      .redirect(await app.photos.viewUrl(key, left), 302);
+  });
+
+  app.delete('/photos/:id', {
+    schema: {
+      tags: ['акт'],
+      summary: 'Убрать кадр из акта. Только руководитель, с записью в журнал',
+      security: [{ session: [] }],
+      params: { type: 'object', required: ['id'], properties: { id: { type: 'integer' } } },
+    },
+  }, async (req) => {
+    const user = requireRole(req, 'supervisor');
+    const { id } = req.params as { id: number };
+    const { rows } = await app.db.query<
+      { id: string; device_id: string; request_id: string; storage_key: string;
+        name: string; deleted_at: string | null }>(
+      `SELECT p.id, p.device_id, p.storage_key, p.name, p.deleted_at, d.request_id
+         FROM photos p JOIN devices d ON d.id = p.device_id WHERE p.id = $1`, [id]);
+    const photo = rows[0];
+    if (!photo) throw notFound(`Нет фотографии №${id}.`);
+    if (photo.deleted_at) throw ruleError('Этот кадр уже убран из акта.', 'photo-deleted');
+
+    return app.db.tx(async (db) => {
+      await db.query('UPDATE photos SET deleted_at = now(), deleted_by = $2 WHERE id = $1',
+        [id, user.id]);
+      // Журнал действий: по 152-ФЗ и руководителю. На фотографии акта видны
+      // фамилия, адрес и подпись — исчезновение кадра должно быть объяснимо.
+      await db.query(
+        `INSERT INTO audit_log (actor_id, actor_role, action, entity, entity_id, before, ip, user_agent)
+         VALUES ($1, $2, 'удаление', 'photos', $3, $4, $5, $6)`,
+        [user.id, user.role, String(id),
+         JSON.stringify({
+           device_id: photo.device_id, request_id: photo.request_id,
+           storage_key: photo.storage_key, name: photo.name,
+         }),
+         req.ip, req.headers['user-agent'] ?? null]);
+      return { ok: true, id, kept_in_storage: true };
+    });
   });
 };
 

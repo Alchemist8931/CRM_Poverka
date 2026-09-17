@@ -10,8 +10,10 @@ import { cap, shell } from '../ui/shell.js';
 import { render, toast } from '../ui/render.js';
 import { isDemo } from '../api/mode.js';
 import { addDevice as apiAddDevice, closeAct as apiCloseAct, dropDevice as apiDropDevice,
-  patchDevice as apiPatchDevice, reopenAct as apiReopenAct, setReplacement as apiSetReplacement,
+  dropPhoto as apiDropPhoto, patchDevice as apiPatchDevice, reopenAct as apiReopenAct,
+  setReplacement as apiSetReplacement, uploadPhoto as apiUploadPhoto,
   flushDevices } from '../api/actions.js';
+import { reload as apiReload } from '../api/load.js';
 import { routeCard } from './routes.js';
 
 /* ---------- поверитель ---------- */
@@ -97,8 +99,8 @@ function workSheet(rt,s){
                <button class="g sm" onclick="postponeRepl('${r.id}',${i})" title="Клиент отказался менять сейчас — адрес уйдёт в лист ожидания оператора">Замена отложена</button>`}
       </div>`:''}
       <div class="wbot"><span class="lbl">Фото работ</span>
-        ${d.photos.map((p,k)=>`<span class="phw"><img src="${p.src}" alt="${esc(p.name)}" title="${esc(p.name)} · ${esc(p.t)}${p.w?` · ${p.w}×${p.h}`:''}" onclick="lbOpen('${r.id}',${i},${k})">
-          <button class="x" title="Удалить кадр" onclick="rmPhoto('${r.id}',${i},${k})">${svg(I.no,9)}</button></span>`).join('')}
+        ${d.photos.map((p,k)=>`<span class="phw"><img src="${p.thumb||p.src}" alt="${esc(p.name)}" title="${esc(p.name)} · ${esc(p.t)}${p.w?` · ${p.w}×${p.h}`:''}" onclick="lbOpen('${r.id}',${i},${k})">
+          ${canDropPhoto()?`<button class="x" title="Убрать кадр из акта" onclick="rmPhoto('${r.id}',${i},${k})">${svg(I.no,9)}</button>`:''}</span>`).join('')}
         <input type="file" id="ph${r.id}_${i}" accept="image/*" capture="environment" multiple style="display:none" onchange="addPhotos('${r.id}',${i},this)">
         <label class="g sm addph" for="ph${r.id}_${i}">${svg(I.cam,12)}Добавить фото</label>
         ${d.photos.length?`<span class="note">${d.photos.length} кадр(ов)</span>`:'<span class="nophoto">нет фото</span>'}
@@ -250,10 +252,19 @@ function clearRepl(rid,i){
   dropReplWait(d); d.repl = null;
   toast('Отметка об отложенной замене снята, адрес убран из листа ожидания.');
 }
+/* Кадр из акта убирает только руководитель, и только пометкой: файл в
+   хранилище остаётся, срок хранения — не меньше шести лет. Поверителю кнопки
+   не показываем вовсе, чтобы не предлагать несделуемое. */
+const canDropPhoto = () => isDemo() || S.role==='supervisor';
 function rmPhoto(rid,i,k){
   const r=S.requests.find(x=>x.id===rid);
-  if(!isDemo()){ S.lb=null; return toast('Удаление снимков появится вместе с хранилищем (пункт be-photos).'); }
-  r.devices[i].photos.splice(k,1); S.lb=null; render();
+  const p = r?.devices?.[i]?.photos?.[k]; if(!p) return;
+  S.lb=null;
+  if(!isDemo()){
+    if(S.role!=='supervisor') return toast('Убрать кадр из акта может только руководитель.');
+    return apiDropPhoto(p.id);
+  }
+  r.devices[i].photos.splice(k,1); render();
 }
 /* ---------- фото работ ----------
    Кнопка «Добавить фото» на телефоне открывает камеру (capture="environment").
@@ -261,6 +272,9 @@ function rmPhoto(rid,i,k){
    «чтобы читаемо», не больше. Поэтому перед добавлением жмём прямо в браузере —
    canvas, длинная сторона 1600 px, JPEG 0.82. На сервер потом уйдёт уже сжатое. */
 const PHOTO_MAX = 1600, PHOTO_Q = .82;
+/* Те же потолки, что и на сервере (server/src/storage.ts): на телефоне их видно
+   сразу, до загрузки, а сервер всё равно проверяет заново — он тут главный. */
+const PHOTO_MAX_BYTES = 5*1024*1024, PHOTO_MAX_PER_DEVICE = 10;
 function shrinkPhoto(src){
   return new Promise(res=>{
     const img = new Image();
@@ -281,13 +295,49 @@ function shrinkPhoto(src){
     img.src = src;
   });
 }
+/* Сжатый кадр из canvas приходит строкой data:image/jpeg;base64,… — в хранилище
+   нужен сам файл. Перегоняем без сети: fetch по data-адресу этим и занимается. */
+const asBlob = (src) => fetch(src).then(r=>r.blob());
+
+/** Кадры в хранилище: по одному, чтобы на мобильной связи не глохло всё сразу. */
+async function sendPhotos(rid,i,list){
+  const r = S.requests.find(x=>x.id===rid);
+  const d = r?.devices?.[i]; if(!d) return;
+  const left = PHOTO_MAX_PER_DEVICE - d.photos.length;
+  if(left<=0) return toast(`На прибор в акте принимается не больше ${PHOTO_MAX_PER_DEVICE} кадров.`);
+  const take = list.slice(0,left);
+  if(take.length<list.length) toast(`Взято ${take.length} из ${list.length}: на прибор не больше ${PHOTO_MAX_PER_DEVICE} кадров.`);
+  toast(take.length>1?`Кадры уходят в хранилище — ${take.length} шт.`:'Кадр уходит в хранилище…');
+  for(const f of take){
+    try{
+      const shrunk = await new Promise(res=>{
+        const rd = new FileReader();
+        rd.onload = () => shrinkPhoto(rd.result).then(res);
+        rd.onerror = () => res(null);
+        rd.readAsDataURL(f);
+      });
+      if(!shrunk) throw new Error('Кадр не прочитался.');
+      const blob = await asBlob(shrunk.src);
+      if(blob.size > PHOTO_MAX_BYTES){
+        toast(`Кадр «${f.name}» весит больше ${PHOTO_MAX_BYTES/1024/1024} МБ — снимите заново.`);
+        continue;
+      }
+      await apiUploadPhoto(d.id, blob, f.name);
+    }catch(err){
+      toast(err?.message || 'Кадр не загрузился.');
+      break;
+    }
+  }
+  await apiReload();
+}
+
 function addPhotos(rid,i,el){
   const list = [...el.files].slice(0,8); if(!list.length) return;
   if(!isDemo()){
-    /* Сжатие кадра уже работает, а класть снимок некуда: хранилище, загрузка и
-       миниатюры — пункт be-photos. Пока честно говорим об этом вслух. */
-    el.value = '';
-    return toast('Загрузка фотографий появится вместе с хранилищем снимков (пункт be-photos). Акт закрывается и без них.');
+    /* Снимок идёт в хранилище напрямую, минуя сервер: сервер только выдал
+       подписанную ссылку и потом запишет кадр в акт (api/actions.js). */
+    const files = [...list]; el.value = '';
+    return sendPhotos(rid,i,files);
   }
   Promise.all(list.map(f=>new Promise(res=>{
     const rd = new FileReader();
@@ -353,4 +403,4 @@ function reopenStop(id,i){
   toast('Позиция вернулась в работу. Начисления и отметка об оплате сняты до повторного закрытия.');
 }
 
-export { PHOTO_MAX, PHOTO_Q, addDev, addPhotos, clearRepl, closeStop, dropReplWait, offerRepl, postponeRepl, reopenStop, rmDev, rmPhoto, setBad, setDev, shrinkPhoto, viewMyRoute, workSheet };
+export { PHOTO_MAX, PHOTO_MAX_BYTES, PHOTO_MAX_PER_DEVICE, PHOTO_Q, addDev, addPhotos, canDropPhoto, clearRepl, closeStop, dropReplWait, offerRepl, postponeRepl, reopenStop, rmDev, rmPhoto, sendPhotos, setBad, setDev, shrinkPhoto, viewMyRoute, workSheet };

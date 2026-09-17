@@ -31,14 +31,49 @@ resource "yandex_storage_bucket" "acts" {
     }
   }
 
+  # Телефон поверителя кладёт кадр в бакет напрямую, по подписанной ссылке
+  # (server/src/storage.ts) — а это для браузера чужой адрес. Без этого правила
+  # предварительный запрос OPTIONS уходит в отказ, и загрузка не начинается
+  # вовсе. На машине разработчика такого не видно: MinIO из docker-compose.yml
+  # по умолчанию пускает любой источник, и правило нужно именно здесь.
+  cors_rule {
+    allowed_origins = ["https://${var.app_domain}"]
+    # PUT — загрузка кадра, GET и HEAD — чтение оригинала и проверка размера.
+    allowed_methods = ["PUT", "GET", "HEAD"]
+    # Content-Type входит в подпись и обязан уехать с запросом; остальные
+    # заголовки браузер добавляет сам, и перечислять их по одному значит
+    # ломать загрузку на каждом их изменении.
+    allowed_headers = ["*"]
+    max_age_seconds = 3600
+  }
+
+  # Правило работает по префиксу — отсюда и вид ключа
+  # acts/год/месяц/заявка/прибор/кадр.jpg (server/src/storage.ts).
+  # В холодное хранилище уезжают только оригиналы: миниатюры лежат под
+  # префиксом thumbs/ и остаются горячими, иначе список кадров в акте
+  # открывался бы с задержкой на каждом старом адресе.
   lifecycle_rule {
     id      = "acts-to-cold"
     enabled = true
+    prefix  = "acts/"
 
     transition {
       days          = var.acts_cold_after_days
       storage_class = "COLD"
     }
+
+    noncurrent_version_transition {
+      days          = var.noncurrent_cold_after_days
+      storage_class = "COLD"
+    }
+  }
+
+  # Миниатюры: старые версии тоже не нужны горячими, но сам кадр списка —
+  # нужен. Поэтому здесь только неактуальные версии.
+  lifecycle_rule {
+    id      = "thumbs-noncurrent-to-cold"
+    enabled = true
+    prefix  = "thumbs/"
 
     noncurrent_version_transition {
       days          = var.noncurrent_cold_after_days

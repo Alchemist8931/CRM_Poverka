@@ -17,6 +17,7 @@ import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import { buildApp } from '../src/api/app.ts';
 import { singleConnectionDb, type Db } from '../src/api/db.ts';
 import { hashPassword } from '../src/password.ts';
+import type { PhotoStorage } from '../src/storage.ts';
 
 const serverDir = fileURLToPath(new URL('..', import.meta.url));
 
@@ -36,7 +37,7 @@ export interface Stand {
   close(): Promise<void>;
 }
 
-export async function makeStand(): Promise<Stand> {
+export async function makeStand(opts: { storage?: PhotoStorage | null } = {}): Promise<Stand> {
   const pg = new PGlite();
   const dir = join(serverDir, 'migrations');
   for (const file of readdirSync(dir).filter((f) => f.endsWith('.sql')).sort()) {
@@ -49,7 +50,9 @@ export async function makeStand(): Promise<Stand> {
     close: () => pg.close(),
   });
   await fixture(db);
-  const app = await buildApp({ db, secret: 'проверочный-ключ-подписи-сессий' });
+  const app = await buildApp({
+    db, secret: 'проверочный-ключ-подписи-сессий', storage: opts.storage ?? null,
+  });
   await app.ready();
   return { app, db, close: async () => { await app.close(); await pg.close(); } };
 }

@@ -42,8 +42,14 @@ export function absenceFrom(row) {
   };
 }
 
+/* Ссылки на снимок сервер выдаёт две: миниатюру рисуем в акте, оригинал —
+   только когда кадр открыли на весь экран (ui/lightbox.js). */
 export function photoFrom(row) {
-  return { id: row.id, src: row.url, name: row.name || '', t: String(row.taken_at || '').slice(0, 5) };
+  return {
+    id: row.id, src: row.url, thumb: row.thumb_url || row.url,
+    name: row.name || '', t: String(row.taken_at || '').slice(0, 5),
+    w: row.width || 0, h: row.height || 0,
+  };
 }
 
 export function deviceFrom(row) {

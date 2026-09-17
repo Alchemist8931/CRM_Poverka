@@ -7,7 +7,9 @@
 import type { Db } from './db.ts';
 import type { DayPlan, Role, Service, SlotDay } from '../rules.ts';
 import { dayLock } from '../rules.ts';
-import { withLinks } from './routes/photos.ts';
+import { withLinks } from './photo-links.ts';
+import { notFound, ruleError } from './errors.ts';
+import type { User } from './auth.ts';
 
 export interface ServiceRow extends Service {
   grp: string;
@@ -153,6 +155,21 @@ export async function nextId(db: Db, table: string, prefix: string): Promise<str
   return prefix + rows[0]!.n;
 }
 
+/** Акт заполняет поверитель, который везёт этот адрес, и правит руководитель.
+ *  Чужой акт поверителю недоступен — там персональные данные другого клиента.
+ *  Проверка одна на весь акт: строки приборов, фотографии, закрытие позиции. */
+export async function actorOr403(db: Db, user: User, requestId: string) {
+  const { rows } = await db.query<Record<string, unknown>>(
+    `SELECT r.*, r.date::text AS date, rt.verifier_id AS route_verifier, rt.status AS route_status
+       FROM requests r LEFT JOIN routes rt ON rt.id = r.route_id WHERE r.id = $1`, [requestId]);
+  const request = rows[0];
+  if (!request) throw notFound(`Нет заявки «${requestId}».`);
+  if (user.role === 'verifier' && request.route_verifier !== user.id) {
+    throw ruleError('Поверитель заполняет акт только по своим адресам.', 'role');
+  }
+  return request;
+}
+
 /** Приборы акта одной заявки, по порядку строк. */
 export async function loadDevices(db: Db, requestId: string, secret?: string) {
   const byRequest = await loadDevicesFor(db, [requestId], secret);
@@ -169,7 +186,8 @@ export async function loadDevicesFor(db: Db, requestIds: string[], secret?: stri
     'SELECT * FROM devices WHERE request_id = ANY($1) ORDER BY request_id, position', [requestIds]);
   if (secret && rows.length) {
     const { rows: photos } = await db.query<Record<string, unknown>>(
-      'SELECT id, device_id, name, taken_at::text AS taken_at FROM photos WHERE device_id = ANY($1) ORDER BY id',
+      `SELECT id, device_id, name, taken_at::text AS taken_at, size_bytes, width, height, thumb_key
+         FROM photos WHERE device_id = ANY($1) AND deleted_at IS NULL ORDER BY id`,
       [rows.map((d) => d.id)]);
     const byDevice = new Map<string, Record<string, unknown>[]>();
     for (const p of photos) {

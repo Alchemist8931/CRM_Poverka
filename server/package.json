@@ -24,15 +24,19 @@
     "check:docs": "tsx scripts/check-docs.mts",
     "check:tables": "tsx scripts/check-tables.mts",
     "check:schema": "tsx scripts/check-schema.ts",
-    "check:seed-cli": "tsx scripts/check-seed-cli.mts"
+    "check:seed-cli": "tsx scripts/check-seed-cli.mts",
+    "check:photos": "tsx scripts/check-photo-roundtrip.mts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1133.0",
+    "@aws-sdk/s3-request-presigner": "^3.1133.0",
     "@fastify/cookie": "^11.1.2",
     "@fastify/swagger": "^9.8.1",
     "dotenv": "^17.2.3",
     "fastify": "^5.12.4",
     "node-pg-migrate": "^9.0.0",
     "pg": "^8.16.3",
+    "sharp": "^0.35.4",
     "tsx": "^4.19.2"
   },
   "devDependencies": {

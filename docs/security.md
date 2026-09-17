@@ -93,7 +93,8 @@
 | Версия ключа меняется раз в год | `infra/variables.tf`, `kms_rotation_period = "8760h"` | В коде |
 | Ключ защищён от удаления в prod | `infra/prod.tfvars`, `kms_deletion_protection = true` | В коде |
 | Бакеты приватные, версионирование включено | `infra/storage.tf` | В коде |
-| Фотографии отдаются только подписанными ссылками | `infra/iam.tf`, статический ключ в Lockbox; реализация — пункт `be-photos` | В коде частично; выдача ссылок — не сделано, сервера нет |
+| Фотографии отдаются только подписанными ссылками | `infra/iam.tf`, статический ключ в Lockbox; `server/src/storage.ts`, `server/src/api/routes/photos.ts` | В коде. Загрузка и просмотр — подписанные ссылки на 15 минут, наружу открыт только вход `/api/photos/{id}/file` с HMAC |
+| Кадр из акта убирает только руководитель, и только пометкой | `server/src/api/routes/photos.ts`, `photos.deleted_at`; у приложения на бакет нет права удалять (`storage.viewer` + `storage.uploader`, `infra/storage.tf`) | В коде. Действие пишется в `audit_log` |
 | Данные не покидают Россию | Регион `ru-central1`, `infra/variables.tf`, `zone` | В коде |
 | Сроки хранения заданы правилами жизненного цикла | `infra/storage.tf`, `acts_cold_after_days`, `calls_cold_after_days`, `calls_ice_after_days` | В коде. Удаления нет намеренно: заказчик просил хранить акты не менее шести лет, записи разговоров — бессрочно |
 | Резервные копии базы | `infra/postgres.tf`, `backup_retain_period_days = 14` в prod | В коде. Учения по восстановлению — пункт `cloud-ops`, не сделано |

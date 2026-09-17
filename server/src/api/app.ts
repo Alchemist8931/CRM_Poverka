@@ -10,6 +10,7 @@ import cookie from '@fastify/cookie';
 import swagger from '@fastify/swagger';
 import type { Db } from './db.ts';
 import { ApiError } from './errors.ts';
+import { photoStorage, storageConfig, type PhotoStorage } from '../storage.ts';
 import { SESSION_COOKIE, readSession, sessionSecret, type User } from './auth.ts';
 import authRoutes from './routes/auth.ts';
 import refRoutes from './routes/refs.ts';
@@ -27,6 +28,9 @@ declare module 'fastify' {
     /** Ключ подписи сессий: один на приложение, чтобы вход и проверка cookie
      *  не разъехались (в тестах он свой, в облаке приходит из Lockbox). */
     sessionSecret: string;
+    /** Хранилище снимков акта или `null`, если оно к контуру не подключено:
+     *  тогда акт работает целиком, а вместо кадра рисуется заглушка. */
+    photos: PhotoStorage | null;
   }
   interface FastifyRequest {
     /** Тело запроса как оно пришло. Нужно вебхуку телефонии: подпись считается
@@ -39,6 +43,9 @@ export interface AppOptions {
   db: Db;
   secret?: string;
   logger?: boolean;
+  /** Хранилище снимков. По умолчанию собирается из окружения; передаётся руками
+   *  в проверке круга загрузки (`scripts/check-photo-roundtrip.mts`). */
+  storage?: PhotoStorage | null;
 }
 
 /** Открытые входы: до них сессия не спрашивается. */
@@ -57,8 +64,10 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   });
   const secret = opts.secret ?? sessionSecret();
 
+  const cfg = storageConfig();
   app.decorate('db', opts.db);
   app.decorate('sessionSecret', secret);
+  app.decorate('photos', opts.storage !== undefined ? opts.storage : (cfg ? photoStorage(cfg) : null));
 
   // Разбор JSON с сохранением сырого тела: по нему вебхук телефонии проверяет подпись.
   app.addContentTypeParser('application/json', { parseAs: 'string' }, (req, body, done) => {

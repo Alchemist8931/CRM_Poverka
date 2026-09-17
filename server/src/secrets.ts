@@ -79,6 +79,7 @@ function plan(env: NodeJS.ProcessEnv): { name: string; secretId: string }[] {
   const wanted: [string, string | undefined, string | undefined][] = [
     ['DATABASE_URL', env.DATABASE_URL, env.LOCKBOX_DB_SECRET_ID],
     ['SESSION_SECRET', env.SESSION_SECRET, env.LOCKBOX_APP_SECRET_ID],
+    ['S3_ACCESS_KEY_ID', env.S3_ACCESS_KEY_ID, env.LOCKBOX_STORAGE_SECRET_ID],
     ['NOVOFON_WEBHOOK_SECRET', env.NOVOFON_WEBHOOK_SECRET, env.LOCKBOX_NOVOFON_SECRET_ID],
   ];
   return wanted
@@ -111,6 +112,17 @@ export async function loadSecrets(env: NodeJS.ProcessEnv = process.env): Promise
       const value = entries.session_secret || entries.jwt_secret;
       if (!value) throw new Error('В секрете приложения нет ни session_secret, ни jwt_secret');
       env.SESSION_SECRET = value;
+    } else if (name === 'S3_ACCESS_KEY_ID') {
+      // Статический ключ сервисного аккаунта: им подписываются ссылки на
+      // загрузку и просмотр снимков. Записи в секрет кладёт сам Terraform
+      // (infra/iam.tf), поэтому имена здесь и там обязаны совпадать.
+      const id = entries.access_key_id;
+      const key = entries.secret_access_key;
+      if (!id || !key) {
+        throw new Error('В секрете хранилища нет записей access_key_id и secret_access_key');
+      }
+      env.S3_ACCESS_KEY_ID = id;
+      env.S3_SECRET_ACCESS_KEY = key;
     } else {
       // Секреты внешних служб заводятся человеком в консоли: до этого момента
       // секрет существует, но пуст. Пустой ключ вебхука — это рабочее

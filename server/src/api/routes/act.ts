@@ -9,7 +9,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import type { Db } from '../db.ts';
 import { requireRole, requireUser, type User } from '../auth.ts';
 import { notFound, ruleError } from '../errors.ts';
-import { loadDevices, loadServices, nextId } from '../store.ts';
+import { actorOr403, loadDevices, loadServices, nextId } from '../store.ts';
 import {
   FAIL_REASONS, PAY_HAND, WAIT_REASONS, closeProblem, priceOf, priceOfDevice, rateO, rateV,
   unservedProblem, type ClientType, type Role,
@@ -20,20 +20,6 @@ const STOP_PARAMS = {
   type: 'object', required: ['id', 'requestId'],
   properties: { id: { type: 'string' }, requestId: { type: 'string' } },
 } as const;
-
-/** Акт заполняет поверитель, который везёт этот адрес, и правит руководитель.
- *  Чужой акт поверителю недоступен — там персональные данные другого клиента. */
-async function actorOr403(db: Db, user: User, requestId: string) {
-  const { rows } = await db.query<Record<string, unknown>>(
-    `SELECT r.*, r.date::text AS date, rt.verifier_id AS route_verifier, rt.status AS route_status
-       FROM requests r LEFT JOIN routes rt ON rt.id = r.route_id WHERE r.id = $1`, [requestId]);
-  const request = rows[0];
-  if (!request) throw notFound(`Нет заявки «${requestId}».`);
-  if (user.role === 'verifier' && request.route_verifier !== user.id) {
-    throw ruleError('Поверитель заполняет акт только по своим адресам.', 'role');
-  }
-  return request;
-}
 
 const plugin: FastifyPluginAsync = async (app) => {
   app.get('/requests/:id/devices', {

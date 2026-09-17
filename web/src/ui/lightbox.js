@@ -24,7 +24,7 @@ function lightbox(){
     <div><img src="${p.src}" alt="">
       <div class="bar"><button class="ib" onclick="lbMove(-1)">${svg(I.left,14)}</button>
         <span class="mono">${S.lb.k+1} / ${ps.length}</span>
-        <span style="color:#8D8D8D">${esc(p.name)} · ${esc(p.t)}</span>
+        <span style="color:#8D8D8D">${esc(p.name)} · ${esc(p.t)}${p.w?` · ${p.w}×${p.h}`:''}</span>
         <button class="ib" onclick="lbMove(1)">${svg(I.right,14)}</button></div></div></div>`;
 }
 
