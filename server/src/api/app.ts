@@ -22,6 +22,7 @@ import moneyRoutes from './routes/money.ts';
 import callRoutes from './routes/calls.ts';
 import photoRoutes from './routes/photos.ts';
 import auditRoutes from './routes/audit.ts';
+import notifyRoutes from './routes/notify.ts';
 import { installAudit } from './audit.ts';
 
 declare module 'fastify' {
@@ -103,6 +104,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
         { name: 'деньги', description: 'оплата на месте, заработок, сдельная, подотчёт' },
         { name: 'связь', description: 'вебхуки телефонии' },
         { name: 'журнал', description: 'журнал действий: кто что менял и смотрел' },
+        { name: 'уведомления', description: 'шаблоны сообщений клиенту, очередь отправки и журнал доставки' },
       ],
       components: {
         securitySchemes: {
@@ -184,6 +186,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   await app.register(callRoutes, { prefix: '/api' });
   await app.register(photoRoutes, { prefix: '/api' });
   await app.register(auditRoutes, { prefix: '/api' });
+  await app.register(notifyRoutes, { prefix: '/api' });
 
   return app;
 }

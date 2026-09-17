@@ -17,6 +17,7 @@ import { BIG, CITIES, CSHORT, DEV_TYPES, LOCS, SERVICES, SMALL, SVC } from '../r
 import { CUR_M, TODAY, addDays, iso, today } from '../util.js';
 import { render } from '../ui/render.js';
 import { dayLock } from '../rules.js';
+import { setNotify } from '../screens/services.js';
 
 /** Сколько заявок просим за раз. Потолок списка на сервере — 500. */
 const PAGE = 500;
@@ -145,6 +146,13 @@ export async function loadAudit() {
   S.auditTotal = total;
 }
 
+/** Шаблоны уведомлений и перечень подстановок для экрана «Услуги и ставки».
+ *  Кладутся не в S, а в сам экран: править их может только руководитель, и
+ *  остальным экранам они не нужны. */
+export async function loadTemplates() {
+  setNotify(await api.get('/notify/templates'));
+}
+
 /* ── экран → что ему нужно ───────────────────────────────── */
 
 const MONTH_FROM = (m) => `${m}-01`;
@@ -208,7 +216,7 @@ const LOADERS = {
     ]);
   },
   async services() {
-    await Promise.all([loadRefs(), loadDays(TODAY, TODAY), loadStaffAndAbsences()]);
+    await Promise.all([loadRefs(), loadDays(TODAY, TODAY), loadStaffAndAbsences(), loadTemplates()]);
   },
   async audit() {
     // Сотрудники — для отбора по человеку: в списке журнала имя приходит уже

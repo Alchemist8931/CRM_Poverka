@@ -53,6 +53,9 @@ function reqForm(K,T,p,day,onDay){
       <div class="f" style="width:50px"><label>кв.</label><input class="fld mono" id="${p}Flat" value="${esc(K.flat)}" oninput="${T}.flat=this.value" placeholder="45"></div>
       <div class="f" style="width:76px"><label>Домофон</label>
         <div class="chkbox">${CHK(K.intercom,K.intercom?'вкл.':'выкл.',`${T}.intercom=!${T}.intercom;render()`)}</div></div>
+      <div class="f" style="width:104px"><label>Уведомления</label>
+        <div class="chkbox" title="Согласие клиента на СМС и письма о заявке. Без него система не отправляет ничего: подтверждение даты остаётся за обзвоном накануне.">
+          ${CHK(!!K.notify,K.notify?'согласен':'не спросили',`${T}.notify=!${T}.notify;render()`)}</div></div>
       <div class="f" style="width:120px"><label>Дата выезда</label>${DATE(p+'Date',day,onDay,{slots,slotsCity:K.city})}</div>
       <div class="f" style="width:150px"><label>Время прибытия</label>
         ${SEL(p+'Time',K.time,Array.from({length:11},(_,i)=>({v:10+i,l:pad(10+i)+':00',hint:'окно '+pad(9+i)+':00–'+pad(11+i)+':00'})),v=>K.time=+v)}</div>
@@ -142,6 +145,9 @@ function fillClient(T){
   K.email = s.email || '';
   K.street = s.street; K.house = s.house; K.entrance = s.entrance;
   K.floor = s.floor; K.flat = s.flat; K.intercom = !!s.intercom;
+  /* Согласие на уведомления клиент даёт один раз: если он соглашался раньше,
+     оператору незачем спрашивать снова — галочка подставляется вместе с адресом. */
+  K.notify = !!s.notify;
   /* Город подставляем только если бригада в этот день туда едет: иначе форма
      всё равно вернёт его к городу дня, и оператор не поймёт, что произошло. */
   const cs = dayCities(dayOf(T));

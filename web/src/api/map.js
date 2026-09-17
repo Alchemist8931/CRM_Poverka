@@ -81,7 +81,7 @@ export function requestFrom(row, extra = {}) {
     phone: row.phone, contact: row.contact || '', phone2: row.phone2 || '', contact2: row.contact2 || '',
     email: row.email || '', street: row.street || '', house: row.house || '',
     entrance: row.entrance || '', floor: row.floor || '', flat: row.flat || '',
-    intercom: !!row.intercom, time: row.time_slot,
+    intercom: !!row.intercom, time: row.time_slot, notify: !!row.notify_consent,
     cmtOp: row.comment_operator || '', cmtVf: row.comment_verifier || '',
     svcs: row.svcs || [], services: [...new Set(devices.map((d) => d.svc))], devices,
     status: row.status, routeId: row.route_id, operator: row.operator_id,
@@ -98,6 +98,9 @@ export function requestBody(K, day) {
     email: K.email || '', city: K.city, street: K.street || '', house: K.house || '',
     entrance: K.entrance || '', floor: K.floor || '', flat: K.flat || '',
     intercom: K.intercom !== false, time_slot: K.time,
+    // Согласие на уведомления: чего оператор не отметил, того клиент не говорил.
+    // Поэтому здесь именно `!!`, а не «по умолчанию да».
+    notify_consent: !!K.notify,
     comment_operator: K.cmtOp || '', comment_verifier: K.cmtVf || '', svcs: K.svcs || [],
   };
 }

@@ -193,6 +193,12 @@ export const takeHandover = (staffId, period, amount, at, note) => run(
 export const patchService = (id, patch) => run(() => api.patch(`/services/${id}`, patch));
 export const setSkills = (staffId, svcs) => run(() => api.put(`/staff/${staffId}/skills`, { svcs }));
 
+/** Шаблон уведомления. Подстановки проверяет сервер: отказ приходит текстом
+ *  «Неизвестная подстановка {…}» и показывается подсказкой, как любое правило. */
+export const saveTemplate = (event, channel, patch) => run(
+  () => api.put(`/notify/templates/${encodeURIComponent(event)}/${channel}`, patch),
+  `Шаблон «${event}» (${channel === 'sms' ? 'СМС' : 'письмо'}) сохранён.`);
+
 /* ── подсказка дат и клиент по номеру ────────────────────── */
 
 /** История клиента по номеру. Экран приёма считает её по S.requests — поэтому

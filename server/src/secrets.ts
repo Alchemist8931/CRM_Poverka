@@ -81,6 +81,7 @@ function plan(env: NodeJS.ProcessEnv): { name: string; secretId: string }[] {
     ['SESSION_SECRET', env.SESSION_SECRET, env.LOCKBOX_APP_SECRET_ID],
     ['S3_ACCESS_KEY_ID', env.S3_ACCESS_KEY_ID, env.LOCKBOX_STORAGE_SECRET_ID],
     ['NOVOFON_WEBHOOK_SECRET', env.NOVOFON_WEBHOOK_SECRET, env.LOCKBOX_NOVOFON_SECRET_ID],
+    ['SMTP_PASSWORD', env.SMTP_PASSWORD, env.LOCKBOX_NOTIFY_SECRET_ID],
   ];
   return wanted
     .filter(([, value, secretId]) => !value && secretId)
@@ -123,6 +124,15 @@ export async function loadSecrets(env: NodeJS.ProcessEnv = process.env): Promise
       }
       env.S3_ACCESS_KEY_ID = id;
       env.S3_SECRET_ACCESS_KEY = key;
+    } else if (name === 'SMTP_PASSWORD') {
+      // Пароль почтового ящика и ключи СМС-шлюза лежат в одном секрете: это
+      // доступы к чужим службам, которые заводит человек в консоли, и у них
+      // общая судьба. Пустой секрет — рабочее состояние: канал молчит,
+      // сообщения ждут в очереди (src/notify/outbox.ts).
+      if (entries.smtp_password) env.SMTP_PASSWORD = entries.smtp_password;
+      if (entries.sms_login) env.SMS_LOGIN = entries.sms_login;
+      if (entries.sms_password) env.SMS_PASSWORD = entries.sms_password;
+      if (!entries.smtp_password) continue;
     } else {
       // Секреты внешних служб заводятся человеком в консоли: до этого момента
       // секрет существует, но пуст. Пустой ключ вебхука — это рабочее

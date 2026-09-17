@@ -19,7 +19,7 @@
     "seed": "tsx src/seed/index.ts",
     "db:reset": "node-pg-migrate down 0 && node-pg-migrate up && tsx src/seed/index.ts",
     "typecheck": "tsc --noEmit",
-    "check": "npm run check:model && npm run check:docs && npm run check:tables && npm run check:schema && npm run check:seed-cli && npm run check:import && npm run check:audit-prune",
+    "check": "npm run check:model && npm run check:docs && npm run check:tables && npm run check:schema && npm run check:seed-cli && npm run check:import && npm run check:audit-prune && npm run check:notify",
     "check:model": "tsx scripts/check-model-sync.mts",
     "check:docs": "tsx scripts/check-docs.mts",
     "check:tables": "tsx scripts/check-tables.mts",
@@ -28,6 +28,9 @@
     "check:photos": "tsx scripts/check-photo-roundtrip.mts",
     "audit:prune": "tsx scripts/audit-prune.mts",
     "check:audit-prune": "tsx scripts/check-audit-prune.mts",
+    "notify:tick": "tsx scripts/notify-worker.mts",
+    "notify:probe": "tsx scripts/notify-probe.mts",
+    "check:notify": "tsx scripts/check-notify.mts",
     "import": "tsx scripts/import/cli.mts",
     "check:import": "tsx scripts/check-import.mts"
   },

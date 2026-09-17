@@ -10,6 +10,7 @@ import { requireUser } from '../auth.ts';
 import { notFound, ruleError } from '../errors.ts';
 import { bookedIn, bookedOn, loadDay, loadDevices, loadDevicesFor, lockFactsFor, nextId, slotDays } from '../store.ts';
 import { normPhone } from '../../db.ts';
+import { enqueueQuietly } from '../../notify/events.ts';
 import {
   SLOT_MAX, SLOT_MIN, canShift, cityCapProblem, dayState, lockedFor, reqProblem, slotsFor, type Role,
 } from '../../rules.ts';
@@ -37,6 +38,9 @@ const REQUEST_FIELDS = {
   comment_operator: { type: 'string' },
   comment_verifier: { type: 'string' },
   svcs: { type: 'array', items: { type: 'string' } },
+  // Согласие на уведомления. Ставит оператор со слов клиента при приёме; без
+  // него не уходит ни письмо, ни СМС (src/notify/events.ts, `enqueue`).
+  notify_consent: { type: 'boolean' },
 } as const;
 
 const plugin: FastifyPluginAsync = async (app) => {
@@ -218,22 +222,31 @@ const plugin: FastifyPluginAsync = async (app) => {
     const capBad = cityCapProblem(day, city, state, user.role as Role);
     if (capBad) throw ruleError(capBad, 'cap');
 
-    return app.db.tx(async (db) => {
+    const created = await app.db.tx(async (db) => {
       const id = await nextId(db, 'requests', 'R');
       const clientId = await upsertClient(db, b, city);
       const { rows } = await db.query(
         `INSERT INTO requests (id, client_id, date, created_date, city, client_type, name, inn,
             phone, phone_norm, contact, phone2, contact2, email, street, house, entrance, floor,
-            flat, intercom, time_slot, comment_operator, comment_verifier, svcs, status, operator_id)
-         VALUES ($1,$2,$3,current_date,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,'создана',$24)
+            flat, intercom, time_slot, comment_operator, comment_verifier, svcs, status, operator_id,
+            notify_consent)
+         VALUES ($1,$2,$3,current_date,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,'создана',$24,$25)
          RETURNING *, date::text AS date, created_date::text AS created_date`,
         [id, clientId, b.date, city, b.client_type ?? 'Физлицо', b.name, b.client_type === 'Юрлицо' ? b.inn ?? '' : '',
          b.phone, normPhone(String(b.phone)), b.contact ?? '', b.phone2 ?? '', b.contact2 ?? '',
          String(b.email ?? '').trim(), b.street ?? '', b.house, b.entrance ?? '', b.floor ?? '',
          b.flat ?? '', b.intercom ?? true, b.time_slot ?? 12, b.comment_operator ?? '',
-         b.comment_verifier ?? '', b.svcs ?? [], user.id]);
+         b.comment_verifier ?? '', b.svcs ?? [], user.id, !!b.notify_consent]);
+      // Согласие держится и в карточке клиента: при следующем звонке оператор
+      // видит, что клиент уже соглашался, и не спрашивает второй раз.
+      await db.query('UPDATE clients SET notify_consent = $2 WHERE id = $1', [clientId, !!b.notify_consent]);
       return { request: rows[0] };
     });
+    // Письмо и СМС ставятся в очередь после записи заявки и намеренно не в
+    // транзакции: упавшая почта не имеет права отменить приём — подтверждение
+    // даты всё равно собирает оператор обзвоном накануне.
+    enqueueQuietly(app.db, 'заявка', String(created.request!.id), {}, req.log);
+    return created;
   });
 
   app.patch('/requests/:id', {
@@ -274,7 +287,7 @@ const plugin: FastifyPluginAsync = async (app) => {
     }, day?.cities ?? [city]);
     if (bad) throw ruleError(bad, 'form');
 
-    return app.db.tx(async (db) => {
+    const patched = await app.db.tx(async (db) => {
       const fields = Object.keys(b).filter((f) => f !== 'date');
       if (fields.length) {
         const set = fields.map((f, i) => `${f} = $${i + 2}`).join(', ');
@@ -299,6 +312,11 @@ const plugin: FastifyPluginAsync = async (app) => {
         'SELECT *, date::text AS date, created_date::text AS created_date FROM requests WHERE id = $1', [id]);
       return { request: rows[0], moved };
     });
+    // Перенос — событие для клиента: в сообщении обе даты, прежняя и новая.
+    // Правка телефона или комментария событием не считается: клиенту про неё
+    // сказать нечего.
+    if (moved) enqueueQuietly(app.db, 'перенос', id, { movedFrom: String(cur.date) }, req.log);
+    return patched;
   });
 
   app.post('/requests/:id/shift', {
