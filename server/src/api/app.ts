@@ -10,8 +10,11 @@ import cookie from '@fastify/cookie';
 import swagger from '@fastify/swagger';
 import type { Db } from './db.ts';
 import { ApiError } from './errors.ts';
-import { photoStorage, storageConfig, type PhotoStorage } from '../storage.ts';
 import { SESSION_COOKIE, readSession, sessionSecret, type User } from './auth.ts';
+import { photoStorage, recordsConfig, storageConfig, type PhotoStorage } from '../storage.ts';
+import { canCall, novofonConfig, type NovofonConfig } from '../novofon/config.ts';
+import { novofonApi, type NovofonApi } from '../novofon/api.ts';
+import { callBus, type CallBus } from '../novofon/bus.ts';
 import authRoutes from './routes/auth.ts';
 import refRoutes from './routes/refs.ts';
 import planRoutes from './routes/plan.ts';
@@ -34,6 +37,16 @@ declare module 'fastify' {
     /** Хранилище снимков акта или `null`, если оно к контуру не подключено:
      *  тогда акт работает целиком, а вместо кадра рисуется заглушка. */
     photos: PhotoStorage | null;
+    /** Бакет записей разговоров. Отдельный от снимков: у записей свои права и
+     *  свой срок хранения. `null` — записи не сохраняются, звонки работают. */
+    records: PhotoStorage | null;
+    /** Настройки телефонии: платформа кабинета, ключи, адрес приёмника. */
+    novofonConfig: NovofonConfig;
+    /** Обращения к АТС или `null`, если ключей нет: тогда система только
+     *  принимает события и показывает карточку, но сама в АТС не ходит. */
+    novofon: NovofonApi | null;
+    /** Шина событий телефонии: из вебхука на пульт оператора. */
+    calls: CallBus;
   }
   interface FastifyRequest {
     /** Тело запроса как оно пришло. Нужно вебхуку телефонии: подпись считается
@@ -49,14 +62,29 @@ export interface AppOptions {
   /** Хранилище снимков. По умолчанию собирается из окружения; передаётся руками
    *  в проверке круга загрузки (`scripts/check-photo-roundtrip.mts`). */
   storage?: PhotoStorage | null;
+  /** Бакет записей разговоров: так же, как и снимки, — по умолчанию из
+   *  окружения, руками в сквозной проверке телефонии. */
+  records?: PhotoStorage | null;
+  /** Настройки телефонии. По умолчанию из окружения; в проверках подменяются
+   *  целиком, чтобы приёмник смотрел на эмулятор, а не на настоящую АТС. */
+  novofon?: NovofonConfig;
+  /** Клиент АТС. `null` — обращений к АТС нет вовсе (так в тестах API). */
+  novofonClient?: NovofonApi | null;
 }
 
 /** Открытые входы: до них сессия не спрашивается. */
 /* Выдача снимка открыта нарочно: тег <img> не носит cookie на чужой адрес и не
    умеет показывать 401, поэтому доступ там даёт подписанная ссылка с коротким
    сроком (`routes/photos.ts`), а не сессия. */
-const PUBLIC = new Set(['/health', '/docs', '/api/auth/login', '/api/webhooks/novofon',
+/* Приёмники телефонии открыты для сессии нарочно: их зовёт АТС, у которой
+   cookie нет и быть не может. Подлинность там подтверждается иначе — подписью
+   события (API 1.0) или секретом в адресе и списком адресов (платформа 2.0),
+   см. `src/novofon/signature.ts`. */
+const PUBLIC = new Set(['/health', '/docs', '/api/auth/login',
+  '/api/webhooks/novofon', '/api/webhooks/novofon/:secret',
+  '/api/webhooks/novofon/routing', '/api/webhooks/novofon/routing/:secret',
   '/api/photos/:id/file']);
+
 
 export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   const app = fastify({
@@ -68,9 +96,17 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   const secret = opts.secret ?? sessionSecret();
 
   const cfg = storageConfig();
+  const recCfg = recordsConfig();
+  const novofon = opts.novofon ?? novofonConfig();
   app.decorate('db', opts.db);
   app.decorate('sessionSecret', secret);
   app.decorate('photos', opts.storage !== undefined ? opts.storage : (cfg ? photoStorage(cfg) : null));
+  app.decorate('records', opts.records !== undefined ? opts.records : (recCfg ? photoStorage(recCfg) : null));
+  app.decorate('novofonConfig', novofon);
+  app.decorate('novofon', opts.novofonClient !== undefined
+    ? opts.novofonClient
+    : (canCall(novofon) ? novofonApi(novofon) : null));
+  app.decorate('calls', callBus());
 
   // Разбор JSON с сохранением сырого тела: по нему вебхук телефонии проверяет подпись.
   app.addContentTypeParser('application/json', { parseAs: 'string' }, (req, body, done) => {
@@ -80,6 +116,14 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     } catch (err) {
       done(err as Error, undefined);
     }
+  });
+
+  // Уведомления API 1.0 приходят формой, а не JSON. Без своего разборщика
+  // fastify отвечает на них 415, и в кабинете это выглядит как «CRM не
+  // принимает события» — без единой строчки о причине.
+  app.addContentTypeParser('application/x-www-form-urlencoded', { parseAs: 'string' }, (req, body, done) => {
+    req.rawBody = String(body);
+    done(null, Object.fromEntries(new URLSearchParams(String(body))));
   });
 
   await app.register(cookie);

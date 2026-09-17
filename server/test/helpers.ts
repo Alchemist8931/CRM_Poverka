@@ -8,6 +8,12 @@
  * Миграции применяются чтением Up-части файлов, а не node-pg-migrate: тому нужен
  * сетевой адрес, а сетевой слой PGlite ломается на длинных пачечных вставках
  * (см. `scripts/check-schema.ts`).
+ *
+ * Схема с набором собираются один раз на процесс и снимаются в образ, а каждый
+ * стенд разворачивается из него. Поднять базу с нуля — это полторы секунды на
+ * миграции и scrypt, и платить её на каждый из четырёх десятков стендов незачем:
+ * из образа то же самое встаёт втрое быстрее, а стенды остаются независимыми —
+ * каждый получает свою копию.
  */
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -18,6 +24,8 @@ import { buildApp } from '../src/api/app.ts';
 import { singleConnectionDb, type Db } from '../src/api/db.ts';
 import { hashPassword } from '../src/password.ts';
 import type { PhotoStorage } from '../src/storage.ts';
+import { novofonConfig, type NovofonConfig } from '../src/novofon/config.ts';
+import type { NovofonApi } from '../src/novofon/api.ts';
 
 const serverDir = fileURLToPath(new URL('..', import.meta.url));
 
@@ -37,7 +45,16 @@ export interface Stand {
   close(): Promise<void>;
 }
 
-export async function makeStand(opts: { storage?: PhotoStorage | null } = {}): Promise<Stand> {
+/** Обёртка над PGlite в том виде, в каком её ждёт приложение. */
+const dbOver = (pg: PGlite): Db => singleConnectionDb({
+  query: (text, params) => pg.query(text, params as never[]) as never,
+  close: () => pg.close(),
+});
+
+/** Образ базы со схемой и набором. Считается один раз, дальше берётся готовым. */
+let image: Promise<Blob> | null = null;
+
+async function makeImage(): Promise<Blob> {
   const pg = new PGlite();
   const dir = join(serverDir, 'migrations');
   for (const file of readdirSync(dir).filter((f) => f.endsWith('.sql')).sort()) {
@@ -45,13 +62,33 @@ export async function makeStand(opts: { storage?: PhotoStorage | null } = {}): P
     const up = sql.split('-- Down Migration')[0]!.split('-- Up Migration')[1] ?? '';
     await pg.exec(up);
   }
-  const db = singleConnectionDb({
-    query: (text, params) => pg.query(text, params as never[]) as never,
-    close: () => pg.close(),
-  });
-  await fixture(db);
+  await fixture(dbOver(pg));
+  // Без сжатия: образ живёт в памяти процесса и до диска не доходит, а gzip
+  // здесь только отнимает время на упаковке и распаковке.
+  const dump = await pg.dumpDataDir('none');
+  await pg.close();
+  return dump;
+}
+
+export async function makeStand(opts: {
+  storage?: PhotoStorage | null;
+  /** Бакет записей разговоров: в проверках телефонии — карта в памяти. */
+  records?: PhotoStorage | null;
+  /** Настройки телефонии: платформа кабинета и секрет приёмника. */
+  novofon?: NovofonConfig;
+  /** Клиент АТС. По умолчанию его нет: тесты API в АТС не ходят. */
+  novofonClient?: NovofonApi | null;
+} = {}): Promise<Stand> {
+  image ??= makeImage();
+  const pg = new PGlite({ loadDataDir: await image });
+  const db = dbOver(pg);
   const app = await buildApp({
     db, secret: 'проверочный-ключ-подписи-сессий', storage: opts.storage ?? null,
+    records: opts.records ?? null,
+    // Настройки телефонии в проверках свои: приёмник должен быть открыт
+    // (секрет задан), а окружение машины проверяющего сюда попадать не должно.
+    novofon: opts.novofon ?? novofonConfig({ NOVOFON_WEBHOOK_SECRET: 'секрет-проверки' } as NodeJS.ProcessEnv),
+    novofonClient: opts.novofonClient ?? null,
     // «Внутренняя ошибка сервера» без причины — это полчаса гадания на ровном
     // месте: TEST_LOG=1 включает журнал приложения на время проверки.
     logger: !!process.env.TEST_LOG,

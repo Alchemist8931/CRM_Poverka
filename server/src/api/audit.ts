@@ -85,8 +85,17 @@ const SPECIAL: Record<string, {
   },
 };
 
-/** Вебхук шлёт АТС, а не человек: журнал действий сотрудников он только засоряет. */
-const SKIP = new Set(['POST /api/webhooks/novofon']);
+/** Вебхуки шлёт АТС, а не человек: журнал действий сотрудников они только
+ *  засоряют, а свой след у них свой — таблица `call_events` со всеми событиями
+ *  в исходном виде, включая непринятые. Поток событий на пульт (`/calls/stream`)
+ *  висит открытым часами: в журнале это была бы одна строка на смену. */
+const SKIP = new Set([
+  'POST /api/webhooks/novofon', 'GET /api/webhooks/novofon',
+  'POST /api/webhooks/novofon/:secret', 'GET /api/webhooks/novofon/:secret',
+  'POST /api/webhooks/novofon/routing', 'GET /api/webhooks/novofon/routing',
+  'POST /api/webhooks/novofon/routing/:secret', 'GET /api/webhooks/novofon/routing/:secret',
+  'GET /api/calls/stream',
+]);
 
 /** Поля, которые в журнал не попадают ни при каких обстоятельствах. */
 const SECRET = /пароль|password|hash|secret|token|подпис/i;

@@ -7,6 +7,7 @@ import { formOf } from '../screens/intake.js';
 import { render, toast } from './render.js';
 import { isDemo } from '../api/mode.js';
 import { fetchClient } from '../api/actions.js';
+import { dial, explainDial, onCall } from '../api/calls.js';
 
 /* ---------- телефон и мини-окно вызова ---------- */
 /* Маска: оператор набирает только цифры, поле само собирает +7 (963) 441-45-30. */
@@ -53,13 +54,28 @@ function PHONE(id,val,key,kind,T){
 }
 function startCall(num,kind,who){
   num = String(num||'').trim(); if(num.length<5) return toast('Телефон не заполнен — набирать нечего.');
-  S.call = {num,kind:kind||'основной',who:who||(S.intake.name.trim()||'Клиент'),st:'набор',t0:Date.now()};
-  clearInterval(S._call); S._call = setInterval(tickCall,500); render();
+  const open = () => {
+    S.call = {num,kind:kind||'основной',who:who||(S.intake.name.trim()||'Клиент'),st:'набор',t0:Date.now()};
+    clearInterval(S._call); S._call = setInterval(tickCall,500); render();
+  };
+  if(isDemo()) return open();
+  /* Рабочий режим: соединяет АТС — сначала звонит оператору, потом клиенту.
+     Окно открывается, когда АТС приняла заявку на звонок; дальше его ведут
+     события с сервера (api/calls.js), а не таймер. */
+  dial(num).then(open).catch(err=>toast(explainDial(err,num)));
 }
+/* Разговор кончился — событие от АТС, а не кнопка: в телефоне положили трубку. */
+onCall({ hangup: (c,ev) => {
+  clearInterval(S._call); S.call=null;
+  const sec = ev.duration_sec ?? Math.floor((Date.now()-c.t0)/1000);
+  toast(ev.kind==='завершение' ? `Звонок завершён · ${pad(Math.floor(sec/60))}:${pad(sec%60)}.` : 'Клиент не ответил.');
+} });
 function tickCall(){
   if(!S.call) return clearInterval(S._call);
   const sec = Math.floor((Date.now()-S.call.t0)/1000);
-  if(S.call.st==='набор' && sec>=2){ S.call.st='разговор'; S.call.t0=Date.now();
+  // Демо: соединение «наступает» само через две секунды. В рабочем режиме
+  // «разговор» приходит событием от АТС.
+  if(isDemo() && S.call.st==='набор' && sec>=2){ S.call.st='разговор'; S.call.t0=Date.now();
     const st=document.getElementById('callSt'), dt=document.getElementById('callDot');
     if(st) st.textContent='разговор'; if(dt) dt.style.background='var(--success)'; return; }
   const el = document.getElementById('callSec');
@@ -70,6 +86,12 @@ function endCall(silent){
   const c = S.call; S.call = null;
   if(silent) return;
   if(!c) return render();
+  /* Рабочий режим: положить трубку из CRM нельзя — у АТС нет такой команды.
+     Окно закрывается, звонок живёт в телефоне и закончится своим событием. */
+  if(!isDemo()){
+    toast(c.st==='разговор' ? 'Окно закрыто, разговор продолжается в телефоне.' : 'Окно закрыто, вызов сбрасывается в телефоне.');
+    return;
+  }
   const sec = Math.floor((Date.now()-c.t0)/1000);
   toast(c.st==='разговор'
     ? `Звонок завершён · ${pad(Math.floor(sec/60))}:${pad(sec%60)}. В боевой версии длительность и запись прилетают из облачной АТС в карточку заявки.`

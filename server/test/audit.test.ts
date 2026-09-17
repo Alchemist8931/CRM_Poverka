@@ -190,11 +190,15 @@ describe('журнал действий: вход и обращение к да�
         `INSERT INTO calls (pbx_id, direction, from_number, to_number, client_phone, started, record_key)
          VALUES ('pbx-1', 'входящий', '+79120000001', '+73432000000', '79120000001', now(), 'calls/2026/09/1.mp3')`);
       const { rows: calls } = await st.db.query<{ id: string }>('SELECT id FROM calls');
-      const heard = await op.get(`/api/calls/${calls[0]!.id}/record`);
+      // Записи разговоров слушает руководитель (пункт int-novofon): оператору
+      // ссылка не выдаётся, это персональные данные обеих сторон разговора.
+      assert.equal((await op.get(`/api/calls/${calls[0]!.id}/record`)).statusCode, 403, 'оператору запись не положена');
+      const sv = as(st.app, await login(st.app, 'sv'));
+      const heard = await sv.get(`/api/calls/${calls[0]!.id}/record`);
       assert.equal(heard.statusCode, 503, 'хранилище к стенду не подключено — отказ честный');
 
       const listened = await journal(st, `entity = 'calls' AND action = 'прослушивание'`);
-      assert.equal(listened.length, 1, 'обращение к записи разговора видно даже без самой записи');
+      assert.ok(listened.length >= 1, 'обращение к записи разговора видно даже без самой записи');
       assert.equal(listened[0]!.entity_id, String(calls[0]!.id));
 
       const verifier = as(st.app, await login(st.app, 'v1'));

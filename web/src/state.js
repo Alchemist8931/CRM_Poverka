@@ -18,7 +18,9 @@ const blankIntake = () => ({ctype:'Физлицо',name:'',inn:'',phone:'',conta
 /* Пульт оператора: смена, входящая линия, накопленные за день минуты.
    По этим двум счётчикам руководитель видит загрузку и решает, когда нанимать. */
 const blankOp = () => ({on:false,from:null,shiftSec:0,talkSec:0,calls:0,missed:0,
-  inc:null,live:null,acw:0,next:0});
+  inc:null,live:null,acw:0,next:0,
+  /* Рабочий режим: какая пауза последней ушла на сервер — слать смену состояния, а не каждую секунду. */
+  sentPause:false});
 const S = {
   view:'intake', page:0, auth:false, user:ROLES.operator.who, role:'operator', me:ROLES.operator.id,
   theme:'light', dd:null, ddM:null,

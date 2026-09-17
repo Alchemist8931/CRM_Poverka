@@ -51,7 +51,13 @@ function bootDemo(){
   setInterval(opTick,1000);
 }
 
-if (isDemo()) bootDemo(); else bootApi();
+if (isDemo()) bootDemo();
+else {
+  bootApi();
+  // Секундный тик пульта нужен и в рабочем режиме: счётчики разговора и
+  // постобработки, синхронизация паузы с АТС. Входящие он не выдумывает.
+  setInterval(opTick,1000);
+}
 
 NET.start();
 INTRO.start(()=>{ S.introDone=true; });

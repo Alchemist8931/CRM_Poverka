@@ -76,6 +76,33 @@ export function storageConfig(env: NodeJS.ProcessEnv = process.env): StorageConf
   };
 }
 
+/** Настройки бакета записей разговоров (пункт int-novofon). Ключ и адрес те же,
+ *  что у снимков, — отличается только бакет: записи разговоров живут отдельно,
+ *  потому что у них свои права (слушает руководитель, не поверитель) и свой срок
+ *  хранения. Нет RECORDINGS_BUCKET — записи просто не сохраняются, а звонки и
+ *  карточка работают как работали. */
+export function recordsConfig(env: NodeJS.ProcessEnv = process.env): StorageConfig | null {
+  const bucket = env.RECORDINGS_BUCKET?.trim();
+  if (!bucket) return null;
+  const base = storageConfig({ ...env, ACTS_BUCKET: bucket });
+  return base ? { ...base, bucket } : null;
+}
+
+/** Префикс записей разговоров в бакете: правило жизненного цикла работает по
+ *  префиксу, как и у снимков акта. */
+export const RECORDS_PREFIX = 'calls';
+/** Запись всегда mp3: АТС отдаёт её в этом формате. */
+export const RECORD_CONTENT_TYPE = 'audio/mpeg';
+
+/** Ключ записи разговора: `calls/год/месяц/номер-звонка.mp3`. Номер звонка —
+ *  наш, а не АТС: идентификатор сессии на стороне АТС в ключ не идёт, он
+ *  встречается в разных видах и меняется вместе с их платформой. */
+export function recordKey(callId: number | string, at: Date = new Date()): string {
+  const yyyy = at.getFullYear();
+  const mm = String(at.getMonth() + 1).padStart(2, '0');
+  return `${RECORDS_PREFIX}/${yyyy}/${mm}/${String(callId).replace(/[^0-9A-Za-z_-]/g, '_')}.mp3`;
+}
+
 /** В ключ идут только латиница, цифры, дефис и подчёркивание: номер заявки и
  *  идентификатор прибора у нас такие и есть, а всё остальное — признак ошибки. */
 const safe = (s: string) => s.replace(/[^A-Za-z0-9_-]/g, '_');

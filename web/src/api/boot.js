@@ -12,6 +12,7 @@ import { S } from '../state.js';
 import { GROUPS, PAGES, ROLES } from '../refs.js';
 import { goPage, onPage, render, toast } from '../ui/render.js';
 import { NET } from '../net.js';
+import { listenCalls, stopCalls } from './calls.js';
 
 /** Старший оператор работает на тех же экранах, что и оператор. */
 const GROUP_OF = { operator: 'operator', senior: 'operator', supervisor: 'supervisor', verifier: 'verifier' };
@@ -33,6 +34,9 @@ function applyUser(user) {
   S.role = role;
   S.me = user.id;
   S.user = user.full_name;
+  // Поток событий телефонии — только тем, у кого есть пульт: поверителю сервер
+  // его не откроет (403), и просить незачем.
+  if (role !== 'verifier') listenCalls();
 }
 
 /* Метка «в этой вкладке уже входили». Сама сессия лежит в httpOnly-cookie и
@@ -58,6 +62,7 @@ export async function login(loginName, password) {
 
 export async function logout() {
   mark(false);
+  stopCalls();
   await api.post('/auth/logout').catch(() => {});
   S.auth = false;
   S.requests = []; S.routes = []; S.waits = []; S.handovers = []; S.days = []; S.booked = {};

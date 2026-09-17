@@ -11,7 +11,8 @@ import { dupGuard, dupPending, reqForm } from './intake.js';
 import { randPhone, rint, rnd, rr } from '../demo/seed.js';
 import { render, toast } from '../ui/render.js';
 import { isDemo } from '../api/mode.js';
-import { createReq as apiCreateReq } from '../api/actions.js';
+import { createReq as apiCreateReq, fetchClient } from '../api/actions.js';
+import { onCall, setLine } from '../api/calls.js';
 
 /* ============ ПУЛЬТ ОПЕРАТОРА (заготовка под облачную АТС) ============ */
 const hms = s => pad(Math.floor(s/3600))+':'+pad(Math.floor(s/60)%60)+':'+pad(s%60);
@@ -34,12 +35,15 @@ function opConsole(){
 }
 function opLine(){
   const O = S.op;
+  /* Имя клиента рядом с номером — из карточки, которую сервер прислал вместе с
+     событием: оператор видит, кто звонит, до того как снял трубку. */
+  const who = c => (c && c.client && c.client.name) ? ` · ${esc(c.client.name)}` : '';
   if(O.live){
     const sec = Math.floor((Date.now()-O.live.t0)/1000);
     return `<div class="opline">
       <span class="ic">${svg(I.phone,18)}</span>
       <div class="info"><div class="st">вызов принят</div>
-        <div class="no">${esc(O.live.num)}</div></div>
+        <div class="no">${esc(fmtPhone(O.live.num)||O.live.num)}${who(O.live)}</div></div>
       <div class="tm mono" id="opLive">${ms(sec)}</div>
       <div class="acts">
         <button class="g" onclick="toast('Перевод на старшего оператора — в интеграции с облачной АТС.')">Перевести</button>
@@ -58,7 +62,7 @@ function opLine(){
     return `<div class="opline">
       <span class="ic">${svg(I.phone,18)}</span>
       <div class="info"><div class="st">входящий вызов</div>
-        <div class="no">${esc(O.inc.num)}</div></div>
+        <div class="no">${esc(fmtPhone(O.inc.num)||O.inc.num)}${who(O.inc)}</div></div>
       <div class="tm mono" id="opRing">${ms(sec)}</div>
       <div class="acts">
         <button class="b ans" onclick="answer()">${svg(I.phone,13)}Принять</button>
@@ -75,6 +79,14 @@ function toggleShift(){
   if(O.on){ O.shiftSec = shiftSec(); O.on=false; O.from=null; O.inc=null; O.acw=0;
     toast('Смена закрыта. Вызовы уходят другим операторам.'); }
   else { O.on=true; O.from=Date.now(); O.next=rint(3,8); toast('Вы на смене. Входящие пойдут на вашу линию.'); }
+  /* Рабочий режим: отметка живёт на сервере, а он передаёт её в АТС. Не дошла
+     до АТС — работа не останавливается (входящие распределяет ответ на
+     «кому звонить», а он читает ту же отметку), но оператор об этом знает. */
+  if(!isDemo()){
+    O.sentPause = false;
+    setLine(O.on,false).then(out=>{ if(out && O.on && !out.synced && out.error) toast('В АТС отметка не дошла, действует только в CRM: '+out.error); })
+      .catch(e=>toast(e?.message||'Отметка линии не сохранилась.'));
+  }
   render();
 }
 function ringIn(){
@@ -91,8 +103,12 @@ function answer(){
   /* Из звонка берём только номер — и тот оператор может заменить:
      звонят с городского, а для связи оставляют сотовый. */
   S.intake.phone = fmtPhone(c.num);
+  if(!isDemo()) fetchClient(c.num);
   render();
 }
+/* Рабочий режим: ответ пришёл от АТС (трубку снял софтфон) — номер в форму
+   приёма, история клиента подтянется тем же путём, что при ручном наборе. */
+onCall({ answered: live => { S.intake.phone = fmtPhone(live.num); if(digitsOf(live.num).length===10) fetchClient(live.num); } });
 function reject(){ S.op.inc=null; S.op.missed++; S.op.next=rint(4,10);
   toast('Вызов отклонён — уходит следующему свободному оператору.'); }
 function hangup(){
@@ -108,6 +124,9 @@ function opTick(){
   if(!S.auth) return;
   const here = S.view==='intake';
   const set = (id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
+  /* Рабочий режим: разговор и постобработка для АТС — пауза. Уходит только на
+     смене состояния, а не каждую секунду. */
+  if(!isDemo() && O.on){ const p = opBusy(); if(p!==!!O.sentPause){ O.sentPause=p; setLine(true,p).catch(()=>{}); } }
   if(O.live){ if(here) set('opLive',ms(Math.floor((Date.now()-O.live.t0)/1000))); return; }
   if(O.acw>0){ O.acw--;
     if(O.acw<=0){ O.next=rint(5,12); if(here) render(); } else if(here) set('opAcw',ms(O.acw));
@@ -120,7 +139,8 @@ function opTick(){
     return;
   }
   if(!here) return;   // вызов приходит только когда оператор смотрит на линию
-  if(O.on && O.next>0 && --O.next<=0) ringIn();
+  // Имитация входящих — только в демо: в рабочем режиме их присылает АТС (api/calls.js).
+  if(isDemo() && O.on && O.next>0 && --O.next<=0) ringIn();
 }
 /* Проверки формы одни и те же у оператора и у руководителя — держим их в одном месте. */
 /* Почта не обязательна, но если её ввели — она должна быть похожа на адрес:

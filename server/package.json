@@ -10,7 +10,7 @@
   "scripts": {
     "start": "tsx src/api/server.ts",
     "dev": "tsx watch src/api/server.ts",
-    "test": "node --import tsx --test test/*.test.ts",
+    "test": "node --import tsx --test --test-concurrency=1 test/*.test.ts",
     "migrate": "node-pg-migrate",
     "migrate:up": "node-pg-migrate up",
     "migrate:down": "node-pg-migrate down 1",
@@ -33,6 +33,7 @@
     "notify:tick": "tsx scripts/notify-worker.mts",
     "notify:probe": "tsx scripts/notify-probe.mts",
     "check:notify": "tsx scripts/check-notify.mts",
+    "check:novofon-flow": "tsx scripts/check-novofon-flow.mts",
     "import": "tsx scripts/import/cli.mts",
     "check:import": "tsx scripts/check-import.mts"
   },
