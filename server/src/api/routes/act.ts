@@ -14,6 +14,8 @@ import {
   FAIL_REASONS, PAY_HAND, WAIT_REASONS, closeProblem, priceOf, priceOfDevice, rateO, rateV,
   unservedProblem, type ClientType, type Role,
 } from '../../rules.ts';
+import { arshinConfig } from '../../arshin/config.ts';
+import { dropUnsent, syncRecords } from '../../arshin/records.ts';
 
 const ID = { type: 'object', required: ['id'], properties: { id: { type: 'string' } } } as const;
 const STOP_PARAMS = {
@@ -239,9 +241,16 @@ const plugin: FastifyPluginAsync = async (app) => {
            paid_at = now(), by_staff = EXCLUDED.by_staff
          RETURNING *`,
         [id, method, amount, price, b.amount != null, b.note ?? '', verifier]);
+      // Поверка становится юридически действительной только после передачи
+      // сведений во ФГИС «Аршин», поэтому запись о поверке рождается здесь же,
+      // при закрытии акта, а не когда до неё дойдут руки (пункт int-arshin).
+      // Считать её отдельно на каждый прибор, включая «не годен», требует
+      // пункт 26 приказа Минпромторга России № 2906.
+      const arshin = await syncRecords(db, id, arshinConfig());
       return {
         closed: id, price, wage, payment: pay[0],
         hand: PAY_HAND.includes(method as never) ? amount : 0,
+        arshin,
       };
     });
   });
@@ -263,7 +272,11 @@ const plugin: FastifyPluginAsync = async (app) => {
                 verifier_id = NULL, updated_at = now() WHERE id = $1`, [id]);
       // Способ и сумму оставляем — снимаем только отметку о принятии денег.
       await db.query('UPDATE payments SET paid_at = NULL WHERE request_id = $1', [id]);
-      return { reopened: id };
+      // Непереданные записи «Аршина» уходят вместе с закрытием: акт снова в
+      // работе, и передавать пока нечего. Уже переданное остаётся — отозвать
+      // сведения из реестра система не может.
+      const arshin = await dropUnsent(db, id);
+      return { reopened: id, arshin };
     });
   });
 

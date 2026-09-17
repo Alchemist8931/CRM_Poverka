@@ -19,7 +19,7 @@
     "seed": "tsx src/seed/index.ts",
     "db:reset": "node-pg-migrate down 0 && node-pg-migrate up && tsx src/seed/index.ts",
     "typecheck": "tsc --noEmit",
-    "check": "npm run check:model && npm run check:docs && npm run check:tables && npm run check:schema && npm run check:seed-cli && npm run check:import && npm run check:audit-prune && npm run check:notify && npm run check:maps",
+    "check": "npm run check:model && npm run check:docs && npm run check:tables && npm run check:schema && npm run check:seed-cli && npm run check:import && npm run check:audit-prune && npm run check:arshin && npm run check:notify && npm run check:maps",
     "check:model": "tsx scripts/check-model-sync.mts",
     "check:docs": "tsx scripts/check-docs.mts",
     "check:tables": "tsx scripts/check-tables.mts",
@@ -28,6 +28,7 @@
     "check:photos": "tsx scripts/check-photo-roundtrip.mts",
     "audit:prune": "tsx scripts/audit-prune.mts",
     "check:audit-prune": "tsx scripts/check-audit-prune.mts",
+    "check:arshin": "tsx scripts/check-arshin.mts",
     "check:maps": "tsx scripts/check-maps.mts",
     "maps:prune": "tsx scripts/maps-prune.mts",
     "notify:tick": "tsx scripts/notify-worker.mts",
@@ -55,6 +56,7 @@
     "@types/node": "^22.10.2",
     "@types/pg": "^8.11.10",
     "exceljs": "^4.4.0",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "xmllint-wasm": "^5.3.0"
   }
 }

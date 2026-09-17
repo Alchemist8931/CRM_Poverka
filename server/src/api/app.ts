@@ -25,6 +25,7 @@ import moneyRoutes from './routes/money.ts';
 import callRoutes from './routes/calls.ts';
 import photoRoutes from './routes/photos.ts';
 import auditRoutes from './routes/audit.ts';
+import arshinRoutes from './routes/arshin.ts';
 import notifyRoutes from './routes/notify.ts';
 import { installAudit } from './audit.ts';
 
@@ -148,6 +149,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
         { name: 'деньги', description: 'оплата на месте, заработок, сдельная, подотчёт' },
         { name: 'связь', description: 'вебхуки телефонии' },
         { name: 'журнал', description: 'журнал действий: кто что менял и смотрел' },
+        { name: 'аршин', description: 'записи о поверке для ФГИС «Аршин»: очередь, выгрузка, номера реестра' },
         { name: 'уведомления', description: 'шаблоны сообщений клиенту, очередь отправки и журнал доставки' },
       ],
       components: {
@@ -230,6 +232,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   await app.register(callRoutes, { prefix: '/api' });
   await app.register(photoRoutes, { prefix: '/api' });
   await app.register(auditRoutes, { prefix: '/api' });
+  await app.register(arshinRoutes, { prefix: '/api' });
   await app.register(notifyRoutes, { prefix: '/api' });
 
   return app;

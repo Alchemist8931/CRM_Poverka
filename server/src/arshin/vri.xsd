@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Схема выгрузки сведений о результатах поверки (пункт int-arshin).
+
+  ВНИМАНИЕ. Это НЕ официальная схема ФГИС «Аршин». Официальная XSD пакетной
+  загрузки выдаётся в личном кабинете ФГИС Росаккредитации и открыто не
+  публикуется; раздел «Справочная информация» fgis.gost.ru на день выкладки
+  отвечает страницей «Технологические работы». Здесь описан состав сведений из
+  пункта 26 Порядка создания и ведения Федерального информационного фонда
+  (приказ Минпромторга России от 28.08.2020 № 2906 в редакции приказа
+  от 13.01.2022 № 37) — он нормативный и меняться от кабинета к кабинету не
+  может. Разметка вокруг него — наша, и она подлежит замене на официальную,
+  как только у заказчика появится доступ в кабинет (docs/arshin.md).
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns="urn:uchetkin:arshin:vri:1"
+           targetNamespace="urn:uchetkin:arshin:vri:1"
+           elementFormDefault="qualified">
+
+  <!-- Непустая строка: пустое обязательное поле — это не «нет сведений»,
+       а незаполненная запись, и такую реестр не примет. -->
+  <xs:simpleType name="filled">
+    <xs:restriction base="xs:string">
+      <xs:minLength value="1"/>
+      <xs:maxLength value="255"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="text">
+    <xs:restriction base="xs:string">
+      <xs:minLength value="1"/>
+      <xs:maxLength value="1000"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- Условный шифр, присвоенный Росстандартом: прописные буквы русского
+       алфавита, одна, две или три (пункт 25 приказа № 2906). -->
+  <xs:simpleType name="orgCode">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[А-ЯЁ]{1,3}"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="mi">
+    <xs:attribute name="name" type="filled" use="required"/>       <!-- «а» -->
+    <xs:attribute name="modification" type="xs:string"/>            <!-- «б» -->
+    <xs:attribute name="grsi" type="filled" use="required"/>        <!-- «в» -->
+    <xs:attribute name="serial" type="filled" use="required"/>      <!-- «г» -->
+  </xs:complexType>
+
+  <xs:complexType name="record">
+    <xs:sequence>
+      <xs:element name="mi" type="mi"/>
+      <xs:element name="method" type="filled"/>                     <!-- «з» -->
+      <xs:element name="etalons" type="text" minOccurs="0"/>        <!-- «ж» -->
+      <xs:element name="verified-on" type="xs:date"/>               <!-- «к» -->
+      <xs:element name="valid-to" type="xs:date" minOccurs="0"/>    <!-- «л» -->
+      <xs:element name="applicable" type="xs:boolean"/>             <!-- «м» -->
+      <xs:element name="fail-reason" type="text" minOccurs="0"/>    <!-- «у» -->
+      <xs:element name="verifier" type="filled"/>                   <!-- «р» -->
+      <xs:element name="owner" type="filled" minOccurs="0"/>        <!-- «т» -->
+    </xs:sequence>
+    <!-- Наш номер записи: по нему ответ реестра раскладывается обратно по
+         приборам. В сам фонд он не идёт. -->
+    <xs:attribute name="source-id" type="filled" use="required"/>
+  </xs:complexType>
+
+  <xs:element name="vri-export">
+    <xs:complexType>
+      <xs:sequence>
+        <!-- Личный кабинет принимает до 999 записей одним файлом. -->
+        <xs:element name="record" type="record" minOccurs="1" maxOccurs="999"/>
+      </xs:sequence>
+      <xs:attribute name="batch" type="filled" use="required"/>
+      <xs:attribute name="created" type="xs:dateTime" use="required"/>
+      <xs:attribute name="org-name" type="filled" use="required"/>  <!-- «п» -->
+      <xs:attribute name="org-code" type="orgCode" use="required"/> <!-- пункт 25 -->
+      <xs:attribute name="count" type="xs:nonNegativeInteger" use="required"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
