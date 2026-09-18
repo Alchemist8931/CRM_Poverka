@@ -22,6 +22,8 @@ locals {
   acts_bucket   = "${local.prefix}-acts${local.bucket_suffix}"
   calls_bucket  = "${local.prefix}-calls${local.bucket_suffix}"
   audit_bucket  = "${local.prefix}-audit${local.bucket_suffix}"
+  # Резервные копии базы и состояние сторожа (backup.tf, watchdog.tf).
+  ops_bucket = "${local.prefix}-ops${local.bucket_suffix}"
 
   use_alb = var.ingress_mode == "alb"
 
@@ -55,4 +57,8 @@ locals {
 
   pg_host_fqdn = var.managed_postgres ? yandex_mdb_postgresql_cluster.main[0].host[0].fqdn : "postgres"
   pg_port      = var.managed_postgres ? 6432 : 5432
+
+  # Откуда сторож проверяет живость снаружи. Пока TLS выключен (A-записи нет),
+  # ходить по имени нельзя — проверка идёт на статический адрес по http.
+  health_url = local.use_alb || local.tls_by_caddy ? "https://${var.app_domain}${var.health_check_path}" : "http://${local.external_ip}${var.health_check_path}"
 }

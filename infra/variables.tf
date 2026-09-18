@@ -352,9 +352,14 @@ variable "pg_version" {
 }
 
 variable "pg_resource_preset" {
-  description = "Класс хоста базы. b3-c1-m4 — 1 vCPU (50 %), 4 ГБ (arch, раздел 2)."
+  description = <<-EOT
+    Класс хоста базы. В arch (раздел 2) записан b3-c1-m4, но такого класса в
+    Managed PostgreSQL нет — API отвечает «not available», проверено на учениях
+    cloud-ops 18.09.2026 (yc managed-postgresql resource-preset list). Ближайший
+    существующий burstable-класс — b2.medium: 2 vCPU (доля 20 %), 4 ГБ.
+  EOT
   type        = string
-  default     = "b3-c1-m4"
+  default     = "b2.medium"
 }
 
 variable "pg_disk_size" {
@@ -473,6 +478,7 @@ variable "lockbox_external_secrets" {
     payment = "Эквайринг и касса: ключи платёжного провайдера (подключается последним)"
     smtp    = "Отправка почты и СМС: логин, пароль, адрес отправителя"
     maps    = "Яндекс Карты: записи geocoder_key (только сервер) и jsapi_key (ограничен доменом)"
+    alerts  = "Оповещения сторожа (watchdog.tf): записи telegram_bot_token и telegram_chat_id"
   }
 }
 
@@ -640,5 +646,117 @@ variable "app_auth_policy" {
   validation {
     condition     = var.app_auth_policy.max_failed_attempts >= 1 && var.app_auth_policy.max_failed_attempts <= 10
     error_message = "Порог блокировки — от 1 до 10 неудачных попыток; в политике заявлено 5."
+  }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Эксплуатация: логи, резервные копии, сторож с оповещениями
+# Пункт плана cloud-ops. Что значит каждый алерт и что делать — docs/ops.md.
+# ─────────────────────────────────────────────────────────────────────────────
+
+variable "logs_retention_days" {
+  description = "Сколько дней Cloud Logging хранит журналы приложения (caddy, api, worker, база)."
+  type        = number
+  default     = 30
+
+  validation {
+    condition     = var.logs_retention_days >= 1 && var.logs_retention_days <= 90
+    error_message = "Cloud Logging хранит журналы от 1 до 90 дней; для разбора инцидентов нужно не меньше двух недель."
+  }
+}
+
+variable "backup_daily_retain_days" {
+  description = <<-EOT
+    Сколько дней лежит ежедневный pg_dump в бакете ops. В prod рядом есть ещё
+    автоматические копии Managed PostgreSQL (pg_backup_retain_days); в dev база
+    контейнером, и этот дамп — единственная её копия.
+  EOT
+  type        = number
+  default     = 14
+}
+
+variable "backup_weekly_retain_days" {
+  description = "Сколько дней лежит еженедельный (воскресный) pg_dump. Год — по постановке cloud-ops."
+  type        = number
+  default     = 365
+}
+
+variable "backup_schedule" {
+  description = <<-EOT
+    Когда снимать pg_dump: выражение OnCalendar таймера systemd в местном
+    времени машины (timezone). 02:30 по Екатеринбургу — после окна
+    автоматических копий облака (pg_backup_window_hour, UTC) и до рабочего дня.
+  EOT
+  type        = string
+  default     = "*-*-* 02:30:00"
+}
+
+variable "status_interval_minutes" {
+  description = <<-EOT
+    Как часто машина отправляет в Monitoring свои служебные метрики: возраст
+    последней копии, занятость диска, дни до конца сертификата, живость
+    контейнеров. По ним сторож поднимает оповещения.
+  EOT
+  type        = number
+  default     = 5
+}
+
+variable "caddy_metrics_port" {
+  description = <<-EOT
+    Порт, на котором Caddy отдаёт метрики Prometheus (deploy/Caddyfile, сайт
+    :2020). Публикуется только на 127.0.0.1 машины — агент мониторинга
+    забирает их оттуда и отправляет в Monitoring как метрики caddy_*.
+  EOT
+  type        = number
+  default     = 2020
+}
+
+variable "watchdog_enabled" {
+  description = <<-EOT
+    Поднимать сторожа — Cloud Function по таймеру раз в минуту, которая снаружи
+    контура проверяет /health и служебные метрики и шлёт оповещения. Алерты
+    самого Monitoring через Terraform и API не заводятся (только консоль),
+    поэтому оповещения живут здесь.
+  EOT
+  type        = bool
+  default     = true
+}
+
+variable "alert_email" {
+  description = <<-EOT
+    Куда сторож шлёт оповещения по почте. Пусто — почтовый канал выключен,
+    остаётся Telegram. Отправка идёт через SMTP из секрета Lockbox
+    <контур>-smtp (записи host, port, user, password, from).
+  EOT
+  type        = string
+  default     = ""
+}
+
+variable "alert_thresholds" {
+  description = <<-EOT
+    Пороги оповещений сторожа. Что значит каждое и что делать — docs/ops.md.
+      down_minutes         — сколько минут подряд /health не отвечает, чтобы поднять тревогу
+      http_5xx_percent     — доля ответов 5xx за последние пять минут
+      disk_percent         — занятость корневого диска ВМ
+      backup_max_age_hours — возраст последней удачной резервной копии
+      cert_days            — за сколько дней до конца сертификата предупреждать
+      remind_hours         — через сколько часов повторить напоминание о нерешённой проблеме
+  EOT
+  type = object({
+    down_minutes         = number
+    http_5xx_percent     = number
+    disk_percent         = number
+    backup_max_age_hours = number
+    cert_days            = number
+    remind_hours         = number
+  })
+
+  default = {
+    down_minutes         = 2
+    http_5xx_percent     = 2
+    disk_percent         = 80
+    backup_max_age_hours = 26
+    cert_days            = 14
+    remind_hours         = 6
   }
 }

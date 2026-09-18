@@ -10,6 +10,11 @@ terraform {
       source  = "hashicorp/random"
       version = "~> 3.6"
     }
+    # Упаковка кода сторожа (watchdog.tf) в zip для Cloud Functions.
+    archive = {
+      source  = "hashicorp/archive"
+      version = "~> 2.4"
+    }
   }
 
   # Состояние хранится в Object Storage. Параметры бакета и ключа не зашиты сюда,

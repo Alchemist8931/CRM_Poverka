@@ -60,6 +60,12 @@ ARGS = {
     "lockbox_external_secrets": {"novofon": "e6q000000000000000d4"},
     "monitoring_agent_enabled": True,
     "monitoring_agent_image": "cr.yandex/yc/unified-agent",
+    "vm_hostname": "uchetkin-prod-app",
+    "log_group_id": "e23000000000000000l1",
+    "ops_bucket": "uchetkin-prod-ops",
+    "backup_schedule": "*-*-* 02:30:00",
+    "status_interval_minutes": 5,
+    "caddy_metrics_port": 2020,
 }
 
 SSHD_FILE = "10-uchetkin.conf"

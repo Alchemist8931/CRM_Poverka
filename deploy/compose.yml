@@ -68,6 +68,9 @@ services:
       - "80:80"
       - "443:443"
       - "443:443/udp"
+      # Метрики Prometheus для агента мониторинга (Caddyfile, сайт :2020).
+      # Только localhost машины: наружу счётчики не смотрят.
+      - "127.0.0.1:2020:2020"
     volumes:
       - /opt/uchetkin/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

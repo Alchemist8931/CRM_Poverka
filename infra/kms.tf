@@ -23,23 +23,58 @@ resource "yandex_kms_symmetric_key" "data" {
 # Приложению нужно и зашифровать при записи, и расшифровать при чтении.
 # Роль выдана на сам ключ, а не на каталог: другими ключами каталога
 # приложение пользоваться не может.
-resource "yandex_kms_symmetric_key_iam_binding" "app" {
+#
+# Все, кому нужен ключ, — в одном binding. Binding — авторитетный список
+# держателей роли: два binding на одну роль (раньше здесь были отдельные для
+# приложения и аудита) перетирали друг друга при каждом apply, и plan
+# предупреждал «will be removed from 1 subject». Найдено в пункте cloud-ops.
+#
+# Кто здесь и зачем:
+#   • приложение — шифрует при записи и расшифровывает при чтении фото и записей;
+#   • аккаунт Audit Trails — складывает журналы в шифрованный бакет; ему бы
+#     хватило «только зашифровать», но такой роли в KMS нет;
+#   • сторож (watchdog.tf) — держит своё состояние в шифрованном бакете ops.
+#
+# Форма — iam_member на каждого держателя, а не общий binding со списком:
+# провайдер 0.228 падает на binding, в списке которого есть ещё не созданный
+# аккаунт («Value Conversion Error… unknown value»), а member такого не боится.
+resource "yandex_kms_symmetric_key_iam_member" "app" {
   symmetric_key_id = yandex_kms_symmetric_key.data.id
   role             = "kms.keys.encrypterDecrypter"
-  members = [
-    "serviceAccount:${yandex_iam_service_account.app.id}",
-  ]
+  member           = "serviceAccount:${yandex_iam_service_account.app.id}"
 }
 
-# Сервисный аккаунт Audit Trails складывает журналы в шифрованный бакет —
-# значит, ему тоже нужно право шифровать. Расшифровывать ему не нужно,
-# но отдельной роли «только зашифровать» в KMS нет.
-resource "yandex_kms_symmetric_key_iam_binding" "audit" {
+resource "yandex_kms_symmetric_key_iam_member" "audit" {
   count = var.audit_trail_enabled ? 1 : 0
 
   symmetric_key_id = yandex_kms_symmetric_key.data.id
   role             = "kms.keys.encrypterDecrypter"
-  members = [
-    "serviceAccount:${yandex_iam_service_account.audit[0].id}",
-  ]
+  member           = "serviceAccount:${yandex_iam_service_account.audit[0].id}"
+}
+
+resource "yandex_kms_symmetric_key_iam_member" "watchdog" {
+  count = var.watchdog_enabled ? 1 : 0
+
+  symmetric_key_id = yandex_kms_symmetric_key.data.id
+  role             = "kms.keys.encrypterDecrypter"
+  member           = "serviceAccount:${yandex_iam_service_account.watchdog[0].id}"
+}
+
+# Прежние binding из состояния забываются, а не уничтожаются: уничтожение
+# binding снимает роль с его держателей, и порядок «снять — вернуть member»
+# Terraform не гарантирует. Держатели те же, и они уже описаны выше.
+removed {
+  from = yandex_kms_symmetric_key_iam_binding.app
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = yandex_kms_symmetric_key_iam_binding.audit
+
+  lifecycle {
+    destroy = false
+  }
 }

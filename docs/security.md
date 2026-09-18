@@ -97,7 +97,7 @@
 | Кадр из акта убирает только руководитель, и только пометкой | `server/src/api/routes/photos.ts`, `photos.deleted_at`; у приложения на бакет нет права удалять (`storage.viewer` + `storage.uploader`, `infra/storage.tf`) | В коде. Действие пишется в `audit_log` |
 | Данные не покидают Россию | Регион `ru-central1`, `infra/variables.tf`, `zone` | В коде |
 | Сроки хранения заданы правилами жизненного цикла | `infra/storage.tf`, `acts_cold_after_days`, `calls_cold_after_days`, `calls_ice_after_days` | В коде. Удаления нет намеренно: заказчик просил хранить акты не менее шести лет, записи разговоров — бессрочно |
-| Резервные копии базы | `infra/postgres.tf`, `backup_retain_period_days = 14` в prod | В коде. Учения по восстановлению — пункт `cloud-ops`, не сделано |
+| Резервные копии базы | `infra/postgres.tf`, `backup_retain_period_days = 14` в prod; `infra/backup.tf` и таймер `uchetkin-backup` — ежедневный и еженедельный `pg_dump` в шифрованный бакет `ops`, машина только дописывает | В коде и применено в dev. Учения по восстановлению проведены 18.09.2026 — `docs/ops.md`, «Протокол учений» |
 
 ## 6. Журналы
 

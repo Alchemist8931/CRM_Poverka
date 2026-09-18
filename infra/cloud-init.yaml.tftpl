@@ -52,6 +52,11 @@ write_files:
       LOCKBOX_DB_SECRET_ID=${lockbox_db_secret_id}
       LOCKBOX_APP_SECRET_ID=${lockbox_app_secret_id}
       LOCKBOX_STORAGE_SECRET_ID=${lockbox_storage_secret_id}
+      # Эксплуатация (пункт cloud-ops): куда машина кладёт резервные копии
+      # и куда агент отправляет журналы. Читают их таймеры uchetkin-backup
+      # и uchetkin-status, а не приложение.
+      OPS_BUCKET=${ops_bucket}
+      LOG_GROUP_ID=${log_group_id}
       # Правила входа и журналирования в самом приложении. Значения приходят из
       # Terraform (переменная app_auth_policy), а не зашиты в код: пункт 152-ФЗ
       # проверяется по конфигурации контура, а не по чтению исходников.
@@ -141,6 +146,13 @@ write_files:
           config:
             directory: /var/lib/yandex/unified_agent/main
             max_partition_size: 100mb
+        # Своё хранилище для журналов: одно хранилище агент разрешает
+        # подключить только к одному каналу.
+        - name: logs
+          plugin: fs
+          config:
+            directory: /var/lib/yandex/unified_agent/logs
+            max_partition_size: 200mb
       channels:
         - name: cloud_monitoring
           channel:
@@ -161,6 +173,50 @@ write_files:
           channel:
             channel_ref:
               name: cloud_monitoring
+
+        # Метрики Caddy (запросы, коды ответов, время ответа): Caddy отдаёт
+        # их в формате Prometheus на 127.0.0.1:${caddy_metrics_port}
+        # (deploy/Caddyfile, deploy/compose.yml). По ним доска HTTP и
+        # тревога «много 5xx» у сторожа.
+        - input:
+            plugin: metrics_pull
+            config:
+              url: http://127.0.0.1:${caddy_metrics_port}/metrics
+              format:
+                prometheus: {}
+              poll_period: 30s
+          channel:
+            channel_ref:
+              name: cloud_monitoring
+
+        # Журналы контейнеров — в Cloud Logging (infra/logging.tf). Docker пишет
+        # каждую строку как JSON с полями log, stream, time; агент берёт из них
+        # текст и время. Хранение — logs_retention_days.
+        - input:
+            plugin: file_input
+            config:
+              path: /var/lib/docker/containers/*/*-json.log
+              multi_file: true
+              state_directory: /var/lib/yandex/unified_agent/docker-logs
+              file_format: text
+          channel:
+            pipe:
+              - storage_ref:
+                  name: logs
+            output:
+              plugin: yc_logs
+              config:
+                log_group_id: ${log_group_id}
+                iam:
+                  cloud_meta: {}
+                resource_type: vm
+                resource_id: ${vm_hostname}
+                stream_name: docker
+                parse_json:
+                  payload:
+                    keys: [log]
+                  timestamp:
+                    keys: [time]
 
   - path: /opt/uchetkin/compose.platform.yml
     permissions: "0644"
@@ -200,6 +256,174 @@ write_files:
             - /etc/uchetkin/unified-agent.yml:/etc/yandex/unified_agent/config.tmpl.yml:ro
             - /var/lib/yandex/unified_agent:/var/lib/yandex/unified_agent
             - /proc:/ua_proc:ro
+            # Журналы контейнеров для Cloud Logging — только чтение.
+            - /var/lib/docker/containers:/var/lib/docker/containers:ro
+
+  # ── Резервная копия базы: pg_dump в бакет ops (infra/backup.tf).
+  #    Ежедневно в pg/daily/, по воскресеньям ещё и в pg/weekly/. Без ключей на
+  #    диске — по IAM-токену сервисного аккаунта машины (роль storage.uploader
+  #    на бакет). Отметка последней удачной копии — в /var/lib/uchetkin, по ней
+  #    uchetkin-status отдаёт метрику возраста, а сторож поднимает тревогу.
+  #    Как восстановить и сколько это занимает — docs/ops.md.
+  - path: /usr/local/bin/uchetkin-backup
+    permissions: "0755"
+    owner: root:root
+    content: |
+      #!/usr/bin/env bash
+      # Резервная копия базы CRM «Учёткин» → Object Storage. Запускает таймер
+      # uchetkin-backup.timer; руками: sudo systemctl start uchetkin-backup.
+      set -euo pipefail
+      . /etc/uchetkin/app.env
+      : "$${OPS_BUCKET:?в app.env нет OPS_BUCKET}"
+      STATE_DIR=/var/lib/uchetkin
+      WORK=/var/lib/uchetkin/backup
+      mkdir -p "$STATE_DIR" "$WORK"
+      DAY=$(date +%F)
+      FILE="$WORK/$PGDATABASE-$DAY.dump"
+      META=http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token
+      LOCKBOX=https://payload.lockbox.api.cloud.yandex.net/lockbox/v1/secrets
+
+      echo "дамп $PGDATABASE ($DAY)"
+      if [ "$${MANAGED_POSTGRES:-true}" = "true" ]; then
+        # Кластер Managed PostgreSQL: пароль из Lockbox. Порт — 6432, пул
+        # соединений: прямой 5432 у Managed PostgreSQL снаружи закрыт
+        # (проверено на учениях cloud-ops), pg_dump через пул работает.
+        TOKEN=$(curl -sfH 'Metadata-Flavor: Google' "$META" | jq -re .access_token)
+        PGPASSWORD=$(curl -sfH "Authorization: Bearer $TOKEN" "$LOCKBOX/$LOCKBOX_DB_SECRET_ID/payload" \
+          | jq -re '.entries[] | select(.key == "password") | .textValue')
+        export PGPASSWORD
+        docker run --rm -e PGPASSWORD postgres:16-alpine \
+          pg_dump -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -Fc "$PGDATABASE" > "$FILE"
+      else
+        # База контейнером (dev): дамп изнутри контейнера, пароль не нужен.
+        docker exec uchetkin-postgres pg_dump -U "$PGUSER" -Fc "$PGDATABASE" > "$FILE"
+      fi
+      SIZE=$(stat -c %s "$FILE")
+      [ "$SIZE" -gt 1024 ] || { echo "дамп подозрительно мал: $SIZE байт" >&2; exit 1; }
+
+      TOKEN=$(curl -sfH 'Metadata-Flavor: Google' "$META" | jq -re .access_token)
+      upload() {
+        local key=$1 code
+        # Ответ хранилища — в файл, а не в /dev/stderr: под systemd stderr — сокет
+        # журнала, и curl на нём падает с кодом 23 ещё до проверки ответа.
+        code=$(curl -s -o "$WORK/upload.out" -w '%%{http_code}' -X PUT \
+          -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/octet-stream' \
+          --upload-file "$FILE" "https://storage.yandexcloud.net/$OPS_BUCKET/$key" || echo "curl:$?")
+        [ "$code" = 200 ] || { echo "загрузка $key: HTTP $code: $(head -c 300 "$WORK/upload.out")" >&2; return 1; }
+        echo "→ s3://$OPS_BUCKET/$key ($SIZE байт)"
+      }
+      upload "pg/daily/$PGDATABASE-$DAY.dump"
+      # Воскресенье — ещё и годовая копия.
+      [ "$(date +%u)" = 7 ] && upload "pg/weekly/$PGDATABASE-$DAY.dump"
+
+      date +%s > "$STATE_DIR/backup.last_ok"
+      echo "$SIZE" > "$STATE_DIR/backup.last_size"
+      # Локально держим только последний дамп: место на диске дороже.
+      find "$WORK" -name '*.dump' ! -name "$(basename "$FILE")" -delete
+      # Сразу обновить метрики, чтобы сторож увидел свежую копию.
+      /usr/local/bin/uchetkin-status || true
+
+  # ── Служебные метрики машины → Monitoring (service=custom, host=имя машины).
+  #    Раз в status_interval_minutes минут; по ним доски (monitoring.tf) и
+  #    тревоги сторожа (watchdog.tf): возраст копии, диск, сертификат.
+  - path: /usr/local/bin/uchetkin-status
+    permissions: "0755"
+    owner: root:root
+    content: |
+      #!/usr/bin/env bash
+      # Служебные метрики CRM «Учёткин». Запускает uchetkin-status.timer.
+      set -euo pipefail
+      . /etc/uchetkin/app.env
+      HOST=$(hostname)
+      META=http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token
+      NOW=$(date +%s)
+
+      LAST=$(cat /var/lib/uchetkin/backup.last_ok 2>/dev/null || echo 0)
+      if [ "$LAST" -gt 0 ]; then BACKUP_AGE=$(( (NOW - LAST) / 3600 )); else BACKUP_AGE=9999; fi
+      BACKUP_SIZE=$(cat /var/lib/uchetkin/backup.last_size 2>/dev/null || echo 0)
+      DISK=$(df --output=pcent / | tail -1 | tr -dc '0-9')
+      APP=$(curl -sf -m 5 http://127.0.0.1:3000/health >/dev/null && echo 1 || echo 0)
+      RUNNING=$(docker ps -q | wc -l)
+
+      # Дни до конца сертификата: −1, пока TLS выключен или сертификата нет.
+      CERT_DAYS=-1
+      if [ "$${TLS_BY_CADDY:-false}" = "true" ]; then
+        END=$(echo | openssl s_client -connect 127.0.0.1:443 -servername "$APP_DOMAIN" 2>/dev/null \
+          | openssl x509 -noout -enddate 2>/dev/null | cut -d= -f2 || true)
+        [ -n "$END" ] && CERT_DAYS=$(( ($(date -d "$END" +%s) - NOW) / 86400 ))
+      fi
+
+      metric() { printf '{"name":"%s","labels":{"host":"%s"},"value":%s}' "$1" "$HOST" "$2"; }
+      BODY=$(printf '{"metrics":[%s,%s,%s,%s,%s,%s,%s]}' \
+        "$(metric uchetkin.status_ok 1)" \
+        "$(metric uchetkin.backup_age_hours "$BACKUP_AGE")" \
+        "$(metric uchetkin.backup_size_bytes "$BACKUP_SIZE")" \
+        "$(metric uchetkin.disk_used_percent "$DISK")" \
+        "$(metric uchetkin.app_health "$APP")" \
+        "$(metric uchetkin.containers_running "$RUNNING")" \
+        "$(metric uchetkin.cert_days_left "$CERT_DAYS")")
+
+      TOKEN=$(curl -sfH 'Metadata-Flavor: Google' "$META" | jq -re .access_token)
+      curl -sf -X POST -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+        --data "$BODY" \
+        "https://monitoring.api.cloud.yandex.net/monitoring/v2/data/write?folderId=$YC_FOLDER_ID&service=custom" \
+        >/dev/null
+      echo "копия $BACKUP_AGE ч, диск $DISK %, сертификат $CERT_DAYS дн., приложение $APP, контейнеров $RUNNING"
+
+  - path: /etc/systemd/system/uchetkin-backup.service
+    permissions: "0644"
+    owner: root:root
+    content: |
+      [Unit]
+      Description=Резервная копия базы CRM «Учёткин» в Object Storage
+      After=docker.service network-online.target
+      Requires=docker.service
+
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/local/bin/uchetkin-backup
+
+  - path: /etc/systemd/system/uchetkin-backup.timer
+    permissions: "0644"
+    owner: root:root
+    content: |
+      [Unit]
+      Description=Ежедневная резервная копия базы CRM «Учёткин»
+
+      [Timer]
+      OnCalendar=${backup_schedule}
+      RandomizedDelaySec=300
+      Persistent=true
+
+      [Install]
+      WantedBy=timers.target
+
+  - path: /etc/systemd/system/uchetkin-status.service
+    permissions: "0644"
+    owner: root:root
+    content: |
+      [Unit]
+      Description=Служебные метрики CRM «Учёткин» в Monitoring
+      After=docker.service network-online.target
+
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/local/bin/uchetkin-status
+
+  - path: /etc/systemd/system/uchetkin-status.timer
+    permissions: "0644"
+    owner: root:root
+    content: |
+      [Unit]
+      Description=Служебные метрики CRM «Учёткин» каждые ${status_interval_minutes} минут
+
+      [Timer]
+      OnBootSec=2min
+      OnCalendar=*-*-* *:0/${status_interval_minutes}:00
+      Persistent=true
+
+      [Install]
+      WantedBy=timers.target
 
   - path: /etc/uchetkin/README
     permissions: "0644"
@@ -209,9 +433,12 @@ write_files:
       правка здесь потеряется при пересоздании ВМ.
         /etc/uchetkin/app.env            конфигурация приложения (без секретов)
         /opt/uchetkin/config/            конфигурация фронта
-        /opt/uchetkin/compose.platform.yml  агент мониторинга
+        /opt/uchetkin/compose.platform.yml  агент мониторинга (метрики + логи)
         /opt/uchetkin/compose.yml        приложение, кладёт выкладка (cloud-cicd)
+        /usr/local/bin/uchetkin-backup   резервная копия базы → бакет ops (таймер, ночью)
+        /usr/local/bin/uchetkin-status   служебные метрики → Monitoring (таймер, каждые 5 минут)
       Секреты лежат в Lockbox и читаются приложением при старте.
+      Что значат оповещения и как восстанавливаться — CRM_Poverka/docs/ops.md.
 
 runcmd:
   # Конфигурация SSH применяется сразу и только если она разбирается: сломанный
@@ -225,5 +452,9 @@ runcmd:
   - [docker, compose, -f, /opt/uchetkin/compose.platform.yml, up, -d]
 %{ endif ~}
   - [systemctl, enable, --now, unattended-upgrades]
+  # Резервные копии и служебные метрики (пункт cloud-ops).
+  - [mkdir, -p, /var/lib/uchetkin]
+  - [systemctl, daemon-reload]
+  - [systemctl, enable, --now, uchetkin-backup.timer, uchetkin-status.timer]
 
 final_message: "ВМ ${env} CRM «Учёткин» готова: docker и агент мониторинга подняты, конфигурация в /etc/uchetkin"

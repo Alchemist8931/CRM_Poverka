@@ -97,3 +97,69 @@ output "lockbox_secret_ids" {
     { for name, secret in yandex_lockbox_secret.external : name => secret.id },
   )
 }
+
+# ─── Эксплуатация (cloud-ops) ────────────────────────────────────────────────
+
+output "ops_bucket" {
+  description = "Бакет резервных копий базы (pg/daily, pg/weekly) и состояния сторожа."
+  value       = yandex_storage_bucket.ops.bucket
+}
+
+output "log_group_id" {
+  description = "Группа Cloud Logging с журналами приложения и сторожа."
+  value       = yandex_logging_group.app.id
+}
+
+output "watchdog_function_id" {
+  description = "Сторож. Проверить каналы: yc serverless function invoke <id> -d '{\"test\": true}'."
+  value       = var.watchdog_enabled ? yandex_function.watchdog[0].id : null
+}
+
+output "health_url" {
+  description = "Что именно проверяет сторож раз в минуту."
+  value       = local.health_url
+}
+
+# ─── Для модуля дашбордов (dashboards/) — он читает эти выходы из состояния ──
+
+output "folder_id" {
+  description = "Каталог контура."
+  value       = var.folder_id
+}
+
+output "env" {
+  description = "Имя контура."
+  value       = var.env
+}
+
+output "prefix" {
+  description = "Префикс имён ресурсов."
+  value       = local.prefix
+}
+
+output "labels" {
+  description = "Метки контура."
+  value       = local.labels
+}
+
+output "vm_id" {
+  description = "Идентификатор ВМ приложения (метрики compute.* адресуются им)."
+  value       = yandex_compute_instance.app.id
+}
+
+# Пустая строка, а не null: выход со значением null Terraform в состояние не
+# пишет, и модуль дашбордов не нашёл бы атрибута вовсе.
+output "postgres_cluster_id" {
+  description = "Кластер Managed PostgreSQL, пусто — база контейнером на ВМ."
+  value       = var.managed_postgres ? yandex_mdb_postgresql_cluster.main[0].id : ""
+}
+
+output "alb_id" {
+  description = "Балансировщик, пусто — ingress_mode = vm."
+  value       = local.use_alb ? yandex_alb_load_balancer.app[0].id : ""
+}
+
+output "alert_thresholds" {
+  description = "Пороги сторожа — доски показывают их в заголовках."
+  value       = var.alert_thresholds
+}

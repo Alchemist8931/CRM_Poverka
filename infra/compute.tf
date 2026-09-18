@@ -92,6 +92,13 @@ locals {
     lockbox_external_secrets  = { for name, secret in yandex_lockbox_secret.external : name => secret.id }
     monitoring_agent_enabled  = var.monitoring_agent_enabled
     monitoring_agent_image    = var.monitoring_agent_image
+    # Эксплуатация (cloud-ops): журналы, копии, служебные метрики.
+    vm_hostname             = local.vm_name
+    log_group_id            = yandex_logging_group.app.id
+    ops_bucket              = local.ops_bucket
+    backup_schedule         = var.backup_schedule
+    status_interval_minutes = var.status_interval_minutes
+    caddy_metrics_port      = var.caddy_metrics_port
   })
 }
 

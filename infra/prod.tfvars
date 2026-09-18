@@ -21,9 +21,11 @@ vm_memory            = 4
 vm_disk_size         = 30
 vm_snapshot_schedule = true
 
-# Managed PostgreSQL: один хост b3-c1-m4, автоматические копии 14 дней.
+# Managed PostgreSQL: один хост, автоматические копии 14 дней. Класс b3-c1-m4
+# из arch в облаке не существует (учения cloud-ops, 18.09.2026): взят b2.medium —
+# 2 vCPU с долей 20 %, 4 ГБ, network-ssd; на нём же прошли учения по восстановлению.
 managed_postgres       = true
-pg_resource_preset     = "b3-c1-m4"
+pg_resource_preset     = "b2.medium"
 pg_disk_size           = 20
 pg_backup_retain_days  = 14
 pg_environment         = "PRODUCTION"
