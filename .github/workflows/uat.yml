@@ -1,0 +1,131 @@
+# Приёмочные сценарии против облачного dev-контура (пункт test-uat).
+#
+# В отличие от ci.yml здесь ничего не собирается и не поднимается: браузер
+# ходит на живой контур по адресу из переменной UAT_BASE_URL (по умолчанию —
+# dev по IP, пока у домена нет A-записи) от имени технической учётки, которую
+# заводит server/scripts/uat-stand.mts. Поэтому прогон и доказывает то, чего
+# не доказать локальным стендом: что выложенная сборка работает на выложенной
+# машине с настоящей базой и настоящим хранилищем снимков.
+#
+# Когда идёт: после каждой удачной выкладки в dev, каждую ночь, по кнопке и
+# на правку самих сценариев. Нагрузочный прогон — только по кнопке, с числом
+# минут: полный час на каждый push никому не нужен.
+name: Приёмочные сценарии (dev)
+
+on:
+  workflow_dispatch:
+    inputs:
+      load_minutes:
+        description: Нагрузочный прогон — минут (0 — не запускать; полный — 60)
+        required: false
+        default: "0"
+        type: string
+  schedule:
+    - cron: "0 1 * * *"   # 06:00 по Екатеринбургу
+  push:
+    branches: [main]
+    paths:
+      - e2e/**
+      - .github/workflows/uat.yml
+  workflow_run:
+    workflows: ["Выкладка в dev"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+# Сценарии пишут в один контур последовательной цепочкой: два прогона разом
+# перепутают друг другу данные.
+concurrency:
+  group: uat-dev
+  cancel-in-progress: false
+
+env:
+  UAT_BASE_URL: ${{ vars.UAT_BASE_URL || 'http://84.201.139.101' }}
+  UAT_LOGIN: ${{ secrets.UAT_LOGIN }}
+  UAT_PASSWORD: ${{ secrets.UAT_PASSWORD }}
+  UAT_STAFF_PASSWORD: ${{ secrets.UAT_STAFF_PASSWORD }}
+
+jobs:
+  e2e:
+    name: Сквозные сценарии по ролям
+    # После выкладки — только удачной: пропущенная или упавшая выкладка ничего не выложила.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: e2e
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+
+      - run: npm ci
+
+      - name: Браузер
+        run: npx playwright install --with-deps chromium
+
+      - name: Контур отвечает
+        run: |
+          curl -sSf --max-time 20 "$UAT_BASE_URL/health"
+          echo
+
+      - name: Сценарии
+        run: npx playwright test
+
+      - name: Отчёт
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: uat-report
+          path: |
+            e2e/report
+            e2e/results
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Запись в итог прогона
+        if: always()
+        run: |
+          {
+            echo "### Приёмочные сценарии"
+            echo ""
+            echo "Контур: \`$UAT_BASE_URL\`. Отчёт Playwright — в артефакте uat-report."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  load:
+    name: Нагрузочный прогон
+    if: github.event_name == 'workflow_dispatch' && inputs.load_minutes != '0'
+    needs: e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: e2e
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Прогон
+        env:
+          MINUTES: ${{ inputs.load_minutes }}
+        run: node load/run.mjs --minutes "$MINUTES" | tee load.log
+
+      - name: Итог
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: uat-load
+          path: |
+            e2e/load/out
+            e2e/load.log
+          retention-days: 90
+          if-no-files-found: ignore

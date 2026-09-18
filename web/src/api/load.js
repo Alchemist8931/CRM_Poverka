@@ -128,6 +128,11 @@ export async function loadRoute(id) {
 export async function loadWaitList() {
   const { waits } = await api.get('/wait-list');
   S.waits = waits.map(M.waitFrom);
+  /* Заявки листа — из прежних дней и чужих маршрутов, в срезы экрана они не
+     попадают, а без заявки строка листа не рисуется. Докладываем недостающие. */
+  const missing = S.waits.map((w) => w.req).filter((id) => id && !S.requests.some((r) => r.id === id));
+  const cards = await Promise.all(missing.map((id) => api.get(`/requests/${id}`).catch(() => null)));
+  mergeRequests(cards.filter(Boolean).map((c) => ({ ...c.request, devices: c.devices, payment: c.payment })));
 }
 
 /** Подотчёт: сдачи за месяц и за предыдущий — экран показывает последнюю. */
@@ -149,6 +154,25 @@ export async function loadAudit() {
   }));
   S.audit = entries;
   S.auditTotal = total;
+}
+
+/** Очередь передачи во ФГИС «Аршин» по текущему отбору и список выгрузок.
+ *  Отбор, сводку и сроки считает сервер: экран показывает срез, а сводка
+ *  нужна по всей очереди — сколько просрочено вообще. */
+export async function loadArshin() {
+  const F = S.arshinF || {};
+  const [queue, { batches }] = await Promise.all([
+    api.get(q('/arshin/queue', { status: F.status, from: F.from, to: F.to, q: F.q, limit: 500 })),
+    api.get('/arshin/batches'),
+  ]);
+  S.arshin = queue.records;
+  S.arshinTotal = queue.total;
+  S.arshinSum = queue.summary;
+  S.arshinCh = queue.channel;
+  S.arshinCode = queue.org_code;
+  S.arshinDue = queue.due_workdays;
+  S.arshinAnswer = queue.answer_workdays;
+  S.arshinBatches = batches;
 }
 
 /** Шаблоны уведомлений и перечень подстановок для экрана «Услуги и ставки».
@@ -181,12 +205,14 @@ const LOADERS = {
     await loadRequests({ date: S.day });
   },
   async support() {
-    await Promise.all([loadDays(TODAY, TODAY), loadWaitList(), loadRoutes({ date: TODAY })]);
+    // День экрана: сегодня, а для обзвона накануне — завтра (screens/support.js).
+    const ds = S.supportDay || TODAY;
+    await Promise.all([loadDays(ds, ds), loadWaitList(), loadRoutes({ date: ds })]);
     // Свободные заявки дня: их оператор ставит в маршрут прямо со шкалы.
-    await loadRequests({ date: TODAY, free: true });
+    await loadRequests({ date: ds, free: true });
     /* Экран открывается на конкретном маршруте — так же, как в прототипе:
        общий режим на две сотни точек и перерисовывать тяжело, и грузить незачем. */
-    const mine = S.routes.filter((r) => r.date === TODAY).sort((a, b) => a.id.localeCompare(b.id));
+    const mine = S.routes.filter((r) => r.date === ds).sort((a, b) => a.id.localeCompare(b.id));
     if (!S.openRoute || !mine.some((r) => r.id === S.openRoute)) S.openRoute = mine[0]?.id || null;
     await loadRoute(S.openRoute);
   },
@@ -233,9 +259,15 @@ const LOADERS = {
     // учётной записи (логин, почта, временный ли пароль, замок входа).
     await loadRefs();
   },
+  async arshin() {
+    await loadArshin();
+  },
   async myroute() {
     await Promise.all([loadDays(TODAY, TODAY), loadRoutes({ date: TODAY })]);
-    const mine = S.routes.find((r) => r.date === TODAY && r.verifier === S.me);
+    // Выбранный в списке маршрут важнее сегодняшнего по умолчанию: у поверителя
+    // бывает два маршрута в день, и открытый им должен приехать с точками.
+    const mine = S.routes.find((r) => r.id === S.openRoute && r.verifier === S.me)
+      || S.routes.find((r) => r.date === TODAY && r.verifier === S.me);
     if (mine) await loadRoute(mine.id);
   },
 };

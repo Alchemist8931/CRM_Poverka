@@ -30,7 +30,7 @@ function viewMyRoute(){
     <div class="f" style="width:360px;margin-bottom:0"><label>Мои маршруты · ${mine.length}</label>
       ${SEL('myRt',rt.id,mine.slice(0,30).map(r=>({v:r.id,l:`${ru(r.date)} · ${r.city}`,
         hint:`${r.stops.filter(s=>s.done).length}/${r.stops.length} · ${r.status}`})),
-        v=>{ S.openRoute=v; S.openStop=null; })}</div>
+        v=>{ S.openRoute=v; S.openStop=null; if(!isDemo()) apiReload(); })}</div>
     <span class="note" style="flex:1">Выполнено ${done} из ${rt.stops.length} точек${mine.length>1?` · всего маршрутов ${mine.length}`:''}.</span>
   </div>`;
   return shell(null, `${cap()}${picker}${routeCard(rt)}${stop?workSheet(rt,stop):''}`);

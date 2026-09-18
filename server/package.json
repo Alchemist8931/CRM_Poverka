@@ -38,6 +38,7 @@
     "import": "tsx scripts/import/cli.mts",
     "check:import": "tsx scripts/check-import.mts",
     "init:accounts": "tsx scripts/init-accounts.mts",
+    "uat:stand": "tsx scripts/uat-stand.mts",
     "check:users": "tsx scripts/check-users.mts"
   },
   "dependencies": {

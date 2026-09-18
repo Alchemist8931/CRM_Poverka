@@ -6,6 +6,8 @@ import { S, nameOf } from '../state.js';
 import { TODAY, addDays, esc, iso, ru, today } from '../util.js';
 import { cap, shell } from '../ui/shell.js';
 import { toast } from '../ui/render.js';
+import { isDemo } from '../api/mode.js';
+import { decideAbsence as apiDecide, sendAbsence as apiSendAbsence } from '../api/actions.js';
 
 /* ---------- отсутствия ---------- */
 function viewAbsence(){

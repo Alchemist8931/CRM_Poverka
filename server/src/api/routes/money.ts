@@ -14,7 +14,7 @@ import { requireRole, requireUser } from '../auth.ts';
 import { notFound, ruleError } from '../errors.ts';
 import { loadDevices, loadServices } from '../store.ts';
 import {
-  PAY_HAND, PAY_METHODS, canSeeEarningsOf, payMethods, priceOf, type ClientType, type Role,
+  PAY_HAND, PAY_METHODS, canManageUsers, canSeeEarningsOf, payMethods, priceOf, type ClientType, type Role,
 } from '../../rules.ts';
 
 const MONTH = { type: 'string', pattern: '^\\d{4}-\\d{2}$' } as const;
@@ -219,8 +219,11 @@ const plugin: FastifyPluginAsync = async (app) => {
   }, async (req) => {
     const user = requireUser(req);
     const q = req.query as { month?: string; staff_id?: string };
-    const staffId = q.staff_id ?? user.id;
-    if (!canSeeEarningsOf(user.role as Role, user.id, staffId)) {
+    // Без сотрудника руководитель получает подотчёт всей бригады за месяц —
+    // так экран «Сдельная оплата» узнаёт, кто что сдал. Остальным без
+    // сотрудника отдаётся своё: чужой подотчёт им не положен.
+    const staffId = q.staff_id ?? (canManageUsers(user.role as Role) ? null : user.id);
+    if (staffId && !canSeeEarningsOf(user.role as Role, user.id, staffId)) {
       throw ruleError('Чужой подотчёт видит только руководитель.', 'role');
     }
     const month = q.month ?? new Date().toISOString().slice(0, 7);
@@ -231,13 +234,14 @@ const plugin: FastifyPluginAsync = async (app) => {
               coalesce(sum(p.amount) FILTER (WHERE p.method = 'перевод на карту'), 0)::text AS card,
               coalesce(sum(p.amount) FILTER (WHERE p.method = 'по счёту'), 0)::text AS acct,
               coalesce((SELECT sum(d.rate_verifier) FROM requests r2 JOIN devices d ON d.request_id = r2.id
-                         WHERE r2.status = 'выполнена' AND r2.verifier_id = $1
+                         WHERE r2.status = 'выполнена' AND ($1::text IS NULL OR r2.verifier_id = $1)
                            AND to_char(r2.date, 'YYYY-MM') = $2), 0)::text AS wage
          FROM payments p JOIN requests r ON r.id = p.request_id
-        WHERE r.status = 'выполнена' AND r.verifier_id = $1 AND to_char(r.date, 'YYYY-MM') = $2`,
+        WHERE r.status = 'выполнена' AND ($1::text IS NULL OR r.verifier_id = $1) AND to_char(r.date, 'YYYY-MM') = $2`,
       [staffId, month]);
     const { rows: hos } = await app.db.query(
-      `SELECT *, at::text AS at FROM handovers WHERE staff_id = $1 AND period = $2 ORDER BY handovers.at`, [staffId, month]);
+      `SELECT *, at::text AS at FROM handovers
+        WHERE ($1::text IS NULL OR staff_id = $1) AND period = $2 ORDER BY handovers.at`, [staffId, month]);
     const got = Number(money[0]!.cash) + Number(money[0]!.card);
     const given = hos.reduce((a, h) => a + Number((h as { amount: number }).amount), 0);
     const wage = Number(money[0]!.wage);

@@ -7,7 +7,6 @@
  *   npm test
  */
 import { strict as assert } from 'node:assert';
-import { createHmac } from 'node:crypto';
 import { describe, it } from 'node:test';
 import { AFTER, TOMORROW, as, draft, login, makeStand } from './helpers.ts';
 
@@ -485,34 +484,19 @@ describe('деньги', () => {
 });
 
 describe('вебхук звонков', () => {
-  const payload = {
-    pbx_id: 'call-1', direction: 'входящий', from: '+79123456789', to: '+73432000000',
-    started: '2026-09-16T10:00:00+05:00', duration_sec: 42, disposition: 'отвечен', operator_ext: '102',
-  };
-
-  it('без подписи приёмник не принимает, с подписью заводит звонок', async () => {
-    process.env.NOVOFON_WEBHOOK_SECRET = 'ключ-вебхука';
+  /* Разбор уведомлений обеих платформ, подписи и повторные доставки — в
+     test/novofon.test.ts (пункт int-novofon). Здесь остаётся одно: приёмник
+     по умолчанию собран под платформу 2.0 и без секрета в адресе не принимает
+     ничего — ни с телом, ни без. */
+  it('без секрета в адресе приёмник не принимает уведомление', async () => {
     const st = await makeStand();
-    const raw = JSON.stringify(payload);
-    const nope = await st.app.inject({
-      method: 'POST', url: '/api/webhooks/novofon', headers: { 'content-type': 'application/json' }, payload: raw,
-    });
-    assert.equal(nope.statusCode, 401);
-
-    const sign = createHmac('sha256', 'ключ-вебхука').update(raw).digest('hex');
-    const ok = await st.app.inject({
-      method: 'POST', url: '/api/webhooks/novofon',
-      headers: { 'content-type': 'application/json', 'x-signature': sign }, payload: raw,
-    });
-    assert.equal(ok.statusCode, 200, ok.body);
-    assert.equal(body(ok).accepted, true);
-
+    const event = { event: 'call_started', call_session_id: 'cs-api-1', numa: '79123456789', numb: '73432000000' };
+    const bare = await st.app.inject({ method: 'POST', url: '/api/webhooks/novofon', payload: event });
+    assert.equal(bare.statusCode, 401, bare.body);
+    const wrong = await st.app.inject({ method: 'POST', url: '/api/webhooks/novofon/не-тот-секрет', payload: event });
+    assert.equal(wrong.statusCode, 401, wrong.body);
     const op = as(st.app, await login(st.app, 'o1'));
-    const calls = body(await op.get('/api/calls')).calls;
-    assert.equal(calls.length, 1);
-    assert.equal(calls[0].client_phone, '+79123456789');
-    assert.equal(calls[0].operator_id, 'o1', 'звонок привязался к оператору по внутреннему номеру');
-    delete process.env.NOVOFON_WEBHOOK_SECRET;
+    assert.equal(body(await op.get('/api/calls')).calls.length, 0, 'отвергнутое уведомление звонка не заводит');
     await st.close();
   });
 });

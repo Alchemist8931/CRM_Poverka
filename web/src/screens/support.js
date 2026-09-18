@@ -2,14 +2,17 @@
 
 import { I, svg } from '../ui/icons.js';
 import { S, nameOf } from '../state.js';
-import { TODAY, esc, pad, ru } from '../util.js';
+import { TODAY, addDays, esc, iso, pad, ru, today } from '../util.js';
 import { addrOf, payLine } from '../rules.js';
 import { badTag } from '../refs.js';
 import { cap, shell } from '../ui/shell.js';
 import { render, toast } from '../ui/render.js';
+import { SEG } from '../ui/controls.js';
+import { reload as apiReload } from '../api/load.js';
 import { isDemo } from '../api/mode.js';
 import { addStop as apiAddStop, shiftReq as apiShiftReq } from '../api/actions.js';
 import { waitList } from './wait-list.js';
+import { routeCard } from './routes.js';
 
 /* ---------- логистика ---------- */
 function poolOf(ds,city){
@@ -19,7 +22,15 @@ function poolOf(ds,city){
 /* ============ ПОДДЕРЖКА МАРШРУТОВ ============ */
 const HOURS = Array.from({length:13},(_,i)=>9+i);   // рабочее окно дня 9:00–21:00
 const stTag = s => `<span class="tg ${s==='выполнен'?'t-ok':s==='в работе'?'t-warn':s==='обзвонен'?'t-cold':'t-mut'}">${s}</span>`;
-const routesToday = () => S.routes.filter(r=>r.date===TODAY);
+/* День экрана: сегодня по умолчанию, завтра — для обзвона накануне. Обзвон
+   идёт вечером перед выездом, и без переключателя завтрашний маршрут
+   оператору было бы не открыть (замечание 4 в docs/uat.md). */
+const supportDay = () => S.supportDay || TODAY;
+const routesToday = () => S.routes.filter(r=>r.date===supportDay());
+function pickSupportDay(v){
+  S.supportDay = v; S.openRoute = null; render();
+  if(!isDemo()) apiReload();
+}
 
 function viewSupport(){
   const list = routesToday();
@@ -30,8 +41,9 @@ function viewSupport(){
     .filter(x=>x.r);
   const all = list.reduce((a,r)=>a+r.stops.length,0);
   const called = stops.filter(x=>x.s.called).length, done = stops.filter(x=>x.s.done).length;
-  const free = S.requests.filter(r=>r.date===TODAY && !r.routeId && r.status==='создана');
-  const side = `<div class="lbl" style="padding:6px 10px 8px">Маршруты · ${ru(TODAY)}</div>
+  const free = S.requests.filter(r=>r.date===supportDay() && !r.routeId && r.status==='создана');
+  const side = `<div class="lbl" style="padding:6px 10px 8px">Маршруты · ${ru(supportDay())}</div>
+    <div style="padding:0 10px 8px">${SEG(supportDay(),[{v:TODAY,l:'Сегодня'},{v:iso(addDays(today,1)),l:'Завтра'}],'pickSupportDay($v)',{sm:true})}</div>
     <button class="sb" aria-current="${!sel}" onclick="S.openRoute=null;render()">
       <span>Все маршруты</span><span class="n">${all}</span></button>
     ${list.map(rt=>`<div class="rrow ${sel&&sel.id===rt.id?'on':''}">
@@ -42,7 +54,7 @@ function viewSupport(){
       <button class="ib sm" title="Чат маршрута ${rt.id}" onclick="S.modal={k:'chat',id:'${rt.id}'};render()">
         ${svg(I.chat,14)}${rt.chat.length?`<span class="cnt">${rt.chat.length}</span>`:''}</button>
     </div>`).join('')}
-    ${list.length?'':`<p class="note" style="padding:8px 10px">На сегодня маршрутов нет.</p>`}`;
+    ${list.length?'':`<p class="note" style="padding:8px 10px">На этот день маршрутов нет.</p>`}`;
 
   return shell(side, `${cap()}
   <div class="c">
@@ -58,6 +70,8 @@ function viewSupport(){
         :`<span class="note" style="max-width:340px">Общий режим тяжёлый: на шкале сразу ${all} заявок. Для работы удобнее выбрать маршрут слева.</span>`}
     </div></div>
 
+  ${sel?routeCard(sel):''}
+
   <div class="c"><h3>Шкала дня</h3>
     <p class="cap">Стрелки сдвигают заявку на час — окно прибытия пересчитывается автоматически.</p>
     <div class="tlg">${HOURS.map(h=>{
@@ -72,7 +86,7 @@ function viewSupport(){
   ${waitList()}
 
   <div class="c"><h3>Заявки без маршрута · ${free.length}</h3>
-    <p class="cap">Созданные сегодня и ещё не поставленные в маршрут. Добавляются в маршрут дня по городу.</p>
+    <p class="cap">Принятые на этот день и ещё не поставленные в маршрут. Добавляются в маршрут дня по городу.</p>
     ${free.length?`<table><thead><tr><th>Заявка</th><th>Город</th><th>Адрес</th><th>Клиент</th><th class="num">Окно</th><th>В маршрут</th></tr></thead><tbody>
       ${free.slice(0,12).map(r=>{const fit=list.filter(rt=>rt.city===r.city);
         return `<tr><td class="mono">${r.id}</td><td>${r.city}</td><td><b>${esc(addrOf(r))}</b></td>
@@ -81,7 +95,7 @@ function viewSupport(){
           ? fit.map(rt=>`<button class="g sm" style="margin:0 4px 4px 0" onclick="addToRoute('${rt.id}','${r.id}')">${rt.id}</button>`).join('')
           : '<span class="note">нет маршрута по этому городу</span>'}</td></tr>`}).join('')}</tbody></table>
       ${free.length>12?`<p class="note" style="margin-top:10px">Показаны первые 12 из ${free.length}.</p>`:''}`
-      :`<div class="empty">Все сегодняшние заявки разложены по маршрутам.</div>`}</div>`);
+      :`<div class="empty">Все заявки этого дня разложены по маршрутам.</div>`}</div>`);
 }
 /* Миниатюра заявки на шкале: город, улица и две кнопки — открыть и позвонить. */
 function chip({rt,s,i,r}){
@@ -121,4 +135,4 @@ function addToRoute(rid,reqId){
   toast(`${r.id} добавлена в ${rt.id} на ${pad(r.time-1)}:00–${pad(r.time+1)}:00.`);
 }
 
-export { HOURS, addToRoute, chip, poolOf, routesToday, shiftReq, stTag, viewSupport };
+export { HOURS, addToRoute, chip, pickSupportDay, poolOf, routesToday, shiftReq, stTag, supportDay, viewSupport };
