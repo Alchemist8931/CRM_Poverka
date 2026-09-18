@@ -268,7 +268,12 @@ const LOADERS = {
     // бывает два маршрута в день, и открытый им должен приехать с точками.
     const mine = S.routes.find((r) => r.id === S.openRoute && r.verifier === S.me)
       || S.routes.find((r) => r.date === TODAY && r.verifier === S.me);
-    if (mine) await loadRoute(mine.id);
+    if (mine) {
+      await loadRoute(mine.id);
+      // Экран показывает S.openRoute: при двух маршрутах в день он должен
+      // совпадать с тем, что дочитан с точками, а не с первым по списку.
+      S.openRoute = mine.id;
+    }
   },
 };
 

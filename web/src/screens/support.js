@@ -31,6 +31,12 @@ function pickSupportDay(v){
   S.supportDay = v; S.openRoute = null; render();
   if(!isDemo()) apiReload();
 }
+/* Маршрут в списке слева: список приходит с сервера счётчиками, без точек, —
+   выбранный маршрут надо дочитать, иначе карточка и шкала дня пустые. */
+function pickRoute(id){
+  S.openRoute = id; render();
+  if(!isDemo()) apiReload();
+}
 
 function viewSupport(){
   const list = routesToday();
@@ -47,7 +53,7 @@ function viewSupport(){
     <button class="sb" aria-current="${!sel}" onclick="S.openRoute=null;render()">
       <span>Все маршруты</span><span class="n">${all}</span></button>
     ${list.map(rt=>`<div class="rrow ${sel&&sel.id===rt.id?'on':''}">
-      <button class="sb" aria-current="${sel&&sel.id===rt.id}" onclick="S.openRoute='${rt.id}';render()">
+      <button class="sb" aria-current="${sel&&sel.id===rt.id}" onclick="pickRoute('${rt.id}')">
         <span style="min-width:0"><span class="mono" style="font-size:12px">${rt.id}</span>
         <span style="display:block;font-size:11px;color:var(--ink3);overflow:hidden;text-overflow:ellipsis">${rt.city} · ${rt.verifier?esc(nameOf(rt.verifier)):'не назначен'}</span></span>
         <span class="n">${rt.stops.filter(s=>s.done).length}/${rt.stops.length}</span></button>
@@ -135,4 +141,4 @@ function addToRoute(rid,reqId){
   toast(`${r.id} добавлена в ${rt.id} на ${pad(r.time-1)}:00–${pad(r.time+1)}:00.`);
 }
 
-export { HOURS, addToRoute, chip, pickSupportDay, poolOf, routesToday, shiftReq, stTag, supportDay, viewSupport };
+export { HOURS, addToRoute, chip, pickRoute, pickSupportDay, poolOf, routesToday, shiftReq, stTag, supportDay, viewSupport };
