@@ -71,14 +71,18 @@ test('адрес 1: два прибора, пенсионер, фото, вто�
   if (storage) {
     // Кадр идёт из браузера прямо в бакет: если правило CORS бакета не пускает
     // этот адрес, загрузка молча не начнётся — ловим подсказку экрана, а не таймаут.
-    const failed = [];
-    page.on('console', (m) => { if (/кадр|загруз/i.test(m.text())) failed.push(m.text()); });
+    const corsBlocked = new Promise((res) => page.on('console', (m) => {
+      if (/Access to fetch|CORS|storage\.yandexcloud/i.test(m.text())) res(`CORS: ${m.text().slice(0, 160)}`);
+    }));
     await page.setInputFiles(`#ph${req}_0`, ROOT + 'fixtures/meter.jpg');
     const outcome = await Promise.race([
       until(page, (id) => (window.S.requests.find((r) => r.id === id)?.devices[0]?.photos || []).length === 1, req, 60_000).then(() => 'ok'),
       page.waitForFunction(() => [...document.querySelectorAll('.toast')].some((t) => /не загруз|не долетел|не удалось/i.test(t.textContent)), null, { timeout: 60_000 })
         .then(() => page.evaluate(() => [...document.querySelectorAll('.toast')].map((t) => t.textContent).join(' | '))),
+      corsBlocked,
     ]).catch((e) => `таймаут: ${e.message.slice(0, 120)}`);
+    // Отказ браузера положить кадр в бакет — не ошибка экрана, она учтена ниже.
+    for (let i = errors.length - 1; i >= 0; i--) if (/Access to fetch|storage\.yandexcloud/i.test(errors[i])) errors.splice(i, 1);
     if (outcome === 'ok') {
       const thumb = await page.evaluate((id) => window.S.requests.find((r) => r.id === id).devices[0].photos[0], req);
       expect(thumb.thumb || thumb.url || thumb.id, 'кадр записан в акт с миниатюрой').toBeTruthy();
