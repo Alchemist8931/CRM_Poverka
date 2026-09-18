@@ -113,7 +113,10 @@ function sheet(book: ExcelJS.Workbook, title: string, columns: { header: string;
 
 const db = await connect();
 try {
-  const [requests, devices, payments] = await Promise.all([q(db, REQUESTS), q(db, DEVICES), q(db, PAYMENTS)]);
+  // По очереди: одно соединение, второй запрос поверх незавершённого pg не любит.
+  const requests = await q(db, REQUESTS);
+  const devices = await q(db, DEVICES);
+  const payments = await q(db, PAYMENTS);
 
   const book = new ExcelJS.Workbook();
   book.creator = 'CRM «Учёткин»';
