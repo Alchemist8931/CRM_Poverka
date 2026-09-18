@@ -49,6 +49,14 @@ write_files:
       PGPORT=${pg_port}
       PGDATABASE=${pg_database}
       PGUSER=${pg_user}
+%{ if managed_postgres ~}
+      # Managed PostgreSQL принимает только TLS; сертификат кластера подписан
+      # корневым сертификатом облака, который лежит в образе API
+      # (server/certs/yandex-cloud-ca.pem). Строку подключения с этими
+      # параметрами собирает server/src/secrets.ts.
+      PGSSLMODE=verify-full
+      PGSSLROOTCERT=/app/certs/yandex-cloud-ca.pem
+%{ endif ~}
       LOCKBOX_DB_SECRET_ID=${lockbox_db_secret_id}
       LOCKBOX_APP_SECRET_ID=${lockbox_app_secret_id}
       LOCKBOX_STORAGE_SECRET_ID=${lockbox_storage_secret_id}

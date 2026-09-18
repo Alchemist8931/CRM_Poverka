@@ -12,6 +12,11 @@ RUN npm ci --omit=dev
 COPY tsconfig.json ./
 COPY src ./src
 COPY migrations ./migrations
+# Корневой сертификат Яндекс Облака: им проверяется TLS до Managed PostgreSQL
+# (sslmode=verify-full, путь уезжает в app.env переменной PGSSLROOTCERT).
+# Открытый сертификат, секретом не является; источник —
+# https://storage.yandexcloud.net/cloud-certs/CA.pem, срок — docs/ops.md.
+COPY certs ./certs
 
 ENV NODE_ENV=production
 ENV PORT=3000

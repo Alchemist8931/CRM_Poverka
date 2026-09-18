@@ -19,6 +19,15 @@ on:
         description: Тег образов в Container Registry (короткий SHA сборки)
         required: true
         type: string
+      build:
+        description: >-
+          Собрать образы этого тега в реестр контура перед выкладкой. Реестр у
+          каждого контура свой (infra/registry.tf), и в prod образы попадают только
+          так — сборкой того же коммита, который уже проверен в dev. Если образы
+          с этим тегом в реестре уже есть (откат), сборка пропускается.
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -42,20 +51,57 @@ jobs:
       TAG: ${{ inputs.tag }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Сборка (build = true) идёт из коммита тега, а не из main: тег — это
+          # короткий SHA, и без полной истории его не найти.
+          fetch-depth: 0
 
       - name: Проверить, что контур настроен
         env:
           SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SA_KEY: ${{ secrets.YC_SA_KEY }}
         run: |
           missing=""
           [ -n "$SSH_HOST" ]    || missing="$missing vars.DEPLOY_HOST"
           [ -n "$SSH_USER" ]    || missing="$missing vars.DEPLOY_USER"
           [ -n "$REGISTRY_ID" ] || missing="$missing vars.YC_REGISTRY_ID"
           [ -n "$SSH_KEY" ]     || missing="$missing secrets.DEPLOY_SSH_KEY"
+          if [ "${{ inputs.build }}" = true ] && [ -z "$SA_KEY" ]; then
+            missing="$missing secrets.YC_SA_KEY"
+          fi
           if [ -n "$missing" ]; then
             echo "Не заданы:$missing — см. docs/release.md, раздел «Что должно быть настроено»" >&2
             exit 1
           fi
+
+      # Образы для prod собираются здесь же, а не берутся из реестра dev: реестр
+      # у каждого контура свой, и ключ на запись в реестр prod лежит только в
+      # окружении prod. Собирается ровно тот коммит, чей SHA стоит в теге.
+      - name: Собрать образы тега в реестр контура
+        if: inputs.build
+        env:
+          SA_KEY: ${{ secrets.YC_SA_KEY }}
+        run: |
+          sha=$(git rev-parse --verify --quiet "${TAG}^{commit}") || {
+            echo "Коммит с SHA ${TAG} в истории не найден: тег — это короткий SHA коммита из main" >&2
+            exit 1
+          }
+          printf '%s' "$SA_KEY" | docker login --username json_key --password-stdin cr.yandex
+          git checkout --quiet --detach "$sha"
+          for name in api web; do
+            image="cr.yandex/${REGISTRY_ID}/uchetkin-${name}:${TAG}"
+            if docker manifest inspect "$image" >/dev/null 2>&1; then
+              echo "${image} уже в реестре — сборка пропущена (откат на выложенный ранее тег)"
+              continue
+            fi
+            case "$name" in
+              api) context=server ;;
+              web) context=web ;;
+            esac
+            docker build -t "$image" "$context"
+            docker push "$image"
+          done
+          git checkout --quiet --detach "$GITHUB_SHA"
 
       - name: Ключ доступа и известный хост
         env:

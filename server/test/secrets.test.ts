@@ -122,6 +122,25 @@ describe('секреты приложения приходят из Lockbox', ()
     );
   });
 
+  it('Managed PostgreSQL: режим TLS и корневой сертификат уходят в строку подключения', async () => {
+    const env: NodeJS.ProcessEnv = {
+      LOCKBOX_DB_SECRET_ID: 'db-secret',
+      PGSSLMODE: 'verify-full',
+      PGSSLROOTCERT: '/app/certs/yandex-cloud-ca.pem',
+    };
+    await secrets.loadSecrets(env);
+    assert.equal(
+      env.DATABASE_URL,
+      'postgres://uchetkin:%D0%BF%40%D1%80%D0%BE%D0%BB%D1%8C%3A%D1%81%2F%D0%B7%D0%BD%D0%B0%D0%BA%D0%B0%D0%BC%D0%B8'
+      + '@rc1a-xxx.mdb.yandexcloud.net:6432/uchetkin?sslmode=verify-full&sslrootcert=%2Fapp%2Fcerts%2Fyandex-cloud-ca.pem',
+    );
+    // Без PGSSLMODE (база контейнером в dev) строка остаётся без параметров.
+    assert.equal(
+      secrets.databaseUrlFrom({ host: 'h', port: '5432', database: 'd', username: 'u', password: 'p' }),
+      'postgres://u:p@h:5432/d',
+    );
+  });
+
   it('в секрете базы не хватает записи — видно, какой', () => {
     assert.throws(
       () => secrets.databaseUrlFrom({ host: 'h', port: '5432', database: 'd' }),

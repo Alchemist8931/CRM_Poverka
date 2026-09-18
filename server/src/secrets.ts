@@ -64,14 +64,38 @@ export async function readSecret(id: string, token: string): Promise<Entries> {
   return out;
 }
 
+/** Как шифровать соединение с базой. Значения приходят из `/etc/uchetkin/app.env`
+ *  (cloud-init пишет их только при Managed PostgreSQL): `PGSSLMODE=verify-full`
+ *  и путь к корневому сертификату облака, который лежит в образе
+ *  (`server/certs/yandex-cloud-ca.pem`, Dockerfile). Без них — как раньше:
+ *  контейнер базы в dev шифрования не держит. */
+export interface DbSsl {
+  sslmode?: string;
+  sslrootcert?: string;
+}
+
+export function dbSslFrom(env: NodeJS.ProcessEnv): DbSsl {
+  return { sslmode: env.PGSSLMODE || undefined, sslrootcert: env.PGSSLROOTCERT || undefined };
+}
+
 /** Строка подключения из записей секрета базы (infra/lockbox.tf, секрет `db`).
- *  Пароль и имя экранируются: в них попадаются знаки, ломающие разбор адреса. */
-export function databaseUrlFrom(e: Entries): string {
+ *  Пароль и имя экранируются: в них попадаются знаки, ломающие разбор адреса.
+ *
+ *  Managed PostgreSQL принимает только TLS: с голым `sslmode=require` драйвер
+ *  сертификат облака не признаёт (учения cloud-ops, 18.09.2026), поэтому режим
+ *  и корневой сертификат передаются в строке явно — `pg-connection-string`
+ *  читает `sslrootcert` с диска и проверяет имя хоста при `verify-full`. */
+export function databaseUrlFrom(e: Entries, ssl: DbSsl = {}): string {
   const missing = ['host', 'port', 'database', 'username', 'password'].filter((k) => !e[k]);
   if (missing.length) throw new Error(`В секрете базы нет записей: ${missing.join(', ')}`);
   const user = encodeURIComponent(e.username!);
   const password = encodeURIComponent(e.password!);
-  return `postgres://${user}:${password}@${e.host}:${e.port}/${e.database}`;
+  const url = `postgres://${user}:${password}@${e.host}:${e.port}/${e.database}`;
+  const params = new URLSearchParams();
+  if (ssl.sslmode) params.set('sslmode', ssl.sslmode);
+  if (ssl.sslrootcert) params.set('sslrootcert', ssl.sslrootcert);
+  const query = params.toString();
+  return query ? `${url}?${query}` : url;
 }
 
 /** Чего не хватает окружению и из какого секрета это берётся. */
@@ -107,7 +131,7 @@ export async function loadSecrets(env: NodeJS.ProcessEnv = process.env): Promise
   for (const { name, secretId } of needed) {
     const entries = await readSecret(secretId, token);
     if (name === 'DATABASE_URL') {
-      env.DATABASE_URL = databaseUrlFrom(entries);
+      env.DATABASE_URL = databaseUrlFrom(entries, dbSslFrom(env));
     } else if (name === 'SESSION_SECRET') {
       // Ключ подписи сессий лежит в секрете приложения. Отдельной записи под
       // него нет — берётся jwt_secret, тот же по смыслу и той же длины.
