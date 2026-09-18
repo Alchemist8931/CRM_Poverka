@@ -1,6 +1,13 @@
 locals {
   prefix = "${var.project}-${var.env}"
 
+  # Имя ВМ и её имя хоста. У принятой в состояние машины имя задаётся явно:
+  # hostname — поле пересоздания, вычислять его из префикса там нельзя.
+  vm_name = var.vm_name != "" ? var.vm_name : "${local.prefix}-app"
+
+  # Образ загрузочного диска: либо явный, либо последний в семействе.
+  vm_image_id = var.vm_image_id != "" ? var.vm_image_id : data.yandex_compute_image.vm[0].id
+
   labels = merge(
     {
       project = var.project
@@ -17,6 +24,11 @@ locals {
   audit_bucket  = "${local.prefix}-audit${local.bucket_suffix}"
 
   use_alb = var.ingress_mode == "alb"
+
+  # Сертификат на ВМ держит Caddy — но только когда есть чему подтверждать
+  # владение доменом. Пока A-записи нет, tls_enabled = false, и Caddy слушает
+  # :80 (cloud-init пишет это в /etc/uchetkin/caddy.env).
+  tls_by_caddy = !local.use_alb && var.tls_enabled
 
   # Smart Web Security привязывается только к виртуальному хосту ALB.
   # Без балансировщика профиль не к чему прикрепить, поэтому он не создаётся.

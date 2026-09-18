@@ -139,9 +139,12 @@ resource "yandex_lockbox_secret_iam_binding" "app_storage" {
 }
 
 resource "yandex_lockbox_secret_iam_binding" "app_external" {
-  for_each = yandex_lockbox_secret.external
+  # Перебор идёт по самой переменной, а не по yandex_lockbox_secret.external:
+  # ключи набора обязаны быть известны до применения, а набор ресурсов целиком
+  # до первого apply неизвестен — с ним Terraform отказывается даже строить план.
+  for_each = var.lockbox_external_secrets
 
-  secret_id = each.value.id
+  secret_id = yandex_lockbox_secret.external[each.key].id
   role      = "lockbox.payloadViewer"
   members   = ["serviceAccount:${yandex_iam_service_account.app.id}"]
 }

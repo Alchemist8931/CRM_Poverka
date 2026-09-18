@@ -169,6 +169,15 @@ write_files:
       # Платформенная часть: она есть на ВМ с первого запуска и не зависит
       # от выкладки приложения. Сборка и обновление контейнеров api, worker и
       # caddy — пункт плана cloud-cicd.
+      #
+      # Своё имя проекта обязательно. Без него Compose берёт имя проекта из
+      # имени каталога, то есть «uchetkin», — ровно то же, что стоит в
+      # deploy/compose.yml. Тогда агент мониторинга оказывается для выкладки
+      # чужим контейнером её же проекта, и `docker compose up -d
+      # --remove-orphans` из deploy.sh сносит его при каждом релизе.
+      # Проверено на живой машине 18.09.2026: агент был снесён именно так.
+      name: uchetkin-platform
+
       services:
         unified-agent:
           image: ${monitoring_agent_image}
@@ -180,7 +189,15 @@ write_files:
           environment:
             - FOLDER_ID=${folder_id}
           volumes:
-            - /etc/uchetkin/unified-agent.yml:/etc/yandex/unified_agent/config.yml:ro
+            # Своя конфигурация подкладывается образу как шаблон, а не как
+            # готовый config.yml. Точка входа образа делает ровно одно:
+            #   eval echo "$(cat config.tmpl.yml)" > config.yml
+            # и затем запускает агент с config.yml. Поэтому монтировать нашу
+            # конфигурацию на config.yml нельзя: под :ro точка входа падает с
+            # «cannot create config.yml: Read-only file system» и контейнер
+            # уходит в вечный перезапуск, а без :ro она перезатирает нашу
+            # конфигурацию своим шаблоном. Проверено на живой машине 18.09.2026.
+            - /etc/uchetkin/unified-agent.yml:/etc/yandex/unified_agent/config.tmpl.yml:ro
             - /var/lib/yandex/unified_agent:/var/lib/yandex/unified_agent
             - /proc:/ua_proc:ro
 

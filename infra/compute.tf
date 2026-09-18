@@ -1,14 +1,16 @@
 data "yandex_compute_image" "vm" {
+  count = var.vm_image_id == "" ? 1 : 0
+
   family = var.vm_image_family
 }
 
 resource "yandex_compute_instance" "app" {
-  name        = "${local.prefix}-app"
+  name        = local.vm_name
   description = "CRM «Учёткин»: caddy, api, worker под Docker Compose"
   folder_id   = var.folder_id
   zone        = var.zone
   platform_id = var.vm_platform_id
-  hostname    = "${local.prefix}-app"
+  hostname    = local.vm_name
   labels      = local.labels
 
   service_account_id        = yandex_iam_service_account.app.id
@@ -22,7 +24,7 @@ resource "yandex_compute_instance" "app" {
 
   boot_disk {
     initialize_params {
-      image_id = data.yandex_compute_image.vm.id
+      image_id = local.vm_image_id
       size     = var.vm_disk_size
       type     = var.vm_disk_type
     }
@@ -51,6 +53,14 @@ resource "yandex_compute_instance" "app" {
     enable-oslogin     = var.enable_oslogin ? "true" : "false"
     serial-port-enable = var.serial_port_enable ? "1" : "0"
   }
+
+  lifecycle {
+    # Ключ cloudbackup в метаданных ведёт не Terraform, а служба Cloud Backup:
+    # она пишет туда отметку установки агента при подключении машины к политике
+    # резервного копирования. В описании его нет, и без этого исключения
+    # Terraform стирал бы отметку на каждом apply.
+    ignore_changes = [metadata["cloudbackup"]]
+  }
 }
 
 locals {
@@ -68,7 +78,7 @@ locals {
     cookie_domain             = local.cookie_domain
     api_path_prefix           = var.api_path_prefix
     health_check_path         = var.health_check_path
-    tls_by_caddy              = !local.use_alb
+    tls_by_caddy              = local.tls_by_caddy
     acts_bucket               = local.acts_bucket
     calls_bucket              = local.calls_bucket
     managed_postgres          = var.managed_postgres
