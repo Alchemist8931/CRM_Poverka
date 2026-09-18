@@ -58,7 +58,8 @@ export async function loadRefs() {
   for (const key of Object.keys(SVC)) delete SVC[key];
   for (const s of SERVICES) SVC[s.id] = s;
 
-  refill(DEV_TYPES, types.device_types.map((t) => ({ v: t.name, grsi: t.grsi })));
+  // Межповерочный интервал (mpi) нужен свидетельству о поверке: «действительно до».
+  refill(DEV_TYPES, types.device_types.map((t) => ({ v: t.name, grsi: t.grsi, mpi: t.interval_years })));
   S.staff = staff.staff.map(M.staffFrom);
 }
 

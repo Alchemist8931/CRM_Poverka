@@ -36,7 +36,8 @@ const I = {
   audit:'<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H17a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6.5A2.5 2.5 0 0 1 4 18.5z"/><path d="M4 17.5h15"/><path d="M8 7.5h7M8 11h5"/>',
   nav:'<path d="M3 11l18-8-8 18-2-8z"/>',
   staff:'<rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2.5"/><path d="M5.5 17a3.5 3.5 0 0 1 7 0"/><path d="M15 9h3M15 13h3"/>',
-  key:'<circle cx="8" cy="15" r="4"/><path d="M10.8 12.2L21 2"/><path d="M15 8l3 3M18 5l3 3"/>'
+  key:'<circle cx="8" cy="15" r="4"/><path d="M10.8 12.2L21 2"/><path d="M15 8l3 3M18 5l3 3"/>',
+  print:'<path d="M6 9V3h12v6"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="7"/>'
 };
 const svg = (p,w=20) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:${w}px;height:${w}px;flex-shrink:0">${p}</svg>`;
 

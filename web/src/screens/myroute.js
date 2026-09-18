@@ -15,6 +15,7 @@ import { addDevice as apiAddDevice, closeAct as apiCloseAct, dropDevice as apiDr
   flushDevices } from '../api/actions.js';
 import { reload as apiReload } from '../api/load.js';
 import { routeCard } from './routes.js';
+import { printButtons } from './print.js';
 
 /* ---------- поверитель ---------- */
 function viewMyRoute(){
@@ -60,8 +61,8 @@ function workSheet(rt,s){
         <button class="g sm" onclick="startCall('${esc(r.phone)}','основной','${esc(r.name)}')">${svg(I.phone,12)}Клиент</button></div>
     </div>
     <p class="cap">Услуга, заводской номер и показания счётчика — в строке прибора. К каждому прибору — фото выполненных работ, несколько кадров.
-      Результат поверки отмечается тут же: «годен» или «не годен». Акт и свидетельство о непригодности вы заполняете на бумажном бланке от руки —
-      CRM пока ничего не печатает, ей нужен только результат и номер выданного бланка.</p>
+      Результат поверки отмечается тут же: «годен» или «не годен». После закрытия позиции акт и свидетельства о поверке на годные приборы
+      печатаются кнопками внизу; свидетельство о непригодности по-прежнему заполняется на бумажном бланке — CRM хранит его номер.</p>
     ${r.cmtVf?`<div class="actnote"><b>Комментарий для поверителей</b>${esc(r.cmtVf)}</div>`:''}
     ${r.devices.map((d,i)=>`<div class="wrow ${d.photos.length?'':'new'} ${d.bad?'bad':''} ${d.swap?'swap':''}">
       <div class="wtop">
@@ -90,7 +91,7 @@ function workSheet(rt,s){
         ${CHK(d.blank,'выдан бланк о непригодности',`setDev('${r.id}',${i},'blank',${!d.blank})`)}
         ${d.blank?`<input class="fld sm mono no" id="bl${r.id}_${i}" value="${esc(d.blankNo)}"
           oninput="setDev('${r.id}',${i},'blankNo',this.value)" placeholder="№ бланка"
-          title="Номер бумажного бланка: нумерацию ведёт руководитель, печатных форм в CRM пока нет">`:''}
+          title="Номер бумажного бланка о непригодности: нумерацию ведёт руководитель, из CRM печатаются только акт и свидетельство о поверке">`:''}
         ${d.repl==='предложена'
           ? `<span class="tg t-cold">замена предложена · строка ниже</span>
              <button class="g sm" onclick="postponeRepl('${r.id}',${i})" title="Передумал на месте: строка замены уйдёт из акта, адрес — в лист ожидания оператора">Клиент отказался</button>`
@@ -134,6 +135,7 @@ function workSheet(rt,s){
           : `Счёт юрлицу: <b>${money(p.amount)}</b> придут на расчётный счёт, в подотчёт не попадают${diff?` · расхождение с прайсом ${diff>0?'+':'−'}${money(Math.abs(diff))}`:''}.`}</div>
     </div>
     <div class="row" style="margin-top:14px;justify-content:flex-end">
+      ${s.done?printButtons(r):''}
       ${s.unserved?`<button class="g" onclick="clearUnserved('${rt.id}',${i0})">Вернуть в работу</button>`
         :s.done?`<button class="g" onclick="reopenStop('${rt.id}',${i0})">Вернуть в работу</button>`
         :`<button class="b" onclick="closeStop('${rt.id}',${i0})" ${r.devices.length?'':'disabled'}>Закрыть позицию</button>`}</div>

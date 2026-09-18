@@ -18,6 +18,7 @@ import { seedAudit } from './demo/audit.js';
 import { INTRO } from './ui/brand.js';
 import { render, step } from './ui/render.js';
 import { closeModal } from './ui/modals.js';
+import { closePrint } from './screens/print.js';
 import { lbMove } from './ui/lightbox.js';
 import { opTick } from './screens/op-console.js';
 import { NET } from './net.js';
@@ -30,6 +31,7 @@ document.addEventListener('keydown', (e) => {
   if(e.key==='Escape'){
     if(S.dd){ S.dd=null; render(); return; }
     if(S.lb){ S.lb=null; render(); return; }
+    if(S.print){ closePrint(); return; }
     if(S.modal){ closeModal(); return; }
   }
   if(!S.auth) return;

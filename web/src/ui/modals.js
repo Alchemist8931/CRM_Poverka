@@ -16,6 +16,7 @@ import { render, toast } from './render.js';
 import { isDemo } from '../api/mode.js';
 import { patchReq as apiPatchReq } from '../api/actions.js';
 import { waitOf } from '../screens/wait-list.js';
+import { printButtons } from '../screens/print.js';
 
 function openReq(id){
   const r = S.requests.find(x=>x.id===id); if(!r) return;
@@ -77,6 +78,7 @@ function modalLayer(){
       ${reqForm(K,'S.edit','ed',K.day,v=>{K.day=v;})}
       ${clientHistory(r)}
       <div class="row" style="margin-top:14px;justify-content:flex-end">
+        ${printButtons(r)}
         <button class="g" onclick="closeModal()">Отмена</button>
         <button class="b long" onclick="saveReq()">${dupPending(K,K.day,r.id)?'Сохранить как вторую заявку':'Сохранить изменения'}</button></div>
     </div></div>`;

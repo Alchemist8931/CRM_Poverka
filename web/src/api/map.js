@@ -64,6 +64,9 @@ export function deviceFrom(row) {
     blank: !!row.blank, blankNo: row.blank_no || '',
     repl: row.replacement || undefined, replW: row.replacement_wait_id || undefined,
     swap: !!row.swap, swapOf: row.swap_of || '',
+    /* Номер записи в реестре, который вернул «Аршин» (int-arshin): печатается
+       в свидетельстве о поверке. Пустой — сведения ещё не приняты. */
+    arshin: row.arshin_number || '',
     photos: (row.photos || []).map(photoFrom),
   };
 }

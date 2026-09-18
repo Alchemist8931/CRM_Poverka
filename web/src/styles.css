@@ -764,3 +764,53 @@ tfoot td{border-top:1px solid var(--border);border-bottom:0;color:var(--ink);fon
 .audit .inner td{border-bottom:1px solid var(--border2);vertical-align:top;word-break:break-word}
 .audit .inner td:first-child{color:var(--ink3);width:220px}
 .audit .inner td:last-child{color:var(--ink)}
+
+/* ---------- печатные формы (пункт fe-forms) ----------
+   Акт и свидетельство о поверке собираются листом А4 поверх экрана; на
+   бумагу уходит только лист. Цвета листа заданы жёстко: тёмная тема экрана
+   к бумаге отношения не имеет. */
+.prtb{display:flex;gap:6px;flex-wrap:wrap;flex:1;align-items:center}
+.prt{position:fixed;inset:0;z-index:120;overflow-y:auto;padding:22px 20px 60px;
+  background:rgba(12,12,12,.62);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);animation:wsFade .2s ease}
+.prt .bar{position:sticky;top:0;z-index:1;display:flex;gap:8px;align-items:center;width:min(210mm,100%);margin:0 auto 14px;
+  padding:8px 12px;border-radius:var(--r);background:rgba(20,20,20,.86);color:#E7E7E7;font-size:11.5px}
+.prt .bar > span{flex:1;min-width:0}
+.prt .bar .g{color:#E7E7E7;border-color:rgba(231,231,231,.3)}
+.prt .bar .g:hover{border-color:#E7E7E7}
+.sheet{box-sizing:border-box;width:210mm;min-height:297mm;margin:0 auto;padding:14mm 16mm;background:#fff;color:#111;
+  font:400 10.5pt/1.4 'SN Pro',ui-sans-serif,system-ui,sans-serif;box-shadow:0 30px 70px -20px #000;animation:wsPop .2s ease}
+.sheet .org{display:flex;justify-content:space-between;gap:8mm;font-size:8.5pt;line-height:1.45;color:#333;
+  border-bottom:1px solid #999;padding-bottom:3mm;margin-bottom:7mm}
+.sheet .org b{font-weight:600;color:#111}
+.sheet .org .r{text-align:right;white-space:nowrap}
+.sheet h1{font-size:15pt;font-weight:600;text-align:center;margin:0 0 1.5mm;letter-spacing:.01em;line-height:1.25}
+.sheet .sub{text-align:center;color:#444;font-size:9.5pt;margin-bottom:6mm}
+.sheet .kv{display:grid;grid-template-columns:44mm 1fr;gap:1.6mm 4mm;margin-bottom:5mm;align-items:baseline}
+.sheet .kv b{font-weight:500;color:#555;font-size:9pt}
+.sheet table{width:100%;border-collapse:collapse;font-size:9pt;margin-bottom:4mm;table-layout:auto}
+.sheet th,.sheet td{border:1px solid #777;padding:1.5mm 2mm;text-align:left;vertical-align:top;line-height:1.35}
+.sheet th{font-weight:500;background:#f0f0f0;font-size:8.5pt}
+.sheet td.n,.sheet th.n{text-align:right;white-space:nowrap}
+.sheet .dim{font-size:8pt;color:#666}
+.sheet .tot{display:grid;grid-template-columns:1fr auto;gap:1.2mm 8mm;justify-items:end;margin:0 0 5mm;font-size:9.5pt}
+.sheet .tot b{font-weight:500}
+.sheet .tot .big{font-size:12pt;font-weight:600}
+.sheet .txt{font-size:9pt;color:#333;margin:0 0 4mm;line-height:1.45}
+.sheet .sig{display:grid;grid-template-columns:1fr 1fr;gap:12mm;margin-top:14mm}
+.sheet .sig div{display:flex;flex-direction:column;gap:1mm;border-top:1px solid #333;padding-top:2mm;font-size:9pt;color:#333}
+.sheet .sig b{font-weight:600;color:#111}
+.sheet .sig i{font-style:normal;color:#888;font-size:8pt}
+.sheet .foot{font-size:8pt;color:#777;margin-top:8mm;text-align:center}
+.sheet.cert .kv{grid-template-columns:52mm 1fr;gap:2.6mm 4mm;font-size:11pt;margin-top:2mm}
+.sheet.cert .kv b{font-size:9.5pt}
+.sheet.cert .till{font-weight:600;font-size:12pt}
+@media print{
+  @page{size:A4;margin:12mm 14mm}
+  html,body{overflow:visible!important;height:auto!important;background:#fff!important;color:#111!important}
+  /* На бумаге — только лист: экран, модальные окна, подсказки и заставка прячутся. */
+  body > *:not(#root),#root > *:not(.prt){display:none!important}
+  .prt{position:static;padding:0;background:none;backdrop-filter:none;-webkit-backdrop-filter:none;overflow:visible;animation:none}
+  .prt .bar{display:none}
+  .sheet{width:auto;min-height:0;margin:0;padding:0;box-shadow:none;animation:none;break-inside:avoid}
+  .sheet .kv,.sheet table,.sheet .sig{break-inside:avoid}
+}

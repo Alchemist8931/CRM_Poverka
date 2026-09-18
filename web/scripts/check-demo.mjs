@@ -48,7 +48,22 @@ for (let i = 0; i < pages; i++) {
 // странице, иначе в разметке его просто нет.
 await page.evaluate(() => window.go('audit'));
 await page.waitForTimeout(250);
+/* Печатные формы (fe-forms) обязаны собираться и без сервера: акт по
+   выполненной заявке из наполнения в памяти. */
+const printed = await page.evaluate(() => {
+  const r = S.requests.find((x) => x.status === 'выполнена' && (x.devices || []).length);
+  if (!r) return { act: false, cert: false, why: 'нет выполненной заявки с приборами' };
+  window.openPrint('act', r.id);
+  const act = !!document.querySelector('.prt .sheet.act');
+  const i = r.devices.findIndex((d) => (d.svc === 'wv' || d.svc === 'hv') && !d.bad);
+  let cert = i < 0;
+  if (i >= 0) { window.openPrint('cert', r.id, i); cert = !!document.querySelector('.prt .sheet.cert .till'); }
+  window.closePrint();
+  return { act, cert, why: r.id };
+});
+await page.waitForTimeout(150);
 const seen = await page.evaluate(() => ({
+  expectedPages: GROUPS.reduce((n, g) => n + g.views.length, 0),
   requests: S.requests.length, routes: S.routes.length, staff: S.staff.length, page: S.page,
   audit: (S.audit || []).length, auditRows: document.querySelectorAll('table.audit tbody tr.ln').length,
 }));
@@ -61,7 +76,9 @@ const check = (what, cond, why) => {
   if (cond) console.log(`  ок   ${what}`);
   else { bad++; console.error(`  ПЛОХО ${what}${why ? ' — ' + why : ''}`); }
 };
-check(`страниц пройдено: ${pages}`, pages === 13, `их ${pages}`);
+// Страниц столько, сколько экранов у ролей: число не зашито, чтобы новый экран не ронял проверку.
+check(`страниц пройдено: ${pages}`, pages === seen.expectedPages, `у ролей их ${seen.expectedPages}`);
+check('акт и свидетельство о поверке печатаются из наполнения в памяти', printed.act && printed.cert, printed.why);
 check('наполнение в памяти есть', seen.requests > 1000 && seen.routes > 10 && seen.staff === 17,
   JSON.stringify(seen));
 // Журнал действий в демо делается по наполнению: пустой экран у руководителя —

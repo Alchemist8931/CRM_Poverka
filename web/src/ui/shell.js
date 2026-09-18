@@ -9,6 +9,7 @@ import { crewOn, dayState, dayTotal, lockedFor, opsOn } from '../rules.js';
 import { iconAt } from './brand.js';
 import { lightbox } from './lightbox.js';
 import { modalLayer } from './modals.js';
+import { printLayer } from '../screens/print.js';
 import { render } from './render.js';
 import { isDemo } from '../api/mode.js';
 import { logout } from '../api/boot.js';
@@ -77,7 +78,7 @@ function shell(side,main){
       </header>
       <div class="body">${side?`<aside class="side">${side}</aside>`:''}<div class="main">${netState()}${main}</div></div>
     </div>
-  </div></div>${modalLayer()}${callWindow()}${lightbox()}${S.toast?`<div class="toast">${esc(S.toast)}</div>`:''}`;
+  </div></div>${modalLayer()}${printLayer()}${callWindow()}${lightbox()}${S.toast?`<div class="toast">${esc(S.toast)}</div>`:''}`;
 }
 const cap = () => `<p class="cap">${CAPS[S.view]||''}</p>`;
 

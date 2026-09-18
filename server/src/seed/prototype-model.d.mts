@@ -61,7 +61,7 @@ export interface DemoState {
               pF: number; pP: number; pU: number; rV: number; rO: number }[];
   SVC: Record<string, { id: string; grp: string; rV: number; rO: number }>;
   LOCS: { n: string; s: string; big?: boolean }[];
-  DEV_TYPES: { v: string; grsi: string }[];
+  DEV_TYPES: { v: string; grsi: string; mpi: number }[];
   TODAY: string;
   priceOfDev(request: DemoRequest, device: DemoDevice): number;
   priceOf(request: DemoRequest): number;
