@@ -26,8 +26,11 @@ test('руководитель планирует день: город, план
       window.tgDay(ds, 'cities', city);
     }
     window.setCap(ds, city, 15);
-    if (!window.crewOn(ds).includes(ver)) window.tgDay(ds, 'crew', ver);
-    const ops = window.opsOn(ds);
+    // crewOn/opsOn отдают карточки сотрудников, сверяем по идентификаторам:
+    // повторный прогон не должен снимать своих же людей со смены.
+    const crew = window.crewOn(ds).map((p) => p.id);
+    if (!crew.includes(ver)) window.tgDay(ds, 'crew', ver);
+    const ops = window.opsOn(ds).map((p) => p.id);
     if (!ops.includes(op)) {
       if (ops.length >= 4) window.tgDay(ds, 'ops', ops[ops.length - 1]);
       window.tgDay(ds, 'ops', op);

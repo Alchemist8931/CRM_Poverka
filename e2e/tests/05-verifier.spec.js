@@ -42,8 +42,11 @@ test('поверитель видит маршрут на телефоне, от
   expect(seen).toEqual(stops);
   // Чужие заявки поверителю не приходят вовсе.
   const ver = await apiAs(C.ver.login, C.ver.password);
+  const { routes } = (await ver.get(`/api/routes?date=${C.today}`)).body;
+  expect(routes.every((r) => r.verifier_id === C.ver.id), 'поверителю приходят только его маршруты').toBe(true);
+  const mineIds = new Set(routes.map((r) => r.id));
   const { requests } = (await ver.get(`/api/requests?date=${C.today}`)).body;
-  expect(requests.every((r) => r.route_id === routeId || r.verifier_id === C.ver.id)).toBe(true);
+  expect(requests.every((r) => mineIds.has(r.route_id) || r.verifier_id === C.ver.id)).toBe(true);
   await ver.close();
   expect(errors, 'ошибок консоли нет').toEqual([]);
 });
