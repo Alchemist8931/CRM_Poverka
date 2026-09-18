@@ -42,6 +42,7 @@ npm start                     # tsx src/api/server.ts
 | `DATABASE_URL` | соединение с PostgreSQL |
 | `PORT`, `HOST` | где слушать (по умолчанию 3000 и 0.0.0.0) |
 | `SESSION_SECRET` | ключ подписи сессионных cookie; в рабочем контуре обязателен, короче 16 знаков не принимается |
+| `SESSION_COOKIE_SECURE` | флаг Secure у cookie сессии: по умолчанию включён в production; `false` — только на контуре, который временно отвечает по http (dev без домена), иначе браузер cookie не сохранит |
 | `NOVOFON_WEBHOOK_SECRET` | ключ подписи вебхуков телефонии; без него приёмник отвечает 503 |
 | `SEED_PASSWORD` | пароль демо-учёток при наполнении |
 

@@ -119,14 +119,23 @@ export function requireRole(req: FastifyRequest, ...roles: Role[]): User {
   return user;
 }
 
-/** Cookie сессии: httpOnly, чтобы её не достал скрипт со страницы, и Secure за
- *  балансировщиком — по HTTP CRM работает только на машине разработчика. */
+/** Cookie сессии: httpOnly, чтобы её не достал скрипт со страницы, и Secure
+ *  везде, где есть TLS. Флаг снимается только явно — `SESSION_COOKIE_SECURE=false`
+ *  на контуре, который временно отвечает по http (dev без A-записи домена):
+ *  браузер Secure-cookie по http не хранит, и войти было бы нельзя никому. */
+export function cookieSecure(env: NodeJS.ProcessEnv = process.env): boolean {
+  if (env.SESSION_COOKIE_SECURE != null && env.SESSION_COOKIE_SECURE !== '') {
+    return env.SESSION_COOKIE_SECURE === 'true';
+  }
+  return env.NODE_ENV === 'production';
+}
+
 export function setSessionCookie(reply: FastifyReply, token: string): void {
   reply.setCookie(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: 'lax',
     path: '/',
-    secure: process.env.NODE_ENV === 'production',
+    secure: cookieSecure(),
     maxAge: Math.floor(SESSION_TTL_MS / 1000),
   });
 }
