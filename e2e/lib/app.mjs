@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { request as pwRequest } from '@playwright/test';
 
-export const BASE = (process.env.UAT_BASE_URL || 'http://84.201.139.101').replace(/\/$/, '');
+export const BASE = (process.env.UAT_BASE_URL || 'https://84-201-139-101.sslip.io').replace(/\/$/, '');
 export const BOT = {
   login: process.env.UAT_LOGIN || 'autotest',
   password: process.env.UAT_PASSWORD || '',

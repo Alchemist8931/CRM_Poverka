@@ -20,7 +20,7 @@ from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor
 
 OUT = sys.argv[1] if len(sys.argv) > 1 else 'Учёткин — программа приёмочных испытаний.docx'
-BASE = sys.argv[2] if len(sys.argv) > 2 else 'http://84.201.139.101'
+BASE = sys.argv[2] if len(sys.argv) > 2 else 'https://84-201-139-101.sslip.io'
 TODAY = date.today().strftime('%d.%m.%Y')
 
 # ───────────────────────── содержание ─────────────────────────

@@ -227,20 +227,24 @@ email: адрес не задан (alert_email пуст)
 
 Решение владельца 18.09.2026 (пункт плана `live-ip`): система запущена в
 работу на dev-контуре по адресу `http://84.201.139.101` — без домена и TLS.
-Отдельный prod и боевой домен — после запуска (пункты `cloud-prod`,
-`cloud-domain`). Пока так, dev и рабочий контур — одна и та же машина, и
-обращаться с ней нужно как с prod.
+В тот же день (пункт `live-tls`) включён HTTPS на временном имени
+`https://84-201-139-101.sslip.io`: сертификат Let's Encrypt получил и
+продлевает Caddy на машине, старый адрес отвечает редиректом. Отдельный prod
+и боевой домен — после запуска (пункты `cloud-prod`, `cloud-domain`). Пока
+так, dev и рабочий контур — одна и та же машина, и обращаться с ней нужно
+как с prod.
 
 | Что | Как |
 | --- | --- |
-| Адрес | `http://84.201.139.101`. В `app.env` `PUBLIC_BASE_URL`, `API_BASE_URL`, `WEBHOOK_BASE_URL` смотрят на него, `COOKIE_DOMAIN` пустой — Terraform считает их от `tls_enabled` (`infra/locals.tf`, `site_origin`). Cookie без `Secure` (`SESSION_COOKIE_SECURE=false`) до HTTPS — пункт `live-tls` или `cloud-domain` |
+| Адрес | `https://84-201-139-101.sslip.io` (`tls_enabled = true` в `infra/dev.tfvars`). В `app.env` `PUBLIC_BASE_URL`, `API_BASE_URL`, `WEBHOOK_BASE_URL` смотрят на него, `COOKIE_DOMAIN` — имя; Terraform считает их от `tls_enabled` (`infra/locals.tf`, `site_origin`). Cookie с `Secure`, строки `SESSION_COOKIE_SECURE` в `app.env` нет. Со старого `http://84.201.139.101` Caddy отвечает 301 на https-имя (`legacy_redirect_from`, файл `/etc/uchetkin/caddy.d/legacy.caddy`) — убрать не раньше 18.10.2026 |
+| Сертификат | выпущен 18.09.2026 на 90 дней, продление — Caddy сам (журнал `docker compose logs caddy`, строки `tls.obtain`/`tls.renew`); дни до конца видны в `uchetkin-status` («сертификат N дн.»). Лимит Let's Encrypt на общий домен `sslip.io` — если продление откажет с 429, контур остаётся на выпущенном сертификате до его конца, а дальше — боевой домен (`cloud-domain`) |
 | Учётные записи | `owner` и `berdinskikh` — полный доступ; временные пароли в секрете Lockbox `uchetkin-handover` каталога `default`: владелец читает в консоли, передаёт заказчице, секрет удаляет. Остальных сотрудников заводит заказчица на экране «Сотрудники» |
 | Данные | демо-набор убран скриптом `server/scripts/purge-demo.sql`, остались справочники из книги `req-refs`. **Не запускать** `npm run seed` и `uat-stand`: они стирают и перезаливают базу |
 | Автотесты | `.github/workflows/uat.yml` — только по кнопке, расписание и запуск на push сняты. На рабочем контуре не гонять: сценарии заводят сотрудников, заявки и маршруты |
 | Копии | таймер `uchetkin-backup` (02:30 по Екатеринбургу) → бакет `uchetkin-dev-ops`, `pg/daily`. Перед любым вмешательством в базу — `sudo systemctl start uchetkin-backup` и строка «→ s3://…» в `sudo journalctl -u uchetkin-backup -n 3` |
 | Выкладка | руками на машине — `docs/release.md`, «Выкладка руками на рабочем контуре»: копия, миграции, перезапуск — в этом порядке |
-| Сторож | проверяет `http://84.201.139.101/health` (`APP_URL` функции — из того же `site_origin`) |
-| Потеря машины | база в томе `pgdata` на диске ВМ; восстановление — раздел «В. Потеряна машина целиком». После пересоздания cloud-init перепишет `app.env` уже с http-адресами, а строку `SESSION_COOKIE_SECURE=false` добавить снова руками (замечание 6 в `docs/uat.md`) |
+| Сторож | проверяет `https://84-201-139-101.sslip.io/health` (`APP_URL` функции — из того же `site_origin`) |
+| Потеря машины | база в томе `pgdata` на диске ВМ; восстановление — раздел «В. Потеряна машина целиком». После пересоздания cloud-init перепишет `app.env`, `caddy.env` и `caddy.d/legacy.caddy` с https-именем сам; сертификат Caddy получит заново (том `caddy_data` уходит вместе с машиной) |
 
 ## Переезд рабочего контура в prod (пункт `cloud-prod`)
 
@@ -255,7 +259,7 @@ email: адрес не задан (alert_email пуст)
 | | dev (рабочий с 18.09.2026) | prod (после apply) |
 | --- | --- | --- |
 | Каталог облака | `default` (`b1giq117a18cpiolfife`) | `crm-prod`, заводит владелец; идентификатор — в `infra/prod.tfvars` |
-| Адрес | `http://84.201.139.101`; имя `84-201-139-101.sslip.io`, HTTPS выключен (`live-ip`) | `https://<адрес>.sslip.io`, HTTPS с первого дня; боевой домен — `cloud-domain` |
+| Адрес | `https://84-201-139-101.sslip.io` (`live-tls`), с `http://84.201.139.101` редирект | `https://<адрес>.sslip.io`, HTTPS с первого дня; боевой домен — `cloud-domain` |
 | Машина | `crm-uchetkin-prod`, принята в Terraform как есть | `uchetkin-prod-app`, создаётся Terraform целиком, cloud-init раскладывает всё сам |
 | База | контейнер PostgreSQL на машине, том `pgdata` | Managed PostgreSQL `uchetkin-prod-pg` (b2.medium, 20 ГБ, порт 6432, только TLS), защита от удаления |
 | Копии | `pg_dump` таймером в `uchetkin-dev-ops` — единственная копия | те же дампы в `uchetkin-prod-ops` **плюс** автоматические копии кластера 14 дней и восстановление на момент времени, снимки диска ВМ раз в неделю |

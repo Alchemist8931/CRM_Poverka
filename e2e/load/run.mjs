@@ -26,7 +26,7 @@ import { fileURLToPath } from 'node:url';
 
 const args = Object.fromEntries(process.argv.slice(2).map((a, i, all) =>
   a.startsWith('--') ? [a.slice(2), all[i + 1] && !all[i + 1].startsWith('--') ? all[i + 1] : 'true'] : []).filter((x) => x.length));
-const BASE = (process.env.UAT_BASE_URL || args.base || 'http://84.201.139.101').replace(/\/$/, '');
+const BASE = (process.env.UAT_BASE_URL || args.base || 'https://84-201-139-101.sslip.io').replace(/\/$/, '');
 const LOGIN = process.env.UAT_LOGIN || 'autotest';
 const PASSWORD = process.env.UAT_PASSWORD || '';
 const MINUTES = Number(args.minutes || 60);

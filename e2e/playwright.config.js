@@ -2,7 +2,7 @@
  *
  * Куда ходят проверки, задаётся окружением — сами они ничего не поднимают:
  *
- *   UAT_BASE_URL       адрес контура, по умолчанию dev в облаке (http://84.201.139.101)
+ *   UAT_BASE_URL       адрес контура, по умолчанию dev в облаке (https://84-201-139-101.sslip.io)
  *   UAT_LOGIN          техническая учётка полного доступа (заводит server/scripts/uat-stand.mts)
  *   UAT_PASSWORD       её пароль
  *   UAT_STAFF_PASSWORD пароль, который получают учётки uat.op и uat.ver после смены временного
@@ -16,7 +16,7 @@
  */
 import { defineConfig } from '@playwright/test';
 
-const BASE = (process.env.UAT_BASE_URL || 'http://84.201.139.101').replace(/\/$/, '');
+const BASE = (process.env.UAT_BASE_URL || 'https://84-201-139-101.sslip.io').replace(/\/$/, '');
 
 export default defineConfig({
   testDir: './tests',
