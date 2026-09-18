@@ -127,6 +127,76 @@ variable "dns_ttl" {
   default     = 300
 }
 
+# ─── Переезд на боевой домен (пункт cloud-domain) ────────────────────────────
+
+variable "legacy_redirect_from" {
+  description = <<-EOT
+    Старые адреса контура, с которых Caddy на ВМ отвечает постоянным редиректом
+    (301) на https://<app_domain>: закладки сотрудников и ссылки в переписке
+    должны открываться ещё не меньше 30 дней после переезда. Значение — адрес
+    сайта в синтаксисе Caddy: "http://<статический адрес>" для голого IP
+    (сертификат на адрес не выпускается), "<старое имя>" без схемы для имени
+    (Caddy получит на него сертификат сам). Пустой список — блока редиректа нет.
+    Действует только при tls_enabled = true: пока контур сам живёт на :80,
+    редиректить не с чего. Убирается через 30 дней после переезда.
+  EOT
+  type        = list(string)
+  default     = []
+
+  validation {
+    condition = alltrue([
+      for a in var.legacy_redirect_from : can(regex("^(https?://)?[a-z0-9.-]+$", a))
+    ])
+    error_message = "legacy_redirect_from — имена или адреса без пути и порта, при необходимости со схемой http://."
+  }
+}
+
+variable "mail_records_enabled" {
+  description = <<-EOT
+    Заводить в зоне записи почтового домена для Яндекс 360 для бизнеса: MX,
+    SPF, DMARC, подтверждение владения и DKIM (когда заданы ключи ниже).
+    Действует только вместе с manage_dns_zone = true.
+  EOT
+  type        = bool
+  default     = false
+}
+
+variable "mail_verification_txt" {
+  description = <<-EOT
+    Строка подтверждения домена из админки Яндекс 360 («yandex-verification: …»).
+    Кладётся TXT-записью на вершину зоны. Пусто — запись не заводится.
+  EOT
+  type        = string
+  default     = ""
+}
+
+variable "mail_dkim_public_key" {
+  description = <<-EOT
+    Значение TXT-записи DKIM из админки Яндекс 360 целиком («v=DKIM1; k=rsa; t=s; p=…»).
+    Селектор у Яндекса — mail, запись mail._domainkey.<зона>. Пусто — запись не заводится,
+    и письма уходят без подписи домена.
+  EOT
+  type        = string
+  default     = ""
+}
+
+variable "dmarc_policy" {
+  description = "Политика DMARC: none — только отчёты, quarantine — в спам, reject — отклонять. Начинать с quarantine."
+  type        = string
+  default     = "quarantine"
+
+  validation {
+    condition     = contains(["none", "quarantine", "reject"], var.dmarc_policy)
+    error_message = "dmarc_policy — none, quarantine или reject."
+  }
+}
+
+variable "dmarc_rua" {
+  description = "Куда слать сводные отчёты DMARC. Пусто — postmaster@<зона>."
+  type        = string
+  default     = ""
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Сеть и доступ снаружи
 # ─────────────────────────────────────────────────────────────────────────────

@@ -73,6 +73,8 @@ services:
       - "127.0.0.1:2020:2020"
     volumes:
       - /opt/uchetkin/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Редиректы со старых адресов (cloud-domain); каталог может быть пустым.
+      - /etc/uchetkin/caddy.d:/etc/uchetkin/caddy.d:ro
       - caddy_data:/data
       - caddy_config:/config
 

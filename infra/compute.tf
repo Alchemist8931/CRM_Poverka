@@ -65,20 +65,23 @@ resource "yandex_compute_instance" "app" {
 
 locals {
   cloud_init = templatefile("${path.module}/cloud-init.yaml.tftpl", {
-    vm_user                   = var.vm_user
-    timezone                  = var.timezone
-    env                       = var.env
-    enable_oslogin            = var.enable_oslogin
-    auth                      = var.app_auth_policy
-    folder_id                 = var.folder_id
-    app_domain                = var.app_domain
-    public_base_url           = local.public_base_url
-    api_base_url              = local.api_base_url
-    webhook_base_url          = local.webhook_base_url
-    cookie_domain             = local.cookie_domain
-    api_path_prefix           = var.api_path_prefix
-    health_check_path         = var.health_check_path
-    tls_by_caddy              = local.tls_by_caddy
+    vm_user           = var.vm_user
+    timezone          = var.timezone
+    env               = var.env
+    enable_oslogin    = var.enable_oslogin
+    auth              = var.app_auth_policy
+    folder_id         = var.folder_id
+    app_domain        = var.app_domain
+    public_base_url   = local.public_base_url
+    api_base_url      = local.api_base_url
+    webhook_base_url  = local.webhook_base_url
+    cookie_domain     = local.cookie_domain
+    api_path_prefix   = var.api_path_prefix
+    health_check_path = var.health_check_path
+    tls_by_caddy      = local.tls_by_caddy
+    # Редирект со старых адресов есть только когда контур сам живёт по HTTPS:
+    # на :80 без имени редиректить не с чего (cloud-domain).
+    legacy_redirect_from      = local.tls_by_caddy ? var.legacy_redirect_from : []
     acts_bucket               = local.acts_bucket
     calls_bucket              = local.calls_bucket
     managed_postgres          = var.managed_postgres

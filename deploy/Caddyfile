@@ -22,6 +22,12 @@
 	metrics /metrics
 }
 
+# Редирект со старых адресов после переезда на боевой домен (пункт cloud-domain):
+# файл /etc/uchetkin/caddy.d/legacy.caddy пишет cloud-init из переменной
+# legacy_redirect_from. Каталог смонтирован compose.yml; пустой каталог — не
+# ошибка, шаблон с * при отсутствии файлов просто ничего не подключает.
+import /etc/uchetkin/caddy.d/*.caddy
+
 {$SITE_ADDRESS} {
 	encode zstd gzip
 

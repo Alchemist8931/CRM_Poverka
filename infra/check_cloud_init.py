@@ -47,6 +47,7 @@ ARGS = {
     "api_path_prefix": "/api",
     "health_check_path": "/health",
     "tls_by_caddy": True,
+    "legacy_redirect_from": ["http://203.0.113.10", "203-0-113-10.sslip.io"],
     "acts_bucket": "uchetkin-prod-acts",
     "calls_bucket": "uchetkin-prod-calls",
     "managed_postgres": True,
@@ -70,6 +71,12 @@ ARGS = {
 
 SSHD_FILE = "10-uchetkin.conf"
 APP_ENV = "/etc/uchetkin/app.env"
+LEGACY_CADDY = "/etc/uchetkin/caddy.d/legacy.caddy"
+# Что должно оказаться в файле редиректа при списке из ARGS (cloud-domain).
+LEGACY_EXPECTED = [
+    "http://203.0.113.10, 203-0-113-10.sslip.io {",
+    "redir https://203-0-113-10.sslip.io{uri} permanent",
+]
 
 MUST_BE_IN_SSHD = [
     "PasswordAuthentication no",
@@ -154,6 +161,16 @@ def check(oslogin):
         for line in MUST_BE_IN_ENV:
             if line not in env:
                 failures.append(f"{where}: в app.env нет строки {line!r}")
+
+    # Редирект со старых адресов: файл есть всегда, блок — при непустом списке.
+    legacy = files.get(LEGACY_CADDY)
+    if legacy is None:
+        failures.append(f"{where}: нет {LEGACY_CADDY}")
+    else:
+        lines = [ln.strip() for ln in legacy.splitlines()]
+        for line in LEGACY_EXPECTED:
+            if line not in lines:
+                failures.append(f"{where}: в файле редиректа нет строки {line!r}")
 
     applied = any(
         "sshd -t" in (" ".join(cmd) if isinstance(cmd, list) else str(cmd))

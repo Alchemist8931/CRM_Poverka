@@ -102,6 +102,22 @@ write_files:
       SITE_ADDRESS=${tls_by_caddy ? app_domain : ":80"}
       API_UPSTREAM=api:3000
 
+  # ── Редирект со старых адресов после переезда на боевой домен (cloud-domain).
+  #    Caddyfile подхватывает всё из /etc/uchetkin/caddy.d/*.caddy; файл есть
+  #    всегда, чтобы состояние машины не зависело от того, был ли список пуст.
+  - path: /etc/uchetkin/caddy.d/legacy.caddy
+    permissions: "0644"
+    owner: root:root
+    content: |
+      # Собирается Terraform из legacy_redirect_from — руками не править.
+      %{~ if length(legacy_redirect_from) > 0 ~}
+      ${join(", ", legacy_redirect_from)} {
+      	redir https://${app_domain}{uri} permanent
+      }
+      %{~ else ~}
+      # Старых адресов нет: список legacy_redirect_from пуст.
+      %{~ endif ~}
+
   # ── Вход на машину: только по ключу и только этим пользователем.
   #    Файл кладётся в sshd_config.d — его подхватывает Include из штатного
   #    конфигурации Ubuntu, а сам конфигурации не правится: так настройка
