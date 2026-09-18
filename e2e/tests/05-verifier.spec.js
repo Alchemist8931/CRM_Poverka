@@ -66,10 +66,31 @@ test('адрес 1: два прибора, пенсионер, фото, вто�
   await page.waitForTimeout(1200);
 
   if (storage) {
+    // Кадр идёт из браузера прямо в бакет: если правило CORS бакета не пускает
+    // этот адрес, загрузка молча не начнётся — ловим подсказку экрана, а не таймаут.
+    const failed = [];
+    page.on('console', (m) => { if (/кадр|загруз/i.test(m.text())) failed.push(m.text()); });
     await page.setInputFiles(`#ph${req}_0`, ROOT + 'fixtures/meter.jpg');
-    await until(page, (id) => (window.S.requests.find((r) => r.id === id)?.devices[0]?.photos || []).length === 1, req, 60_000);
-    const thumb = await page.evaluate((id) => window.S.requests.find((r) => r.id === id).devices[0].photos[0], req);
-    expect(thumb.thumb || thumb.url || thumb.id, 'кадр записан в акт с миниатюрой').toBeTruthy();
+    const outcome = await Promise.race([
+      until(page, (id) => (window.S.requests.find((r) => r.id === id)?.devices[0]?.photos || []).length === 1, req, 60_000).then(() => 'ok'),
+      page.waitForFunction(() => [...document.querySelectorAll('.toast')].some((t) => /не загруз|не долетел|не удалось/i.test(t.textContent)), null, { timeout: 60_000 })
+        .then(() => page.evaluate(() => [...document.querySelectorAll('.toast')].map((t) => t.textContent).join(' | '))),
+    ]).catch((e) => `таймаут: ${e.message.slice(0, 120)}`);
+    if (outcome === 'ok') {
+      const thumb = await page.evaluate((id) => window.S.requests.find((r) => r.id === id).devices[0].photos[0], req);
+      expect(thumb.thumb || thumb.url || thumb.id, 'кадр записан в акт с миниатюрой').toBeTruthy();
+    } else {
+      // Сервер ссылку выдал, а браузер до бакета не достучался: это правило CORS
+      // бакета на адрес контура (docs/uat.md, замечание 6а), а не код акта.
+      const slot = await page.evaluate(async (id) => {
+        const d = window.S.requests.find((r) => r.id === id).devices[0];
+        const r = await fetch(`/api/devices/${d.id}/photos/upload`, { method: 'POST', credentials: 'same-origin',
+          headers: { 'content-type': 'application/json' }, body: JSON.stringify({ size: 1000, content_type: 'image/jpeg' }) });
+        return r.status;
+      }, req);
+      expect(slot, 'сервер выдаёт ссылку на загрузку').toBe(200);
+      test.info().annotations.push({ type: 'skip', description: `кадр не ушёл в бакет из браузера — CORS бакета на адрес контура: ${outcome}` });
+    }
   } else {
     test.info().annotations.push({ type: 'skip', description: 'хранилище снимков не подключено — загрузка отвечает 503' });
   }

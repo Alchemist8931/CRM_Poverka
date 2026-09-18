@@ -37,7 +37,9 @@ resource "yandex_storage_bucket" "acts" {
   # вовсе. На машине разработчика такого не видно: MinIO из docker-compose.yml
   # по умолчанию пускает любой источник, и правило нужно именно здесь.
   cors_rule {
-    allowed_origins = ["https://${var.app_domain}"]
+    # Пока у dev нет A-записи и TLS, браузер открывает систему по http и IP —
+    # такие адреса добавляются переменной extra_cors_origins (только dev).
+    allowed_origins = concat(["https://${var.app_domain}"], var.extra_cors_origins)
     # PUT — загрузка кадра, GET и HEAD — чтение оригинала и проверка размера.
     allowed_methods = ["PUT", "GET", "HEAD"]
     # Content-Type входит в подпись и обязан уехать с запросом; остальные

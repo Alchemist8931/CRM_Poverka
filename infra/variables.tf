@@ -423,6 +423,16 @@ variable "bucket_suffix" {
   default     = ""
 }
 
+variable "extra_cors_origins" {
+  description = <<-EOT
+    Дополнительные источники, которым бакет снимков разрешает класть кадры из
+    браузера, кроме https://<app_domain>. Нужно только dev, пока он открыт по
+    http и IP (docs/uat.md, замечание 6а); в prod оставлять пустым.
+  EOT
+  type        = list(string)
+  default     = []
+}
+
 variable "acts_cold_after_days" {
   description = "Через сколько дней фото актов уходят в холодное хранилище (arch, раздел 7 — 90 дней)."
   type        = number
