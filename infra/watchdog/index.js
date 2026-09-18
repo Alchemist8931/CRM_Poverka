@@ -329,9 +329,33 @@ async function sendEmail(cfg, subject, text) {
 // от функции доходили только системные START/END/REPORT).
 const log = (level, message, fields) => console.log(JSON.stringify({ level, message, ...fields }));
 
+// Заглушка каналов (решение владельца 18.09.2026: Telegram подключается
+// позднее). Пока секреты пусты, оповещение всё равно доставляется — в
+// Cloud Logging и в журнал последних оповещений в бакете ops
+// (watchdog/alerts.json, последние 50). Когда секреты заполнят, к этому
+// добавятся Telegram и почта — код тот же, менять ничего не нужно.
+const ALERTS_KEY = 'watchdog/alerts.json';
+
+async function appendAlertJournal(token, entry) {
+  let list = [];
+  try {
+    const res = await http(`${STORAGE}/${env.OPS_BUCKET}/${ALERTS_KEY}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (res.ok) list = await res.json();
+  } catch {}
+  list.push(entry);
+  list = list.slice(-50);
+  const res = await http(`${STORAGE}/${env.OPS_BUCKET}/${ALERTS_KEY}`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(list, null, 1),
+  });
+  return res.ok ? `журнал: записано в s3://${env.OPS_BUCKET}/${ALERTS_KEY}` : `журнал: ошибка ${res.status}`;
+}
+
 async function deliver(token, subject, text) {
   const [tg, smtp] = await Promise.all([lockbox(token, env.ALERTS_SECRET_ID), lockbox(token, env.SMTP_SECRET_ID)]);
   const results = await Promise.all([sendTelegram(tg, text), sendEmail(smtp, subject, text)]);
+  results.push(await appendAlertJournal(token, { at: new Date().toISOString(), subject, text, delivery: results.slice() }));
   log('WARN', `оповещение: ${subject}`, { event: 'alert', subject, text, delivery: results });
   return results;
 }

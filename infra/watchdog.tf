@@ -20,7 +20,9 @@
 #   <контур>-alerts: telegram_bot_token, telegram_chat_id
 #   <контур>-smtp:   host, port, user, password, from  (+ alert_email в tfvars)
 # Пока секрет пуст, сторож пишет текст оповещения в журнал (Cloud Logging,
-# группа <контур>-app) и помечает, что канал не настроен.
+# группа <контур>-app) и в файл watchdog/alerts.json бакета ops (последние 50),
+# а канал помечает как не настроенный. Telegram и почта отложены владельцем
+# 18.09.2026; включаются заполнением секретов, без правки кода.
 #
 # Проверить доставку, не дожидаясь беды:
 #   yc serverless function invoke <контур>-watchdog -d '{"test": true}'
@@ -59,13 +61,19 @@ resource "yandex_resourcemanager_folder_iam_member" "watchdog_logging" {
   member    = "serviceAccount:${yandex_iam_service_account.watchdog[0].id}"
 }
 
-# Секреты каналов доставки — и только они.
-resource "yandex_lockbox_secret_iam_binding" "watchdog_channels" {
-  for_each = var.watchdog_enabled ? toset(["alerts", "smtp"]) : toset([])
+# Секреты каналов доставки — и только они. Право выдаётся в общем binding
+# app_external (lockbox.tf): второй binding на ту же пару «секрет — роль»
+# отбирал бы право у приложения, а приложение — у сторожа.
+#
+# Прежний отдельный binding выводится из состояния без удаления в облаке:
+# иначе Terraform снял бы роль со сторожа в момент, когда общий binding её
+# уже держит. Блок можно убрать после apply в обоих контурах.
+removed {
+  from = yandex_lockbox_secret_iam_binding.watchdog_channels
 
-  secret_id = yandex_lockbox_secret.external[each.key].id
-  role      = "lockbox.payloadViewer"
-  members   = ["serviceAccount:${yandex_iam_service_account.watchdog[0].id}"]
+  lifecycle {
+    destroy = false
+  }
 }
 
 # Состояние в бакете ops зашифровано тем же ключом, что и всё остальное:

@@ -215,7 +215,7 @@ Terraform положил `user-data` в метаданные, — и второ�
 | Служебные метрики машины (`uchetkin.*`) | `uchetkin-status` + таймер, `cloud-init.yaml.tftpl` | да, каждые 5 минут |
 | Ежедневный и еженедельный `pg_dump` → бакет `ops` | `backup.tf`, `uchetkin-backup` + таймер | да, 02:30 по Екатеринбургу |
 | Дашборды: машина, HTTP, база, балансировщик | `dashboards/` | да: `uchetkin-dev-vm`, `uchetkin-dev-http` (базы и балансировщика в dev нет) |
-| Сторож: `/health`, диск, копии, 5xx, сертификат → Telegram и почта | `watchdog.tf`, `watchdog/index.js` | да, раз в минуту; каналы ждут секретов |
+| Сторож: `/health`, диск, копии, 5xx, сертификат → Telegram и почта | `watchdog.tf`, `watchdog/index.js` | да, раз в минуту; Telegram и почта отложены по решению владельца 18.09.2026 — пока оповещения пишутся в Cloud Logging и в `watchdog/alerts.json` бакета `ops` |
 
 **Дашборды — отдельный корневой модуль** `dashboards/` с провайдером,
 прибитым к `0.222.0`. Провайдер с `0.223.0` по `0.228.0` (текущий) падает на

@@ -146,5 +146,14 @@ resource "yandex_lockbox_secret_iam_binding" "app_external" {
 
   secret_id = yandex_lockbox_secret.external[each.key].id
   role      = "lockbox.payloadViewer"
-  members   = ["serviceAccount:${yandex_iam_service_account.app.id}"]
+  # Binding задаёт полный список держателей роли, поэтому все читатели одного
+  # секрета перечислены здесь: два binding на одну пару «секрет — роль»
+  # отбирали бы право друг у друга при каждом apply. Секреты каналов
+  # оповещений (alerts, smtp) читает ещё и сторож (watchdog.tf).
+  members = concat(
+    ["serviceAccount:${yandex_iam_service_account.app.id}"],
+    var.watchdog_enabled && contains(["alerts", "smtp"], each.key)
+    ? ["serviceAccount:${yandex_iam_service_account.watchdog[0].id}"]
+    : [],
+  )
 }
