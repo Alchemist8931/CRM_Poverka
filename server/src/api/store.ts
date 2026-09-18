@@ -75,18 +75,40 @@ export interface StaffRow {
   anchor: string | null;
   blocked_at: string | null;
   svcs: string[];
+  /* Поля учётной записи. Приезжают только с `account: true` — то есть только
+     руководителю на экран «Сотрудники» (пункт be-users). Хеша пароля среди них
+     нет и быть не может: наружу он не выходит ни одним запросом. */
+  login?: string | null;
+  email?: string | null;
+  must_change_password?: boolean;
+  locked_until?: string | null;
 }
 
+/** Кого показывать: всех, только работающих или только заблокированных.
+ *  «Всех» — не умолчание ради полноты: уволенный обязан остаться в истории,
+ *  и списку маршрутов нужно его имя, чтобы было чем подписать прошлый выезд. */
+export type StaffState = 'all' | 'active' | 'blocked';
+
 /** Сотрудники с компетенциями. Учётные данные наружу не выходят ни одним полем. */
-export async function loadStaff(db: Db, opts: { role?: Role } = {}): Promise<StaffRow[]> {
+export async function loadStaff(
+  db: Db,
+  opts: { role?: Role; state?: StaffState; account?: boolean } = {},
+): Promise<StaffRow[]> {
+  const account = opts.account
+    ? ', s.login, s.email, s.must_change_password, s.locked_until'
+    : '';
   const { rows } = await db.query<StaffRow>(
     `SELECT s.id, s.full_name, s.role, s.phone, s.ext, s.pattern, s.anchor::text AS anchor,
-            s.blocked_at, coalesce(k.svcs, '{}') AS svcs
+            s.blocked_at, coalesce(k.svcs, '{}') AS svcs${account}
        FROM staff s
        LEFT JOIN (SELECT staff_id, array_agg(service_id ORDER BY service_id) AS svcs
                     FROM staff_skills GROUP BY staff_id) k ON k.staff_id = s.id
       WHERE ($1::text IS NULL OR s.role = $1)
-      ORDER BY s.role, s.full_name`, [opts.role ?? null]);
+        AND ($2::text IS NULL
+             OR ($2 = 'active' AND s.blocked_at IS NULL)
+             OR ($2 = 'blocked' AND s.blocked_at IS NOT NULL))
+      ORDER BY s.role, s.full_name`,
+    [opts.role ?? null, opts.state && opts.state !== 'all' ? opts.state : null]);
   return rows;
 }
 

@@ -363,3 +363,8 @@ export const canSeeRoute = (role: Role, me: string, verifierId: string | null): 
 
 /** Планирование дня, сборка маршрутов, справочники — руки руководителя. */
 export const canPlan = (role: Role): boolean => role === 'supervisor';
+
+/** Учётные записи заводит, блокирует и разблокирует только руководитель.
+ *  Своего администратора у заказчика нет: полный доступ — это и есть роль
+ *  руководителя, отдельной роли «админ» в системе нет (пункт be-users). */
+export const canManageUsers = (role: Role): boolean => role === 'supervisor';

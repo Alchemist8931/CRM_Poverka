@@ -22,6 +22,20 @@ const STOP_PARAMS = {
  *  в смене. Ровно этим числом прототип нарезал свободный пул на выезды. */
 const ROUTE_CHUNK = 25;
 
+/** Уволенного на новый выезд не поставить (пункт be-users). В прошлых маршрутах
+ *  он остаётся: история не переписывается оттого, что человек ушёл. Проверка
+ *  стоит на сервере, а не только в выпадающем списке, — список экран мог
+ *  отрисовать до увольнения и остаться открытым. */
+async function assertHired(db: Db, ids: (string | null | undefined)[]): Promise<void> {
+  const list = ids.filter((x): x is string => !!x);
+  if (!list.length) return;
+  const { rows } = await db.query<{ full_name: string }>(
+    'SELECT full_name FROM staff WHERE id = ANY($1) AND blocked_at IS NOT NULL', [list]);
+  if (rows[0]) {
+    throw ruleError(`${rows[0].full_name} — учётная запись отключена при увольнении. Выберите другого.`, 'blocked');
+  }
+}
+
 /** Порядок объезда: точки перенумеровываются по окну приезда. Позиция при этом
  *  остаётся тем, чем была, — ручной последовательностью, которую правит руководитель
  *  стрелками; пересортировка идёт только при добавлении адреса, как в прототипе. */
@@ -152,6 +166,7 @@ const plugin: FastifyPluginAsync = async (app) => {
       throw ruleError('Выберите на карте хотя бы две точки — маршрут строится по последовательности.', 'points');
     }
     return app.db.tx(async (db) => {
+      await assertHired(db, [b.verifier_id, b.duty_operator_id]);
       const { rows: reqs } = await db.query<{ id: string; city: string; route_id: string | null; status: string }>(
         `SELECT id, city, route_id, status FROM requests WHERE id = ANY($1) AND date = $2`,
         [b.request_ids, b.date]);
@@ -233,6 +248,7 @@ const plugin: FastifyPluginAsync = async (app) => {
     const { id } = req.params as { id: string };
     const b = req.body as { verifier_id?: string | null; duty_operator_id?: string | null; status?: string };
     return app.db.tx(async (db) => {
+      await assertHired(db, [b.verifier_id, b.duty_operator_id]);
       const route = await routeOr404(db, id);
       let status = b.status ?? (route.status as string);
       // Назначили поверителя черновику — маршрут готов к выдаче.

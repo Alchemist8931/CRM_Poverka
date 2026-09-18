@@ -34,7 +34,9 @@ const I = {
   cam:'<path d="M4 8h3l1.6-2.2A2 2 0 0 1 10.2 5h3.6a2 2 0 0 1 1.6.8L17 8h3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z"/><circle cx="12" cy="14" r="3.4"/>',
   act:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/>',
   audit:'<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H17a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6.5A2.5 2.5 0 0 1 4 18.5z"/><path d="M4 17.5h15"/><path d="M8 7.5h7M8 11h5"/>',
-  nav:'<path d="M3 11l18-8-8 18-2-8z"/>'
+  nav:'<path d="M3 11l18-8-8 18-2-8z"/>',
+  staff:'<rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2.5"/><path d="M5.5 17a3.5 3.5 0 0 1 7 0"/><path d="M15 9h3M15 13h3"/>',
+  key:'<circle cx="8" cy="15" r="4"/><path d="M10.8 12.2L21 2"/><path d="M15 8l3 3M18 5l3 3"/>'
 };
 const svg = (p,w=20) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:${w}px;height:${w}px;flex-shrink:0">${p}</svg>`;
 

@@ -47,7 +47,10 @@ function go(v){
 function render(){
   const a = document.activeElement;
   const id = a && a.id, ss = a && a.selectionStart, se = a && a.selectionEnd;
-  document.getElementById('root').innerHTML = S.auth?(VIEWS[S.view]||VIEWS.intake)():VIEWS.login();
+  /* Смена пароля стоит перед экранами: при первом входе по временному паролю
+     сервер ничего другого и не отдаст (пункт be-users). */
+  document.getElementById('root').innerHTML = !S.auth ? VIEWS.login()
+    : (S.mustChange||S.pwOpen) ? VIEWS.password() : (VIEWS[S.view]||VIEWS.intake)();
   if(!id) return;
   const el = document.getElementById(id);
   if(!el || typeof el.focus!=='function') return;

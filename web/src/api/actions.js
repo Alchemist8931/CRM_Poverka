@@ -188,6 +188,15 @@ export const takeHandover = (staffId, period, amount, at, note) => run(
     return `${nameOf(staffId)}: принято ${money(amount)} от ${ru(at)}.`;
   });
 
+/* ── учётные записи (пункт be-users) ─────────────────────── */
+/* Временный пароль приходит в ответе один раз; экран показывает его сам и
+   больше нигде не хранит. Своё дело здесь — запрос, перечитывание и подсказка. */
+
+export const createStaff = (body) => run(() => api.post('/staff', body));
+export const patchStaff = (id, body, said) => run(() => api.patch(`/staff/${id}`, body), said);
+export const resetPassword = (id) => run(() => api.post(`/staff/${id}/password/reset`));
+export const closeSessions = (id, said) => run(() => api.post(`/staff/${id}/sessions/close`), said);
+
 /* ── справочники ─────────────────────────────────────────── */
 
 export const patchService = (id, patch) => run(() => api.patch(`/services/${id}`, patch));

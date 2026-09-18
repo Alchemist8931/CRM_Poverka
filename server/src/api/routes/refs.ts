@@ -7,8 +7,8 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { requireRole, requireUser } from '../auth.ts';
 import { ruleError, notFound } from '../errors.ts';
-import { loadServices, loadStaff } from '../store.ts';
-import { canEditPrices, type Role } from '../../rules.ts';
+import { loadServices, loadStaff, type StaffState } from '../store.ts';
+import { canEditPrices, canManageUsers, type Role } from '../../rules.ts';
 import { canGeocode, mapsConfig } from '../../maps/config.ts';
 
 const plugin: FastifyPluginAsync = async (app) => {
@@ -103,13 +103,29 @@ const plugin: FastifyPluginAsync = async (app) => {
 
   app.get('/staff', {
     schema: {
-      tags: ['справочники'], summary: 'Сотрудники и компетенции поверителей', security: [{ session: [] }],
-      querystring: { type: 'object', properties: { role: { type: 'string' } } },
+      tags: ['справочники'],
+      summary: 'Сотрудники и компетенции поверителей. Руководителю — ещё и учётные данные',
+      security: [{ session: [] }],
+      querystring: {
+        type: 'object',
+        properties: {
+          role: { type: 'string' },
+          state: {
+            type: 'string', enum: ['all', 'active', 'blocked'], default: 'all',
+            description: 'all — все, включая уволенных: их имена нужны истории; '
+              + 'active — кого можно ставить в смену и маршрут',
+          },
+        },
+      },
     },
   }, async (req) => {
-    requireUser(req);
-    const { role } = req.query as { role?: Role };
-    return { staff: await loadStaff(app.db, role ? { role } : {}) };
+    const user = requireUser(req);
+    const { role, state } = req.query as { role?: Role; state?: StaffState };
+    /* Логин, почта и признак временного пароля — часть учётной записи, а не
+       справочника: их видит только тот, кто учётками и распоряжается. Оператору
+       список сотрудников нужен, чтобы подписать смену именем, — и не более. */
+    const account = canManageUsers(user.role as Role);
+    return { staff: await loadStaff(app.db, { ...(role ? { role } : {}), state, account }) };
   });
 
   app.put('/staff/:id/skills', {

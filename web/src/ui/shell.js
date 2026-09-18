@@ -56,6 +56,7 @@ function shell(side,main){
           ${svg(I[v])}${b?`<span class="bdg">${b}</span>`:''}</button>`}).join('')}</div>`).join('')}</div>
       <div class="foot">
         <button class="nb" title="Переключить тему" onclick="toggleTheme()">${svg(S.theme==='light'?I.moon:I.sun,18)}</button>
+        <button class="nb" title="Сменить пароль" onclick="pwOpen()">${svg(I.key,18)}</button>
         <button class="nb" title="Выйти" onclick="signOut()">${svg(I.out,18)}</button>
         <div class="ava" title="${esc(S.user)} · ${ROLES[S.role].label}">${ini}<i></i></div>
       </div>

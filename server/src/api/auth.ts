@@ -6,9 +6,12 @@
  * поэтому её переживает перезапуск и не ломает второй экземпляр за балансировщиком.
  *
  * Блокировка при этом работает мгновенно: роль и `blocked_at` читаются из базы на
- * каждый запрос, а не берутся из cookie. Цена решения — выход с одного устройства
- * не гасит сессии на других; полноценный список сессий и второй фактор — пункт
- * cloud-sec, выдача и сброс паролей — be-users.
+ * каждый запрос, а не берутся из cookie. Второй фактор — пункт cloud-sec.
+ *
+ * Выход со всех устройств (пункт be-users) сделан не списком сессий, а одной
+ * отметкой времени `staff.sessions_from`: сессия, выданная раньше неё, не
+ * принимается. Состояния на сервере от этого не появляется, а погасить разом
+ * все выданные ключи — ровно то, что нужно при увольнении и смене пароля.
  */
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { FastifyReply, FastifyRequest } from 'fastify';
@@ -21,6 +24,18 @@ export const SESSION_COOKIE = 'uchetkin_session';
 /** Смена длиннее рабочего дня не бывает, но оператор открывает CRM утром и
  *  закрывает вечером — двенадцати часов хватает, чтобы не перелогиниваться среди дня. */
 export const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
+
+/** Столько неудачных попыток подряд закрывают вход. Пять — это три опечатки и
+ *  два «а может, пароль от старой системы»; перебору этого мало. */
+export const LOGIN_FAIL_LIMIT = 5;
+/** На столько вход закрывается. Четверти часа хватает, чтобы перебор потерял
+ *  смысл, и мало, чтобы оператор остался без работы до конца смены. */
+export const LOGIN_LOCK_MS = 15 * 60 * 1000;
+
+/** Сколько минут ещё ждать — для текста отказа. Округляем вверх: «через 0 минут»
+ *  человек читает как «прямо сейчас» и пробует снова. */
+export const lockMinutesLeft = (until: string | Date, now = Date.now()): number =>
+  Math.max(1, Math.ceil((new Date(until).getTime() - now) / 60000));
 
 /** Ключ подписи сессий. В облаке лежит в Lockbox и приходит переменной окружения;
  *  на машине разработчика — значение по умолчанию, и о нём сервер говорит вслух. */
@@ -41,7 +56,16 @@ export function makeSession(staffId: string, secret: string, now = Date.now()): 
   return `${payload}.${sign(payload, secret)}`;
 }
 
-export function readSession(token: string | undefined, secret: string, now = Date.now()): string | null {
+/** Кто и когда получил эту сессию. Время выдачи считается из срока: он записан
+ *  в самой подписанной строке, а срок жизни один на всё приложение. Нужно оно
+ *  затем, чтобы отличить сессию, выданную до «выйти со всех устройств», от
+ *  выданной после. */
+export interface Session {
+  staffId: string;
+  issuedAt: number;
+}
+
+export function readSession(token: string | undefined, secret: string, now = Date.now()): Session | null {
   if (!token) return null;
   const i = token.lastIndexOf('.');
   if (i < 0) return null;
@@ -51,8 +75,20 @@ export function readSession(token: string | undefined, secret: string, now = Dat
   if (mac.length !== expected.length || !timingSafeEqual(Buffer.from(mac), Buffer.from(expected))) return null;
   const [staffId, expires] = payload.split('.');
   if (!staffId || !expires || Number(expires) < now) return null;
-  return staffId;
+  return { staffId, issuedAt: Number(expires) - SESSION_TTL_MS };
 }
+
+/** Сессия старше отметки «выйти со всех устройств» — уже не сессия.
+ *
+ *  Отметку ставит приложение своим временем (`sessionsFrom()`), а не `now()`
+ *  базы, и сравнивается она с временем выдачи cookie — тоже приложения. Иначе
+ *  расхождение часов машины и базы в полсекунды либо оставляло бы погашенные
+ *  сессии живыми, либо выбрасывало человека сразу после смены пароля. */
+export const sessionFresh = (issuedAt: number, from: string | Date | null): boolean =>
+  !from || issuedAt >= new Date(from).getTime();
+
+/** Отметка «с этого мгновения прежние сессии недействительны». */
+export const sessionsFrom = (): string => new Date().toISOString();
 
 /** Кто пришёл. Роль и имя берутся из базы на каждый запрос. */
 export interface User {

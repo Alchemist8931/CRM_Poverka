@@ -35,8 +35,10 @@ function applyUser(user) {
   S.me = user.id;
   S.user = user.full_name;
   // Поток событий телефонии — только тем, у кого есть пульт: поверителю сервер
-  // его не откроет (403), и просить незачем.
-  if (role !== 'verifier') listenCalls();
+  // его не откроет (403), и просить незачем. До смены временного пароля сервер
+  // не откроет его никому — подключится экран смены пароля, когда она пройдёт.
+  S.mustChange = !!user.must_change_password;
+  if (role !== 'verifier' && !S.mustChange) listenCalls();
 }
 
 /* Метка «в этой вкладке уже входили». Сама сессия лежит в httpOnly-cookie и
@@ -52,6 +54,9 @@ export async function login(loginName, password) {
     const { user } = await api.post('/auth/login', { login: loginName, password });
     mark(true);
     applyUser(user);
+    // Первый вход по временному паролю: справочники сервер отдаст только после
+    // смены — сразу показываем форму пароля (screens/password.js).
+    if (S.mustChange) return render();
     await loadRefs();
     goPage(0);
   } catch (err) {
@@ -64,7 +69,7 @@ export async function logout() {
   mark(false);
   stopCalls();
   await api.post('/auth/logout').catch(() => {});
-  S.auth = false;
+  S.auth = false; S.mustChange = false; S.pwOpen = false;
   S.requests = []; S.routes = []; S.waits = []; S.handovers = []; S.days = []; S.booked = {};
   render();
 }
@@ -77,6 +82,7 @@ export async function bootApi() {
   try {
     const { user } = await api.get('/auth/me');
     applyUser(user);
+    if (S.mustChange) return render();
     await loadRefs();
     goPage(0);
   } catch (err) {

@@ -228,6 +228,11 @@ const LOADERS = {
     // с записью, а вот выпадающий список собирается из справочника.
     await Promise.all([loadRefs(), loadAudit()]);
   },
+  async staff() {
+    // Тот же справочник сотрудников: руководителю сервер отдаёт его с полями
+    // учётной записи (логин, почта, временный ли пароль, замок входа).
+    await loadRefs();
+  },
   async myroute() {
     await Promise.all([loadDays(TODAY, TODAY), loadRoutes({ date: TODAY })]);
     const mine = S.routes.find((r) => r.date === TODAY && r.verifier === S.me);

@@ -19,7 +19,7 @@
     "seed": "tsx src/seed/index.ts",
     "db:reset": "node-pg-migrate down 0 && node-pg-migrate up && tsx src/seed/index.ts",
     "typecheck": "tsc --noEmit",
-    "check": "npm run check:model && npm run check:docs && npm run check:tables && npm run check:schema && npm run check:seed-cli && npm run check:import && npm run check:audit-prune && npm run check:arshin && npm run check:notify && npm run check:maps",
+    "check": "npm run check:model && npm run check:docs && npm run check:tables && npm run check:schema && npm run check:seed-cli && npm run check:import && npm run check:audit-prune && npm run check:arshin && npm run check:notify && npm run check:maps && npm run check:users",
     "check:model": "tsx scripts/check-model-sync.mts",
     "check:docs": "tsx scripts/check-docs.mts",
     "check:tables": "tsx scripts/check-tables.mts",
@@ -36,7 +36,9 @@
     "check:notify": "tsx scripts/check-notify.mts",
     "check:novofon-flow": "tsx scripts/check-novofon-flow.mts",
     "import": "tsx scripts/import/cli.mts",
-    "check:import": "tsx scripts/check-import.mts"
+    "check:import": "tsx scripts/check-import.mts",
+    "init:accounts": "tsx scripts/init-accounts.mts",
+    "check:users": "tsx scripts/check-users.mts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1133.0",

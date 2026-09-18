@@ -10,12 +10,13 @@ import cookie from '@fastify/cookie';
 import swagger from '@fastify/swagger';
 import type { Db } from './db.ts';
 import { ApiError } from './errors.ts';
-import { SESSION_COOKIE, readSession, sessionSecret, type User } from './auth.ts';
 import { photoStorage, recordsConfig, storageConfig, type PhotoStorage } from '../storage.ts';
 import { canCall, novofonConfig, type NovofonConfig } from '../novofon/config.ts';
 import { novofonApi, type NovofonApi } from '../novofon/api.ts';
 import { callBus, type CallBus } from '../novofon/bus.ts';
+import { SESSION_COOKIE, readSession, sessionFresh, sessionSecret, type User } from './auth.ts';
 import authRoutes from './routes/auth.ts';
+import userRoutes from './routes/users.ts';
 import refRoutes from './routes/refs.ts';
 import planRoutes from './routes/plan.ts';
 import requestRoutes from './routes/requests.ts';
@@ -86,6 +87,9 @@ const PUBLIC = new Set(['/health', '/docs', '/api/auth/login',
   '/api/webhooks/novofon/routing', '/api/webhooks/novofon/routing/:secret',
   '/api/photos/:id/file']);
 
+/* Что открыто, пока временный пароль не сменён: узнать, кто я, сменить пароль
+   и выйти. Всё остальное ждёт смены. */
+const PASSWORD_CHANGE = new Set(['/api/auth/me', '/api/auth/logout', '/api/staff/:id/password']);
 
 export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   const app = fastify({
@@ -164,12 +168,17 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   // Из-за этого заблокированная учётка перестаёт работать сразу, а не по сроку cookie.
   app.addHook('onRequest', async (req) => {
     const token = req.cookies?.[SESSION_COOKIE];
-    const staffId = readSession(token, secret);
-    if (!staffId) return;
-    const { rows } = await app.db.query<User & { blocked_at: string | null }>(
-      'SELECT id, role, full_name, must_change_password, blocked_at FROM staff WHERE id = $1', [staffId]);
+    const session = readSession(token, secret);
+    if (!session) return;
+    const { rows } = await app.db.query<User & { blocked_at: string | null; sessions_from: string | null }>(
+      `SELECT id, role, full_name, must_change_password, blocked_at, sessions_from
+         FROM staff WHERE id = $1`, [session.staffId]);
     const row = rows[0];
     if (!row || row.blocked_at) return;
+    // Выход со всех устройств (пункт be-users): сессия, выданная до отметки,
+    // больше не сессия. Так гасятся чужие открытые вкладки при увольнении и
+    // при смене пароля — без списка сессий на сервере.
+    if (!sessionFresh(session.issuedAt, row.sessions_from)) return;
     req.user = { id: row.id, role: row.role, full_name: row.full_name, must_change_password: row.must_change_password };
   });
 
@@ -179,6 +188,12 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     const path = req.routeOptions?.url ?? req.url.split('?')[0]!;
     if (PUBLIC.has(path) || !path.startsWith('/api/')) return;
     if (!req.user) throw new ApiError(401, 'Нужен вход в систему.');
+    // Первый вход по временному паролю (пункт be-users): дальше смены пароля
+    // человек не проходит. Охрана стоит здесь, а не в экранах, — иначе учётка
+    // с паролем, который знает ещё и руководитель, работала бы полноценно.
+    if (req.user.must_change_password && !PASSWORD_CHANGE.has(path)) {
+      throw new ApiError(403, 'Сначала смените временный пароль.', 'password');
+    }
   });
 
   // Журнал действий ставится до маршрутов и поверх всех сразу: обработчик,
@@ -223,6 +238,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   }, async () => app.swagger());
 
   await app.register(authRoutes, { prefix: '/api' });
+  await app.register(userRoutes, { prefix: '/api' });
   await app.register(refRoutes, { prefix: '/api' });
   await app.register(planRoutes, { prefix: '/api' });
   await app.register(requestRoutes, { prefix: '/api' });

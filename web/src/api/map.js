@@ -22,6 +22,9 @@ export function staffFrom(row) {
     pattern: row.pattern, anchor: date(row.anchor), extra: [],
     svcs: row.svcs || [], phone: row.phone || undefined, ext: row.ext || undefined,
     blocked: !!row.blocked_at,
+    // Поля учётной записи сервер отдаёт только руководителю (экран «Сотрудники»).
+    login: row.login ?? null, email: row.email ?? null,
+    mustChange: !!row.must_change_password, lockedUntil: row.locked_until || null,
   };
 }
 
