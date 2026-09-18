@@ -1,0 +1,24 @@
+{
+  "_": "Роли на дату реестра доступов (лист «Роли» в «Учёткин — реестр доступов и секретов.xlsx»). Сверяет docs/support/check-roles.sh. Расхождение — либо реестр устарел, либо кто-то выдал роль мимо реестра.",
+  "date": "2026-09-18",
+  "folder_id": "b1giq117a18cpiolfife",
+  "registry_id": "crpa7sraqj6kcj3vj5am",
+  "folder_bindings": [
+    "serviceAccount:deploy=admin",
+    "serviceAccount:uchetkin-dev-app=container-registry.images.puller",
+    "serviceAccount:uchetkin-dev-app=logging.writer",
+    "serviceAccount:uchetkin-dev-app=monitoring.editor",
+    "serviceAccount:uchetkin-dev-audit=audit-trails.viewer",
+    "serviceAccount:uchetkin-dev-audit=storage.configViewer",
+    "serviceAccount:uchetkin-dev-watchdog=logging.writer",
+    "serviceAccount:uchetkin-dev-watchdog=monitoring.viewer"
+  ],
+  "registry_bindings": [
+    "serviceAccount:uchetkin-dev-app=container-registry.images.puller",
+    "serviceAccount:uchetkin-dev-deployer=container-registry.images.pusher"
+  ],
+  "github_repo": "Alchemist8931/CRM_Poverka",
+  "github_collaborators": [
+    "Alchemist8931=admin"
+  ]
+}
