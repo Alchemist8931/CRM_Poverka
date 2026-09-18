@@ -48,10 +48,15 @@ locals {
 
   # Всё, что знает про адрес системы, собирается здесь и уезжает на ВМ файлом
   # окружения. В коде приложения доменов нет — это условие, а не пожелание.
-  public_base_url  = "https://${var.app_domain}"
-  api_base_url     = "https://${var.app_domain}${var.api_path_prefix}"
-  webhook_base_url = "https://${var.app_domain}${var.webhook_path_prefix}"
-  cookie_domain    = var.app_domain
+  # Пока TLS выключен (A-записи нет), контур живёт по http на статическом
+  # адресе — и ссылки в письмах, адрес приёмника вебхуков и cookie должны
+  # смотреть туда же: https-имя без записи в DNS вело бы в никуда. Условие то
+  # же, что у health_url ниже.
+  site_origin      = local.use_alb || local.tls_by_caddy ? "https://${var.app_domain}" : "http://${local.external_ip}"
+  public_base_url  = local.site_origin
+  api_base_url     = "${local.site_origin}${var.api_path_prefix}"
+  webhook_base_url = "${local.site_origin}${var.webhook_path_prefix}"
+  cookie_domain    = local.use_alb || local.tls_by_caddy ? var.app_domain : ""
 
   external_ip = local.use_alb ? yandex_vpc_address.alb[0].external_ipv4_address[0].address : yandex_vpc_address.vm[0].external_ipv4_address[0].address
 

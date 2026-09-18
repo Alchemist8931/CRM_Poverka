@@ -90,6 +90,33 @@ Actions → Variables) и **секреты**; в prod они задаются н
   ограничение веток (`main`). Без этого «по кнопке» превращается в «кто угодно
   и когда угодно».
 
+## Выкладка руками на рабочем контуре
+
+С 18.09.2026 контур на `84.201.139.101` — рабочий (пункт плана `live-ip`,
+`docs/ops.md`, «Рабочий контур на временном адресе»), а выкладка через
+Actions до него не доходит (порт 22 для runner'ов закрыт — «Чего ещё нет»).
+Поэтому обновляется он на самой машине тем же порядком, что `deploy/deploy.sh`,
+только образы собираются на месте под тегом `manual` (он же в
+`/opt/uchetkin/.env`):
+
+```bash
+cd /opt/uchetkin/src && sudo git pull --ff-only
+sudo docker tag cr.yandex/crpa7sraqj6kcj3vj5am/uchetkin-api:manual cr.yandex/crpa7sraqj6kcj3vj5am/uchetkin-api:manual-prev
+sudo docker tag cr.yandex/crpa7sraqj6kcj3vj5am/uchetkin-web:manual cr.yandex/crpa7sraqj6kcj3vj5am/uchetkin-web:manual-prev
+sudo docker build -t cr.yandex/crpa7sraqj6kcj3vj5am/uchetkin-api:manual server
+sudo docker build -t cr.yandex/crpa7sraqj6kcj3vj5am/uchetkin-web:manual web
+cd /opt/uchetkin
+sudo systemctl start uchetkin-backup          # копия базы до миграций, строка «→ s3://…» в journalctl -u uchetkin-backup
+sudo docker compose run --rm --no-deps api npm run migrate:cloud
+sudo docker compose up -d
+curl -sf http://127.0.0.1/health
+```
+
+Откат — `IMAGE_TAG=manual-prev` в `/opt/uchetkin/.env` и `sudo docker compose
+up -d`; миграции при этом остаются (см. «Порядок релиза» — они совместимы с
+предыдущим релизом). База живёт в томе `pgdata` на диске машины: данные
+рабочего контура, копия перед каждой выкладкой обязательна.
+
 ## Чего ещё нет
 
 - **Настроенного контура.** Пока переменная `YC_REGISTRY_ID` не задана,
