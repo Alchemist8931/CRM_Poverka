@@ -2,7 +2,7 @@
 #
 # В отличие от ci.yml здесь ничего не собирается и не поднимается: браузер
 # ходит на живой контур по адресу из переменной UAT_BASE_URL (по умолчанию —
-# https-имя dev через sslip.io, пункт live-tls) от имени технической учётки,
+# боевой домен https://uchetkin.ru, пункт cloud-domain) от имени технической учётки,
 # которую заводит server/scripts/uat-stand.mts. Поэтому прогон и доказывает то, чего
 # не доказать локальным стендом: что выложенная сборка работает на выложенной
 # машине с настоящей базой и настоящим хранилищем снимков.
@@ -37,7 +37,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  UAT_BASE_URL: ${{ vars.UAT_BASE_URL || 'https://84-201-139-101.sslip.io' }}
+  UAT_BASE_URL: ${{ vars.UAT_BASE_URL || 'https://uchetkin.ru' }}
   UAT_LOGIN: ${{ secrets.UAT_LOGIN }}
   UAT_PASSWORD: ${{ secrets.UAT_PASSWORD }}
   UAT_STAFF_PASSWORD: ${{ secrets.UAT_STAFF_PASSWORD }}

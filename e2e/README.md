@@ -9,7 +9,7 @@
 
 ```bash
 cd e2e && npm ci && npx playwright install chromium
-UAT_BASE_URL=https://84-201-139-101.sslip.io UAT_LOGIN=autotest UAT_PASSWORD=… npx playwright test
+UAT_BASE_URL=https://uchetkin.ru UAT_LOGIN=autotest UAT_PASSWORD=… npx playwright test
 ```
 
 Ничего не поднимается: браузер ходит на контур, техническая учётка входит,
