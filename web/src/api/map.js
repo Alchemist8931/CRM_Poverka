@@ -76,6 +76,19 @@ export function paymentFrom(row) {
   return {
     method: row.method, amount: row.amount, charged: row.charged,
     at: stamp(row.paid_at), by: row.by_staff, manual: !!row.manual, note: row.note || '',
+    // Чек по безналичной оплате (пункт int-pay): номер показывается клиенту и оператору.
+    receipt: row.receipt_number || '', receiptAt: stamp(row.receipt_sent_at),
+  };
+}
+
+/** Действующий платёж провайдера: QR или ссылка, состояние, чек. */
+export function onlineFrom(row) {
+  if (!row) return null;
+  return {
+    id: row.id, kind: row.kind, amount: row.amount, status: row.status, confirmation: row.confirmation || '',
+    paidAt: stamp(row.paid_at), paidAmount: row.paid_amount, mismatch: !!row.mismatch,
+    receipt: row.receipt_number || '', receiptStatus: row.receipt_status || null, error: row.error || '',
+    refundAmount: row.refund_amount, refundReason: row.refund_reason || '',
   };
 }
 
@@ -98,6 +111,7 @@ export function requestFrom(row, extra = {}) {
     status: row.status, routeId: row.route_id, operator: row.operator_id,
     verifier: row.verifier_id, from: row.moved_from,
     pay: paymentFrom(extra.payment),
+    online: onlineFrom(extra.online),
   };
 }
 

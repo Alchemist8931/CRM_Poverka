@@ -27,7 +27,10 @@ const S = {
   city:CITIES[0], day:TODAY, staff:[], days:[], requests:[], routes:[], absences:[], waits:[], handovers:[], seq:1000,
   toast:null, openRoute:null, openStop:null, call:null, lb:null, ukCity:'', ukSeal:'', pMonth:TODAY.slice(0,7), planTab:'day',
   mMonth:TODAY.slice(0,7), meTab:'done', modal:null, edit:null, uns:null, ho:null, dupAsk:null, mchat:false,
-  intake:blankIntake(), op:blankOp()
+  intake:blankIntake(), op:blankOp(),
+  /* Эквайринг (пункт int-pay): подключён ли к контуру, открытый платёж на экране
+     поверителя, сверка за день у руководителя и форма возврата. */
+  payCfg:null, pay:null, acq:null, acqDay:TODAY, refund:null
 };
 const staffById = id => S.staff.find(s=>s.id===id);
 const nameOf = id => staffById(id)?.name || '—';

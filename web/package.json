@@ -19,7 +19,8 @@
     "check:audit-ui": "node scripts/check-audit-ui.mjs",
     "check:notify-ui": "node scripts/check-notify-ui.mjs",
     "check:maps-ui": "node scripts/check-maps-ui.mjs",
-    "check:print-ui": "node scripts/check-print-ui.mjs"
+    "check:print-ui": "node scripts/check-print-ui.mjs",
+    "check:payment-ui": "node scripts/check-payment-ui.mjs"
   },
   "devDependencies": {
     "pixelmatch": "^7.2.0",

@@ -11,6 +11,7 @@ import { render, toast } from '../ui/render.js';
 import { isDemo } from '../api/mode.js';
 import { takeHandover as apiTakeHandover } from '../api/actions.js';
 import { reqTag } from './intake.js';
+import { acqCard } from './pay.js';
 
 /* ---------- заработок ---------- */
 function viewMe(){
@@ -109,8 +110,8 @@ function subCard(vid,m){
       от ${ru(R.last.at)} за ${MN[+R.last.period.slice(5)-1]}${R.last.by?` · принял ${esc(nameOf(R.last.by))}`:''}.</p>`
       :`<p class="note">Сдач ещё не было.</p>`}</div>`;
   return `<div class="c"><h3>Подотчёт · ${mn}</h3>
-    <p class="cap">Онлайн-оплаты пока нет: деньги с клиентов вы забираете на адресе и держите у себя.
-      В конце месяца сдаёте руководителю собранное за вычетом своей сдельной оплаты.</p>
+    <p class="cap">Наличные и переводы вы забираете на адресе и держите у себя; в конце месяца сдаёте руководителю
+      собранное за вычетом своей сдельной оплаты. Оплаты по QR и ссылке сюда не входят — они ушли на счёт компании.</p>
     <div class="kpi" style="margin-bottom:12px">
       <div><div class="v">${money(R.cash)}</div><div class="k">принято наличными</div></div>
       <div><div class="v">${money(R.card)}</div><div class="k">принято переводом</div></div>
@@ -154,11 +155,12 @@ function viewPayroll(){
     <div class="c"><h3>Поверители</h3><p class="cap">По закрытым маршрутам.</p>${tbl(byV,cV,'Сотрудник')}</div>
     <div class="c"><h3>Операторы</h3><p class="cap">По заявкам, дошедшим до выполнения.</p>${tbl(byO,cO,'Сотрудник')}</div></div>
   ${subTable()}
+  ${acqCard()}
   ${unpaidCard()}`);
 }
 /* Подотчёт бригады за текущий месяц: у поверителя на руках наличные и переводы,
-   он сдаёт их за вычетом своей сдельной оплаты. Пока нет эквайринга — это
-   единственное место, где видно, сколько денег ходит мимо кассы. */
+   он сдаёт их за вычетом своей сдельной оплаты. Безнал по эквайрингу сюда не
+   входит — он в соседней карточке, своим потоком. */
 function subTable(){
   const m = CUR_M, mn = `${MN[+m.slice(5)-1]} ${m.slice(0,4)}`;
   const rows = S.staff.filter(p=>p.role==='verifier').map(p=>({p,R:subReport(p.id,m)}))
@@ -167,7 +169,8 @@ function subTable(){
   const T = rows.reduce((a,x)=>({cash:a.cash+x.R.cash,card:a.card+x.R.card,got:a.got+x.R.got,
     wage:a.wage+x.R.wage,given:a.given+x.R.given,left:a.left+x.R.left}),{cash:0,card:0,got:0,wage:0,given:0,left:0});
   return `<div class="c"><h3>Подотчёт бригады · ${mn}</h3>
-    <p class="cap">Эквайринга нет: деньги на адресе берёт поверитель и держит у себя до конца месяца.
+    <p class="cap">Наличные и переводы на адресе берёт поверитель и держит у себя до конца месяца; безнал по QR и ссылке
+      идёт мимо него — на счёт компании — и считается отдельно, ниже.
       «Принять возврат» — это приход денег в кассу: поверитель привёз собранное за вычетом своей сдельной оплаты.</p>
     ${rows.length?`<table><thead><tr><th>Поверитель</th><th class="num">Наличными</th><th class="num">Переводом</th>
       <th class="num">Принято</th><th class="num">Начислено</th><th class="num">Сдано</th><th class="num">Остаток</th>

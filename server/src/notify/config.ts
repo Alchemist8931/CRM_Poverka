@@ -61,6 +61,9 @@ export interface NotifyConfig {
   maxAttempts: number;
   /** Пауза перед повтором в минутах: n-я попытка ждёт retryMinutes × 2^(n-1). */
   retryMinutes: number;
+  /** Подключён ли эквайринг (ключи провайдера в окружении): от этого зависит,
+   *  обещать ли клиенту в письме оплату по QR и ссылке (пункт int-pay). */
+  online: boolean;
 }
 
 const str = (v: string | undefined): string | null => {
@@ -107,6 +110,7 @@ export function notifyConfig(env: NodeJS.ProcessEnv = process.env): NotifyConfig
     },
     maxAttempts: num(env.NOTIFY_MAX_ATTEMPTS, 5),
     retryMinutes: num(env.NOTIFY_RETRY_MINUTES, 10),
+    online: !!(str(env.PAYMENT_SHOP_ID) && str(env.PAYMENT_SECRET_KEY)),
   };
 }
 

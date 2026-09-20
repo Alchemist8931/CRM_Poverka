@@ -181,6 +181,28 @@ export function savePayment(r, delay = 600) {
   }, delay));
 }
 
+/* ── эквайринг (пункт int-pay) ───────────────────────────── */
+
+/** Платёж на сумму акта: QR СБП или ссылка. Сумму задаёт сервер по акту —
+ *  поверитель её не вводит. Повторный вызов отдаёт тот же платёж. */
+export const createOnline = (requestId, kind) => run(
+  () => api.post(`/requests/${requestId}/online-payment`, { kind }));
+
+/** Спросить провайдера об оплате: для «я уже заплатил», когда уведомление ещё в пути. */
+export const syncOnline = (id) => api.get(`/online-payments/${id}?sync=true`);
+
+export const cancelOnline = (id) => run(
+  () => api.post(`/online-payments/${id}/cancel`), 'Платёж отменён, заявка помечена «не оплачено».');
+
+export const refundOnline = (id, reason) => run(
+  () => api.post(`/online-payments/${id}/refund`, { reason }),
+  () => { closeModal(); return 'Возврат проведён, чек возврата уйдёт клиенту.'; });
+
+export const retryReceipt = (id) => run(
+  () => api.post(`/online-payments/${id}/receipt`),
+  (out) => (out.payment.receipt_status === 'зарегистрирован'
+    ? `Чек № ${out.payment.receipt_number} зарегистрирован.` : `Касса чек не приняла: ${out.payment.error || 'причина не названа'}.`));
+
 export const takeHandover = (staffId, period, amount, at, note) => run(
   () => api.post('/handovers', { staff_id: staffId, period, amount, at, note }),
   () => {

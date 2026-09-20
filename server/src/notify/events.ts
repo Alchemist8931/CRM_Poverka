@@ -45,6 +45,8 @@ type ServiceRow = Service & { name: string };
 export interface EnqueueOptions {
   /** Дата, с которой перенесли: подстановка {прежняя_дата} у события «перенос». */
   movedFrom?: string;
+  /** Чек по безналичной оплате (событие «чек»): номер, сумма, куда отправлен. */
+  receipt?: { number: string; amount: number; email: string };
   /** Какие каналы трогать. По умолчанию все, у которых есть шаблон и адрес. */
   channels?: Channel[];
 }
@@ -78,10 +80,13 @@ export function varsFor(cfg: NotifyConfig, r: RequestRow, services: Map<string, 
       .filter(Boolean).join(', '),
     'услуги': names.join(', '),
     'сумма': sum,
-    // Эквайринга нет и до пункта int-pay не будет: на месте берут наличными
-    // или переводом, и обещать клиенту ссылку на оплату нельзя.
-    'оплата': payMethods(r.client_type).filter((m) => m !== 'не оплачено').join(' или '),
+    // Безналичные способы (QR СБП, ссылка) обещаются только там, где эквайринг
+    // подключён к контуру: без ключей провайдера их в акте не будет.
+    'оплата': payMethods(r.client_type, cfg.online).filter((m) => m !== 'не оплачено').join(' или '),
     'поверитель': r.verifier_name ?? '',
+    'номер_чека': opts.receipt?.number ?? '',
+    'сумма_оплаты': opts.receipt?.amount ?? '',
+    'почта': opts.receipt?.email || r.email || '',
     'контора': cfg.office,
     'телефон_конторы': cfg.officePhone,
     'подпись': cfg.signature,
@@ -139,6 +144,9 @@ export async function enqueue(
     if (opts.channels && !opts.channels.includes(t.channel)) continue;
     const address = addressOf(r, t.channel);
     if (!address) continue;
+    // У чека свой повод — номер чека: два чека по одной заявке (после
+    // возврата и повторной оплаты) — два разных сообщения.
+    const cause = event === 'чек' ? opts.receipt?.number ?? 'чек' : r.date;
     const { rows } = await db.query<{ id: number }>(
       `INSERT INTO notifications
          (event, channel, request_id, client_id, dedup_key, address, subject, body, send_after)
@@ -150,7 +158,7 @@ export async function enqueue(
          END)
        ON CONFLICT (dedup_key) DO NOTHING
        RETURNING id`,
-      [event, t.channel, r.id, r.client_id, `${event}:${r.id}:${t.channel}:${r.date}`,
+      [event, t.channel, r.id, r.client_id, `${event}:${r.id}:${t.channel}:${cause}`,
        address, render(t.subject, vars), render(t.body, vars), r.date, cfg.timezone]);
     if (rows[0]) out.push({ id: rows[0].id, channel: t.channel });
   }

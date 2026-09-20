@@ -26,6 +26,8 @@ import { hashPassword } from '../src/password.ts';
 import type { PhotoStorage } from '../src/storage.ts';
 import { novofonConfig, type NovofonConfig } from '../src/novofon/config.ts';
 import type { NovofonApi } from '../src/novofon/api.ts';
+import type { PaymentConfig } from '../src/payment/config.ts';
+import type { PaymentProvider } from '../src/payment/provider.ts';
 
 const serverDir = fileURLToPath(new URL('..', import.meta.url));
 
@@ -78,6 +80,9 @@ export async function makeStand(opts: {
   novofon?: NovofonConfig;
   /** Клиент АТС. По умолчанию его нет: тесты API в АТС не ходят. */
   novofonClient?: NovofonApi | null;
+  /** Эквайринг: настройки и провайдер. По умолчанию выключен — как в контуре без ключей. */
+  payment?: PaymentConfig;
+  paymentProvider?: PaymentProvider | null;
 } = {}): Promise<Stand> {
   image ??= makeImage();
   const pg = new PGlite({ loadDataDir: await image });
@@ -89,6 +94,8 @@ export async function makeStand(opts: {
     // (секрет задан), а окружение машины проверяющего сюда попадать не должно.
     novofon: opts.novofon ?? novofonConfig({ NOVOFON_WEBHOOK_SECRET: 'секрет-проверки' } as NodeJS.ProcessEnv),
     novofonClient: opts.novofonClient ?? null,
+    payment: opts.payment,
+    paymentProvider: opts.paymentProvider ?? null,
     // «Внутренняя ошибка сервера» без причины — это полчаса гадания на ровном
     // месте: TEST_LOG=1 включает журнал приложения на время проверки.
     logger: !!process.env.TEST_LOG,

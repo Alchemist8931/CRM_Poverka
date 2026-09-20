@@ -40,6 +40,9 @@ const SNAPSHOT: Record<string, { table: string; key: string; param: string }> = 
   handovers: { table: 'handovers', key: 'id', param: 'id' },
   'wait-list': { table: 'wait_list', key: 'id', param: 'id' },
   'route-builder': { table: 'route_builder', key: 'date', param: 'date' },
+  // Возврат и отмена платежа — деньги клиента: в журнале должно быть видно,
+  // кто и почему (пункт int-pay).
+  'online-payments': { table: 'online_payments', key: 'id', param: 'id' },
 };
 
 /** Адреса, где сущность не совпадает с первым куском пути. */
@@ -95,6 +98,8 @@ const SKIP = new Set([
   'POST /api/webhooks/novofon/routing', 'GET /api/webhooks/novofon/routing',
   'POST /api/webhooks/novofon/routing/:secret', 'GET /api/webhooks/novofon/routing/:secret',
   'GET /api/calls/stream',
+  // Уведомления платёжного провайдера — не человек; их след — `payment_events`.
+  'POST /api/webhooks/payment/:secret',
 ]);
 
 /** Поля, которые в журнал не попадают ни при каких обстоятельствах. */

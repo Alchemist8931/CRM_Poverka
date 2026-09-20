@@ -107,6 +107,7 @@ function plan(env: NodeJS.ProcessEnv): { name: string; secretId: string }[] {
     ['NOVOFON_WEBHOOK_SECRET', env.NOVOFON_WEBHOOK_SECRET, env.LOCKBOX_NOVOFON_SECRET_ID],
     ['SMTP_PASSWORD', env.SMTP_PASSWORD, env.LOCKBOX_NOTIFY_SECRET_ID],
     ['YANDEX_GEOCODER_KEY', env.YANDEX_GEOCODER_KEY, env.LOCKBOX_MAPS_SECRET_ID],
+    ['PAYMENT_SECRET_KEY', env.PAYMENT_SECRET_KEY, env.LOCKBOX_PAYMENT_SECRET_ID],
   ];
   return wanted
     .filter(([, value, secretId]) => !value && secretId)
@@ -167,6 +168,16 @@ export async function loadSecrets(env: NodeJS.ProcessEnv = process.env): Promise
       if (entries.geocoder_key) env.YANDEX_GEOCODER_KEY = entries.geocoder_key;
       if (entries.jsapi_key) env.YANDEX_JSAPI_KEY = entries.jsapi_key;
       if (!entries.geocoder_key) continue;
+    } else if (name === 'PAYMENT_SECRET_KEY') {
+      // Ключи эквайринга и кассы (пункт int-pay): идентификатор магазина и
+      // секретный ключ из кабинета провайдера, секрет приёмника уведомлений.
+      // Заводит их человек в консоли после договора; пустой секрет — рабочее
+      // состояние: безналичных способов в акте нет, наличные работают.
+      if (entries.shop_id) env.PAYMENT_SHOP_ID = entries.shop_id;
+      if (entries.secret_key) env.PAYMENT_SECRET_KEY = entries.secret_key;
+      if (entries.webhook_secret) env.PAYMENT_WEBHOOK_SECRET = entries.webhook_secret;
+      if (entries.provider) env.PAYMENT_PROVIDER = entries.provider;
+      if (!entries.secret_key) continue;
     } else {
       // Секреты внешних служб заводятся человеком в консоли: до этого момента
       // секрет существует, но пуст. Пустой ключ вебхука — это рабочее

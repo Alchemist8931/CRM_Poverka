@@ -1,9 +1,11 @@
 /* Деньги: оплата на месте, заработок, сдельная оплата по всем и подотчёт.
  *
- * Эквайринга на первом этапе нет: поверитель берёт наличные или перевод на карту
- * и держит деньги у себя как подотчёт до конца месяца. Поэтому у платежа нет ни
- * провайдера, ни внешнего идентификатора — только способ, сумма и кто принял.
- * Место под провайдера оставлено в `GET /payments/{id}/status` (пункт int-pay).
+ * Наличные и перевод на карту поверитель берёт на адресе и держит у себя как
+ * подотчёт до конца месяца: у такого платежа нет ни провайдера, ни внешнего
+ * идентификатора — только способ, сумма и кто принял. Безнал через провайдера
+ * (СБП по QR, платёжная ссылка — пункт int-pay, `routes/payment.ts`) в подотчёт
+ * не попадает: деньги приходят на расчётный счёт ИП, а отметка «оплачено»
+ * ставится уведомлением провайдера, а не рукой поверителя.
  *
  * Начисления считаются по снимку в строках приборов (`rate_verifier`,
  * `rate_operator`), а не по текущему прайсу: переписанная цена не должна менять
@@ -14,8 +16,10 @@ import { requireRole, requireUser } from '../auth.ts';
 import { notFound, ruleError } from '../errors.ts';
 import { loadDevices, loadServices } from '../store.ts';
 import {
-  PAY_HAND, PAY_METHODS, canManageUsers, canSeeEarningsOf, payMethods, priceOf, type ClientType, type Role,
+  PAY_HAND, PAY_METHODS, PAY_ONLINE, canManageUsers, canSeeEarningsOf, payMethods, priceOf, type ClientType, type Role,
 } from '../../rules.ts';
+import { canPay } from '../../payment/config.ts';
+import { activeOf, openPaymentProblem } from '../../payment/service.ts';
 
 const MONTH = { type: 'string', pattern: '^\\d{4}-\\d{2}$' } as const;
 
@@ -37,9 +41,11 @@ const plugin: FastifyPluginAsync = async (app) => {
     const devices = await loadDevices(app.db, id);
     return {
       payment: rows[0] ?? null,
-      // Счёт выставляется только юрлицу — физлицу этот способ не показываем.
-      methods: payMethods(reqs[0].client_type),
+      // Счёт выставляется только юрлицу — физлицу этот способ не показываем;
+      // безнал через провайдера — только там, где он подключён.
+      methods: payMethods(reqs[0].client_type, !!app.payments && canPay(app.paymentConfig)),
       charged: priceOf(map, reqs[0].client_type, devices.map((d) => ({ service_id: String(d.service_id), pensioner: !!d.pensioner }))),
+      online: await activeOf(app.db, id),
     };
   });
 
@@ -66,51 +72,66 @@ const plugin: FastifyPluginAsync = async (app) => {
       'SELECT client_type, verifier_id FROM requests WHERE id = $1', [id]);
     const request = reqs[0];
     if (!request) throw notFound(`Нет заявки «${id}».`);
-    if (!payMethods(request.client_type).includes(b.method as never)) {
-      throw ruleError('По счёту платит только юрлицо — физлицу этот способ недоступен.', 'method');
+    const online = PAY_ONLINE.includes(b.method as never);
+    if (!payMethods(request.client_type, !!app.payments && canPay(app.paymentConfig)).includes(b.method as never)) {
+      throw ruleError(online
+        ? 'Эквайринг не подключён к этому контуру: принимайте наличными или переводом.'
+        : 'По счёту платит только юрлицо — физлицу этот способ недоступен.', 'method');
     }
-    // «Не оплачено» — это долг, а не платёж на ноль рублей: сумма при нём нулевая.
-    const amount = b.method === 'не оплачено' ? 0 : b.amount ?? 0;
     const { map } = await loadServices(app.db);
     const devices = await loadDevices(app.db, id);
     const charged = priceOf(map, request.client_type,
       devices.map((d) => ({ service_id: String(d.service_id), pensioner: !!d.pensioner })));
+    // Оплаченный безнал руками не переписывается, ожидающий с другой суммой —
+    // не принимается: те же правила, что при закрытии позиции.
+    const stale = await openPaymentProblem(app.db, id, b.method, charged);
+    if (stale) throw ruleError(stale, 'payment');
+    const onlinePay = online ? await activeOf(app.db, id) : null;
+    // «Не оплачено» — это долг, а не платёж на ноль рублей: сумма при нём нулевая.
+    // У безнала сумма — из платежа, отметка «оплачено» — из уведомления провайдера.
+    const amount = b.method === 'не оплачено' ? 0 : online ? (onlinePay?.paid_amount ?? onlinePay?.amount ?? charged) : b.amount ?? 0;
+    const paidAt = b.method === 'не оплачено' ? null : online ? onlinePay?.paid_at ?? null : new Date();
 
     const { rows } = await app.db.query(
       `INSERT INTO payments (request_id, method, amount, charged, manual, note, paid_at, by_staff)
-       VALUES ($1,$2,$3,$4,$5,$6, CASE WHEN $2 = 'не оплачено' THEN NULL ELSE now() END, $7)
+       VALUES ($1,$2,$3,$4,$5,$6, $8, $7)
        ON CONFLICT (request_id) DO UPDATE SET method = EXCLUDED.method, amount = EXCLUDED.amount,
          charged = EXCLUDED.charged, manual = EXCLUDED.manual, note = EXCLUDED.note,
          paid_at = EXCLUDED.paid_at, by_staff = EXCLUDED.by_staff
        RETURNING *`,
-      [id, b.method, amount, charged, b.amount != null, b.note ?? '',
-       request.verifier_id ?? (user.role === 'verifier' ? user.id : null)]);
-    return { payment: rows[0] };
+      [id, b.method, amount, charged, !online && b.amount != null, b.note ?? '',
+       request.verifier_id ?? (user.role === 'verifier' ? user.id : null), paidAt]);
+    return { payment: rows[0], online: onlinePay };
   });
 
   app.get('/payments/:id/status', {
     schema: {
       tags: ['деньги'],
-      summary: 'Состояние платежа. Провайдера пока нет — учёт ручной (пункт int-pay)',
+      summary: 'Состояние платежа: у наличных — по отметке о приёме, у безнала — по платежу провайдера',
       security: [{ session: [] }],
       params: { type: 'object', required: ['id'], properties: { id: { type: 'integer' } } },
     },
   }, async (req) => {
     requireUser(req);
     const { id } = req.params as { id: number };
-    const { rows } = await app.db.query<{ method: string; amount: number; charged: number; paid_at: string | null }>(
-      'SELECT method, amount, charged, paid_at FROM payments WHERE id = $1', [id]);
+    const { rows } = await app.db.query<{ request_id: string; method: string; amount: number; charged: number; paid_at: string | null; receipt_number: string | null }>(
+      'SELECT request_id, method, amount, charged, paid_at, receipt_number FROM payments WHERE id = $1', [id]);
     const p = rows[0];
     if (!p) throw notFound(`Нет платежа №${id}.`);
+    const online = PAY_ONLINE.includes(p.method as never) ? await activeOf(app.db, p.request_id) : null;
     return {
       id,
-      provider: null,
-      // Состояние выводится из способа и отметки о приёме денег: эквайринг
-      // появится вместе с int-pay, тогда же здесь появится и внешний статус.
-      state: p.method === 'не оплачено' ? 'долг' : p.paid_at ? 'принят' : 'ожидает приёма',
+      provider: online?.provider ?? null,
+      // У наличных состояние выводится из способа и отметки о приёме денег;
+      // у безнала его называет платёж провайдера.
+      state: p.method === 'не оплачено' ? 'долг'
+        : online ? online.status
+        : p.paid_at ? 'принят' : 'ожидает приёма',
       in_hand: PAY_HAND.includes(p.method as never),
       amount: p.amount,
       charged: p.charged,
+      receipt_number: p.receipt_number,
+      online,
     };
   });
 

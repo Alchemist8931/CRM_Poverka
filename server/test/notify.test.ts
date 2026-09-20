@@ -414,8 +414,10 @@ describe('уведомления: шаблоны', () => {
     try {
       const op = as(st.app, await login(st.app, 'o1'));
       const res = body(await op.get('/api/notify/templates'));
-      assert.equal(res.templates.length, 8);
+      // Пять событий на два канала: четыре заказчика плюс «чек» (пункт int-pay).
+      assert.equal(res.templates.length, 10);
       assert.ok(res.placeholders['окно_с']);
+      assert.ok(res.allowed['чек'].includes('номер_чека') && !res.allowed['заявка'].includes('номер_чека'));
       assert.ok(!res.allowed['заявка'].includes('поверитель'));
       assert.ok(res.allowed['выезд'].includes('поверитель'));
       // Отправитель — из настроек контура, а не из формы: правится выкладкой.

@@ -14,6 +14,9 @@ import { photoStorage, recordsConfig, storageConfig, type PhotoStorage } from '.
 import { canCall, novofonConfig, type NovofonConfig } from '../novofon/config.ts';
 import { novofonApi, type NovofonApi } from '../novofon/api.ts';
 import { callBus, type CallBus } from '../novofon/bus.ts';
+import { canPay, paymentConfig, type PaymentConfig } from '../payment/config.ts';
+import { yookassa } from '../payment/yookassa.ts';
+import type { PaymentProvider } from '../payment/provider.ts';
 import { SESSION_COOKIE, readSession, sessionFresh, sessionSecret, type User } from './auth.ts';
 import authRoutes from './routes/auth.ts';
 import userRoutes from './routes/users.ts';
@@ -28,6 +31,7 @@ import photoRoutes from './routes/photos.ts';
 import auditRoutes from './routes/audit.ts';
 import arshinRoutes from './routes/arshin.ts';
 import notifyRoutes from './routes/notify.ts';
+import paymentRoutes from './routes/payment.ts';
 import { installAudit } from './audit.ts';
 
 declare module 'fastify' {
@@ -49,6 +53,11 @@ declare module 'fastify' {
     novofon: NovofonApi | null;
     /** Шина событий телефонии: из вебхука на пульт оператора. */
     calls: CallBus;
+    /** Настройки эквайринга: провайдер, ключи, коды чека, секрет приёмника. */
+    paymentConfig: PaymentConfig;
+    /** Платёжный провайдер или `null`, если ключей нет: тогда безналичные
+     *  способы в акте не показываются, а наличные и перевод работают как прежде. */
+    payments: PaymentProvider | null;
   }
   interface FastifyRequest {
     /** Тело запроса как оно пришло. Нужно вебхуку телефонии: подпись считается
@@ -72,6 +81,11 @@ export interface AppOptions {
   novofon?: NovofonConfig;
   /** Клиент АТС. `null` — обращений к АТС нет вовсе (так в тестах API). */
   novofonClient?: NovofonApi | null;
+  /** Настройки эквайринга. По умолчанию из окружения; в проверках — на
+   *  эмулятор провайдера (src/payment/emulator.ts). */
+  payment?: PaymentConfig;
+  /** Платёжный провайдер. `null` — эквайринг выключен (так в тестах API по умолчанию). */
+  paymentProvider?: PaymentProvider | null;
 }
 
 /** Открытые входы: до них сессия не спрашивается. */
@@ -82,9 +96,13 @@ export interface AppOptions {
    cookie нет и быть не может. Подлинность там подтверждается иначе — подписью
    события (API 1.0) или секретом в адресе и списком адресов (платформа 2.0),
    см. `src/novofon/signature.ts`. */
+/* Приёмник платёжного провайдера открыт по той же причине: его зовёт провайдер,
+   секрет стоит в адресе, а событие подтверждается повторным чтением платежа
+   из API провайдера (`src/payment/yookassa.ts`, verifyWebhook). */
 const PUBLIC = new Set(['/health', '/docs', '/api/auth/login',
   '/api/webhooks/novofon', '/api/webhooks/novofon/:secret',
   '/api/webhooks/novofon/routing', '/api/webhooks/novofon/routing/:secret',
+  '/api/webhooks/payment/:secret',
   '/api/photos/:id/file']);
 
 /* Что открыто, пока временный пароль не сменён: узнать, кто я, сменить пароль
@@ -112,6 +130,11 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     ? opts.novofonClient
     : (canCall(novofon) ? novofonApi(novofon) : null));
   app.decorate('calls', callBus());
+  const pay = opts.payment ?? paymentConfig();
+  app.decorate('paymentConfig', pay);
+  app.decorate('payments', opts.paymentProvider !== undefined
+    ? opts.paymentProvider
+    : (canPay(pay) ? yookassa(pay) : null));
 
   // Разбор JSON с сохранением сырого тела: по нему вебхук телефонии проверяет подпись.
   app.addContentTypeParser('application/json', { parseAs: 'string' }, (req, body, done) => {
@@ -150,7 +173,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
         { name: 'заявки', description: 'приём, правка, перенос, подсказка дат' },
         { name: 'маршруты', description: 'сборка, обзвон, точки, чат' },
         { name: 'акт', description: 'приборы, закрытие и возврат позиции, лист ожидания' },
-        { name: 'деньги', description: 'оплата на месте, заработок, сдельная, подотчёт' },
+        { name: 'деньги', description: 'оплата на месте и по QR/ссылке, чеки, заработок, сдельная, подотчёт, сверка эквайринга' },
         { name: 'связь', description: 'вебхуки телефонии' },
         { name: 'журнал', description: 'журнал действий: кто что менял и смотрел' },
         { name: 'аршин', description: 'записи о поверке для ФГИС «Аршин»: очередь, выгрузка, номера реестра' },
@@ -250,6 +273,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   await app.register(auditRoutes, { prefix: '/api' });
   await app.register(arshinRoutes, { prefix: '/api' });
   await app.register(notifyRoutes, { prefix: '/api' });
+  await app.register(paymentRoutes, { prefix: '/api' });
 
   return app;
 }

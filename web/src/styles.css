@@ -429,6 +429,16 @@ td b{color:var(--ink);font-weight:600}
 .payb{border:1px solid var(--border2);border-left:2px solid var(--success);border-radius:var(--r);
   background:var(--card);padding:11px 12px;margin-top:12px}
 .payb.none{border-left-color:var(--warning)}
+.payb.wait{border-left-color:var(--cold)}
+/* Окно оплаты по QR или ссылке: код крупно, сумма под ним, состояние ниже. */
+.qrbox{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px;border:1px solid var(--border2);border-radius:var(--r);background:#fff}
+.qrbox.paid{border-color:var(--success)}
+.qrbox img{width:min(300px,70vw);height:auto;display:block}
+.qrdemo{width:220px;height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px dashed var(--border);border-radius:var(--r);font-size:40px;font-weight:700;color:var(--ink3)}
+.qrdemo small{font-size:12px;font-weight:400}
+.qrlink{max-width:100%;word-break:break-all;font-family:var(--mono,monospace);font-size:13px;padding:8px 10px;background:var(--surface2,#f4f5f7);border-radius:6px}
+.qrsum{font-size:24px;font-weight:700;color:var(--ink)}
+.qrstate{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
 .payh{display:flex;align-items:baseline;gap:10px;margin-bottom:9px;flex-wrap:wrap}
 .payh .note{flex:1;min-width:180px}
 .payg{display:grid;grid-template-columns:1.2fr .8fr 2.2fr;gap:8px;align-items:flex-end}

@@ -106,6 +106,14 @@ const plugin: FastifyPluginAsync = async (app) => {
           'SELECT * FROM payments WHERE request_id = ANY($1)', [ids]);
         const byRequest = new Map(pays.map((p) => [String(p.request_id), p]));
         for (const r of rows) r.payment = byRequest.get(String(r.id)) ?? null;
+        // Действующий платёж провайдера (пункт int-pay): акту нужно знать,
+        // показан ли QR и пришли ли деньги, — вместе с отметкой оплаты.
+        const { rows: online } = await app.db.query<Record<string, unknown>>(
+          `SELECT DISTINCT ON (request_id) * FROM online_payments
+            WHERE request_id = ANY($1) AND status NOT IN ('отменён', 'ошибка')
+            ORDER BY request_id, id DESC`, [ids]);
+        const onlineBy = new Map(online.map((p) => [String(p.request_id), p]));
+        for (const r of rows) r.online = onlineBy.get(String(r.id)) ?? null;
       }
     }
     return { requests: rows };
@@ -125,12 +133,14 @@ const plugin: FastifyPluginAsync = async (app) => {
     const request = rows[0];
     if (!request) throw notFound(`Нет заявки «${id}».`);
     const { rows: pay } = await app.db.query('SELECT * FROM payments WHERE request_id = $1', [id]);
+    const { rows: online } = await app.db.query(
+      `SELECT * FROM online_payments WHERE request_id = $1 AND status NOT IN ('отменён', 'ошибка') ORDER BY id DESC LIMIT 1`, [id]);
     const { rows: stop } = await app.db.query(
       'SELECT * FROM stops WHERE request_id = $1 ORDER BY id DESC LIMIT 1', [id]);
     const { rows: wait } = await app.db.query(
       'SELECT * FROM wait_list WHERE request_id = $1 ORDER BY at DESC', [id]);
     return { request, devices: await loadDevices(app.db, id, app.sessionSecret),
-      payment: pay[0] ?? null, stop: stop[0] ?? null, waits: wait };
+      payment: pay[0] ?? null, online: online[0] ?? null, stop: stop[0] ?? null, waits: wait };
   });
 
   app.get('/clients', {

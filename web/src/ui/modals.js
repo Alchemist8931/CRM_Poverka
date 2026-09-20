@@ -17,6 +17,7 @@ import { isDemo } from '../api/mode.js';
 import { patchReq as apiPatchReq } from '../api/actions.js';
 import { waitOf } from '../screens/wait-list.js';
 import { printButtons } from '../screens/print.js';
+import { qrModal, refundModal } from '../screens/pay.js';
 
 function openReq(id){
   const r = S.requests.find(x=>x.id===id); if(!r) return;
@@ -49,10 +50,12 @@ function saveReq(){
   toast(moved ? `${r.id} перенесена на ${ru(r.date)} и снята с маршрута — поставьте её в маршрут той даты.`
               : `${r.id} обновлена.`);
 }
-function closeModal(){ S.modal=null; S.edit=null; S.supReq=null; S.uns=null; S.ho=null; S.dupAsk=null; render(); }
+function closeModal(){ S.modal=null; S.edit=null; S.supReq=null; S.uns=null; S.ho=null; S.dupAsk=null; S.refund=null; render(); }
 function modalLayer(){
   if(!S.modal) return '';
   if(S.modal.k==='ho') return hoModal();
+  if(S.modal.k==='qr') return qrModal();
+  if(S.modal.k==='refund') return refundModal();
   if(S.modal.k==='day') return dayModal(S.modal.date);
   if(S.modal.k==='ops') return opsModal(S.modal.date);
   if(S.modal.k==='supreq') return supReqModal();

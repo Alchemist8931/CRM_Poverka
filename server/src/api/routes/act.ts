@@ -11,11 +11,13 @@ import { requireRole, requireUser, type User } from '../auth.ts';
 import { notFound, ruleError } from '../errors.ts';
 import { actorOr403, loadDevices, loadServices, nextId } from '../store.ts';
 import {
-  FAIL_REASONS, PAY_HAND, WAIT_REASONS, closeProblem, priceOf, priceOfDevice, rateO, rateV,
-  unservedProblem, type ClientType, type Role,
+  FAIL_REASONS, PAY_HAND, PAY_METHODS, PAY_ONLINE, WAIT_REASONS, closeProblem, payMethods, priceOf, priceOfDevice,
+  rateO, rateV, unservedProblem, type ClientType, type Role,
 } from '../../rules.ts';
 import { arshinConfig } from '../../arshin/config.ts';
 import { dropUnsent, syncRecords } from '../../arshin/records.ts';
+import { canPay } from '../../payment/config.ts';
+import { activeOf, openPaymentProblem } from '../../payment/service.ts';
 
 const ID = { type: 'object', required: ['id'], properties: { id: { type: 'string' } } } as const;
 const STOP_PARAMS = {
@@ -184,7 +186,7 @@ const plugin: FastifyPluginAsync = async (app) => {
       body: {
         type: 'object',
         properties: {
-          method: { type: 'string', enum: ['наличные', 'перевод на карту', 'по счёту', 'не оплачено'] },
+          method: { type: 'string', enum: [...PAY_METHODS] },
           amount: { type: 'integer', minimum: 0 },
           note: { type: 'string' },
         },
@@ -209,6 +211,21 @@ const plugin: FastifyPluginAsync = async (app) => {
     const price = priceOf(map, clientType, act);
     const wage = rateV(map, act);
 
+    // Способ по умолчанию и допустимость: по счёту — только юрлицу, безнал
+    // через провайдера — только там, где он подключён.
+    const method = b.method ?? (clientType === 'Юрлицо' ? 'по счёту' : 'наличные');
+    const online = PAY_ONLINE.includes(method as never);
+    if (!payMethods(clientType, !!app.payments && canPay(app.paymentConfig)).includes(method as never)) {
+      throw ruleError(online
+        ? 'Эквайринг не подключён к этому контуру: принимайте наличными или переводом.'
+        : 'По счёту платит только юрлицо — физлицу этот способ недоступен.', 'method');
+    }
+    // Сумма безналичного платежа обязана совпадать с суммой акта на момент его
+    // создания (пункт int-pay): разошлась — позиция не закрывается.
+    const stale = await openPaymentProblem(app.db, id, method, price);
+    if (stale) throw ruleError(stale, 'payment');
+    const onlinePay = online ? await activeOf(app.db, id) : null;
+
     return app.db.tx(async (db) => {
       // Снимок цены и ставок на момент выполнения: переписанный прайс не должен
       // менять ни закрытый акт, ни начисленную по нему сдельную оплату.
@@ -231,16 +248,26 @@ const plugin: FastifyPluginAsync = async (app) => {
       }
       // Деньги фиксируются в момент закрытия: закрыть можно и без оплаты — тогда
       // адрес останется в долгах, видимых оператору и руководителю.
-      const method = b.method ?? (clientType === 'Юрлицо' ? 'по счёту' : 'наличные');
-      const amount = method === 'не оплачено' ? 0 : b.amount ?? price;
+      // Безнал через провайдера поверитель руками не принимает: сумма — из
+      // платежа, отметка «оплачено» — из уведомления провайдера, а не из
+      // закрытия; до него позиция закрыта, но ждёт оплаты.
+      const amount = method === 'не оплачено' ? 0 : online ? (onlinePay?.paid_amount ?? onlinePay?.amount ?? price) : b.amount ?? price;
+      const paidAt = online ? onlinePay?.paid_at ?? null : new Date();
+      if (!online) {
+        // Наличными при живом безнале: ожидающий QR или ссылка уступают место
+        // и отменяются у нас (у провайдера истекут сами).
+        await db.query(
+          `UPDATE online_payments SET status = 'отменён', error = 'позиция закрыта другим способом оплаты', handled_by = $2, updated_at = now()
+            WHERE request_id = $1 AND status IN ('создан', 'ожидает')`, [id, user.id]);
+      }
       const { rows: pay } = await db.query(
         `INSERT INTO payments (request_id, method, amount, charged, manual, note, paid_at, by_staff)
-         VALUES ($1,$2,$3,$4,$5,$6, now(), $7)
+         VALUES ($1,$2,$3,$4,$5,$6, $8, $7)
          ON CONFLICT (request_id) DO UPDATE SET method = EXCLUDED.method, amount = EXCLUDED.amount,
            charged = EXCLUDED.charged, manual = EXCLUDED.manual, note = EXCLUDED.note,
-           paid_at = now(), by_staff = EXCLUDED.by_staff
+           paid_at = EXCLUDED.paid_at, by_staff = EXCLUDED.by_staff
          RETURNING *`,
-        [id, method, amount, price, b.amount != null, b.note ?? '', verifier]);
+        [id, method, amount, price, !online && b.amount != null, b.note ?? '', verifier, paidAt]);
       // Поверка становится юридически действительной только после передачи
       // сведений во ФГИС «Аршин», поэтому запись о поверке рождается здесь же,
       // при закрытии акта, а не когда до неё дойдут руки (пункт int-arshin).
@@ -250,6 +277,7 @@ const plugin: FastifyPluginAsync = async (app) => {
       return {
         closed: id, price, wage, payment: pay[0],
         hand: PAY_HAND.includes(method as never) ? amount : 0,
+        online: onlinePay,
         arshin,
       };
     });
@@ -271,7 +299,12 @@ const plugin: FastifyPluginAsync = async (app) => {
         `UPDATE requests SET status = CASE WHEN route_id IS NULL THEN 'создана' ELSE 'в маршруте' END,
                 verifier_id = NULL, updated_at = now() WHERE id = $1`, [id]);
       // Способ и сумму оставляем — снимаем только отметку о принятии денег.
-      await db.query('UPDATE payments SET paid_at = NULL WHERE request_id = $1', [id]);
+      // Оплаченный безнал не трогаем: деньги у провайдера, отметка «оплачено»
+      // принадлежит платежу, а не закрытию, и снять её может только возврат.
+      await db.query(
+        `UPDATE payments SET paid_at = NULL WHERE request_id = $1
+            AND NOT (method IN ('СБП по QR', 'платёжная ссылка')
+                     AND EXISTS (SELECT 1 FROM online_payments o WHERE o.request_id = $1 AND o.status = 'оплачен'))`, [id]);
       // Непереданные записи «Аршина» уходят вместе с закрытием: акт снова в
       // работе, и передавать пока нечего. Уже переданное остаётся — отозвать
       // сведения из реестра система не может.

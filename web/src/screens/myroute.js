@@ -3,7 +3,8 @@
 import { CHK, SEG, SEL } from '../ui/controls.js';
 import { DEV_TYPES, FAIL_REASONS, ROOMS, SERVICES, SVC, badDevs, isCheck, needSerial, replSvcOf } from '../refs.js';
 import { I, svg } from '../ui/icons.js';
-import { PAY_HAND, addrOf, discountOf, payInit, payMethods, priceOf, priceOfDev, rateV, setPay, worksOf } from '../rules.js';
+import { PAY_HAND, PAY_ONLINE, addrOf, discountOf, payInit, payMethods, priceOf, priceOfDev, rateV, setPay, worksOf } from '../rules.js';
+import { onlineLine } from './pay.js';
 import { S, nameOf } from '../state.js';
 import { TODAY, esc, money, pad, ru } from '../util.js';
 import { cap, shell } from '../ui/shell.js';
@@ -49,7 +50,9 @@ function workSheet(rt,s){
   const nBad = badDevs(r).length;
   const disc = discountOf(r);
   const p = payInit(r,rt.verifier), price = priceOf(r);
-  const diff = p.method==='не оплачено' ? 0 : p.amount-price;
+  const online = PAY_ONLINE.includes(p.method);
+  const diff = p.method==='не оплачено' || online ? 0 : p.amount-price;
+  const paidOnline = online && r.online && r.online.status==='оплачен';
   return `<div class="c" style="margin-top:14px">
     <div class="acthd" style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:4px">
       <div><h3>Акт · точка ${pad(i0+1)} · ${esc(addrOf(r))}</h3>
@@ -113,26 +116,36 @@ function workSheet(rt,s){
       <span class="note">${r.devices.length?`К оплате клиенту <b class="mono" style="color:var(--ink)">${money(price)}</b>${disc?` · скидка пенсионеру ${money(disc)} за счёт компании`:''} · вам начислится <b class="mono" style="color:var(--ink)">${money(rateV(r))}</b>${nBad?` · <span style="color:var(--error)">непригодных ${nBad}</span> — поверка их всё равно оплачивается`:''}${noPh?' · <span style="color:var(--error)">есть приборы без фото</span>':''}`
         :'Приборов в акте нет. Добавьте то, что фактически обслужили на адресе.'}</span>
     </div>
-    <div class="payb ${p.method==='не оплачено'?'none':''}">
+    <div class="payb ${p.method==='не оплачено'?'none':''} ${online&&!paidOnline?'wait':''}">
       <div class="payh"><span class="lbl">Оплата</span>
-        <span class="note">Онлайн-оплаты пока нет: деньги вы берёте на адресе и держите у себя как подотчёт, в конце месяца сдаёте руководителю.</span>
+        <span class="note">${payMethods(r).some(m=>PAY_ONLINE.includes(m))
+          ? 'Наличные держите у себя как подотчёт до конца месяца. По QR СБП или ссылке деньги уходят сразу на счёт компании, чек клиенту пробивает касса.'
+          : 'Онлайн-оплаты в этом контуре нет: деньги вы берёте на адресе и держите у себя как подотчёт, в конце месяца сдаёте руководителю.'}</span>
         ${p.at?`<span class="tg t-mut">отмечено ${esc(p.at)}${p.by?' · '+esc(nameOf(p.by)):''}</span>`:''}</div>
       <div class="payg">
         <div class="f" style="margin-bottom:0"><label>Способ</label>
           ${SEL('payM'+r.id,p.method,payMethods(r),v=>setPay(r.id,'method',v),{sm:true})}</div>
-        <div class="f" style="margin-bottom:0"><label>Принято, ₽</label>
-          <input class="fld sm mono" id="payA${r.id}" value="${p.method==='не оплачено'?0:p.amount}"
-            ${p.method==='не оплачено'?'disabled':''} oninput="setPay('${r.id}','amount',this.value)"
-            title="Подставлено из прайса — поправьте, если клиент округлил или доплатил не всё"></div>
+        <div class="f" style="margin-bottom:0"><label>${online?'К оплате, ₽':'Принято, ₽'}</label>
+          <input class="fld sm mono" id="payA${r.id}" value="${p.method==='не оплачено'?0:online?price:p.amount}"
+            ${p.method==='не оплачено'||online?'disabled':''} oninput="setPay('${r.id}','amount',this.value)"
+            title="${online?'Сумма безналичного платежа — цена акта, руками не правится':'Подставлено из прайса — поправьте, если клиент округлил или доплатил не всё'}"></div>
         <div class="f" style="margin-bottom:0"><label>Примечание</label>
           <input class="fld sm" id="payN${r.id}" value="${esc(p.note||'')}" oninput="setPay('${r.id}','note',this.value)"
             placeholder="${p.method==='не оплачено'?'почему не оплачено — это увидит руководитель':'что сказал клиент про деньги'}"></div>
       </div>
+      ${online?`<div class="row" style="margin-top:9px;align-items:center;gap:8px">
+        ${paidOnline?'':`<button class="b sm" onclick="openPay('${r.id}')" ${r.devices.length?'':'disabled'}>${svg(p.method==='СБП по QR'?I.cam:I.send,12)}${p.method==='СБП по QR'?'Показать QR':'Показать ссылку'}</button>`}
+        ${r.online&&r.online.kind===(p.method==='СБП по QR'?'qr':'link')?onlineLine(r):''}
+      </div>`:''}
       <div class="paysum">${p.method==='не оплачено'
         ? `Позицию можно закрыть и без оплаты: работа выполнена, долг <b>${money(price)}</b> останется видимым у оператора и руководителя.`
-        : PAY_HAND.includes(p.method)
-          ? `В ваш подотчёт уйдёт <b>${money(p.amount)}</b>${diff?` · расхождение с прайсом ${diff>0?'+':'−'}${money(Math.abs(diff))}`:''}.`
-          : `Счёт юрлицу: <b>${money(p.amount)}</b> придут на расчётный счёт, в подотчёт не попадают${diff?` · расхождение с прайсом ${diff>0?'+':'−'}${money(Math.abs(diff))}`:''}.`}</div>
+        : online
+          ? (paidOnline
+            ? `Оплачено безналом: <b>${money(r.online.paidAmount||r.online.amount)}</b> пришли на счёт компании, в подотчёт не попадают${r.online.receipt?`, чек № ${esc(r.online.receipt)} отправлен клиенту`:''}.`
+            : `Клиент платит <b>${money(price)}</b> ${p.method==='СБП по QR'?'по QR-коду в приложении банка':'по ссылке картой или через СБП'}. Отметка «оплачено» придёт от провайдера сама; сумма — ровно по акту, изменится акт — покажите код заново.`)
+          : PAY_HAND.includes(p.method)
+            ? `В ваш подотчёт уйдёт <b>${money(p.amount)}</b>${diff?` · расхождение с прайсом ${diff>0?'+':'−'}${money(Math.abs(diff))}`:''}.`
+            : `Счёт юрлицу: <b>${money(p.amount)}</b> придут на расчётный счёт, в подотчёт не попадают${diff?` · расхождение с прайсом ${diff>0?'+':'−'}${money(Math.abs(diff))}`:''}.`}</div>
     </div>
     <div class="row" style="margin-top:14px;justify-content:flex-end">
       ${s.done?printButtons(r):''}
@@ -390,6 +403,7 @@ function closeStop(id,i){
   toast(`Позиция закрыта: ${r.devices.length} прибор(ов) на ${money(priceOf(r))}, вам начислено ${money(rateV(r))}.`
     + (p.method==='не оплачено' ? ' Оплата не принята — адрес уйдёт в список «выполнено без оплаты».'
       : PAY_HAND.includes(p.method) ? ` Принято ${p.method}: ${money(p.amount)} — сумма легла в ваш подотчёт.`
+      : PAY_ONLINE.includes(p.method) ? ` ${p.method}: ${money(p.amount)} — деньги идут на счёт компании, в подотчёт не попадают.`
       : ` Оплата по счёту: ${money(p.amount)} — деньги придут на расчётный счёт.`)
     + (bad.length?` Непригодных приборов: ${bad.length} — поверка по ним оплачена.`:'')
     + (noBlank?` Без бланка о непригодности: ${noBlank} — выпишите свидетельство и отметьте его номер.`:'')

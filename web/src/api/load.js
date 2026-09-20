@@ -36,13 +36,17 @@ function refill(target, items) {
 /** Города, услуги, приборы и сотрудники. Читаются один раз после входа:
  *  меняются они руководителем и редко, а нужны каждому экрану. */
 export async function loadRefs() {
-  const [cities, services, types, staff, maps] = await Promise.all([
+  const [cities, services, types, staff, maps, pay] = await Promise.all([
     api.get('/cities'), api.get('/services'), api.get('/device-types'), api.get('/staff'),
     /* Ключ карты — такой же справочник, только его может не быть: контур без
        ключа рисует схематичную карту области, и это рабочее состояние. */
     api.get('/maps/config').catch(() => null),
+    /* Эквайринг: подключён ли к контуру. Без ключей провайдера безналичных
+       способов в акте нет, наличные и перевод работают как прежде. */
+    api.get('/payments/config').catch(() => null),
   ]);
   setMaps(maps);
+  S.payCfg = pay || { enabled: false, kinds: [] };
   refill(LOCS, cities.cities.map((c) => ({ n: c.name, s: c.short, big: c.is_big })));
   refill(CITIES, LOCS.map((x) => x.n));
   refill(BIG, LOCS.filter((x) => x.big).map((x) => x.n));
@@ -83,7 +87,7 @@ export async function loadDays(from, to) {
 /** Заявки в S: то, что пришло, заменяет прежнее, остальное не трогаем. */
 export function mergeRequests(rows, extra = () => ({})) {
   const byId = new Map(S.requests.map((r) => [r.id, r]));
-  for (const row of rows) byId.set(row.id, M.requestFrom(row, { devices: row.devices, payment: row.payment, ...extra(row) }));
+  for (const row of rows) byId.set(row.id, M.requestFrom(row, { devices: row.devices, payment: row.payment, online: row.online, ...extra(row) }));
   S.requests = [...byId.values()];
 }
 
@@ -133,7 +137,7 @@ export async function loadWaitList() {
      попадают, а без заявки строка листа не рисуется. Докладываем недостающие. */
   const missing = S.waits.map((w) => w.req).filter((id) => id && !S.requests.some((r) => r.id === id));
   const cards = await Promise.all(missing.map((id) => api.get(`/requests/${id}`).catch(() => null)));
-  mergeRequests(cards.filter(Boolean).map((c) => ({ ...c.request, devices: c.devices, payment: c.payment })));
+  mergeRequests(cards.filter(Boolean).map((c) => ({ ...c.request, devices: c.devices, payment: c.payment, online: c.online })));
 }
 
 /** Подотчёт: сдачи за месяц и за предыдущий — экран показывает последнюю. */
@@ -174,6 +178,14 @@ export async function loadArshin() {
   S.arshinDue = queue.due_workdays;
   S.arshinAnswer = queue.answer_workdays;
   S.arshinBatches = batches;
+}
+
+/** Сверка эквайринга за день у руководителя: платежи провайдера, чеки, итоги.
+ *  Считает сервер — ему видны все платежи, а не срез заявок во вкладке. */
+export async function loadAcq() {
+  if (S.role !== 'supervisor') return;
+  const day = S.acqDay || TODAY;
+  S.acq = await api.get(q('/online-payments', { date: day })).catch(() => null);
 }
 
 /** Шаблоны уведомлений и перечень подстановок для экрана «Услуги и ставки».
@@ -245,6 +257,7 @@ const LOADERS = {
     await Promise.all([
       loadRequests({ date_from: MONTH_FROM(m), date_to: MONTH_TO(m), status: 'выполнена', with: 'devices,payment' }),
       loadHandovers(null, m),
+      loadAcq(),
     ]);
   },
   async services() {

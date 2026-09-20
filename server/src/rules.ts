@@ -223,14 +223,83 @@ export const rateV = (services: Map<string, Service>, devices: ActDevice[]): num
 export const rateO = (services: Map<string, Service>, devices: ActDevice[]): number =>
   devices.reduce((a, d) => a + (svcOf(services, d)?.rate_operator ?? 0), 0);
 
-/** Счёт выставляется только юрлицу — физлицу этот способ не показываем. */
-export const PAY_METHODS = ['наличные', 'перевод на карту', 'по счёту', 'не оплачено'] as const;
+/** Счёт выставляется только юрлицу — физлицу этот способ не показываем.
+ *  «СБП по QR» и «платёжная ссылка» — безнал через платёжного провайдера
+ *  (пункт int-pay): деньги приходят на расчётный счёт ИП, чек пробивает
+ *  онлайн-касса. Показываются, когда провайдер подключён к контуру. */
+export const PAY_METHODS = ['наличные', 'перевод на карту', 'по счёту', 'не оплачено', 'СБП по QR', 'платёжная ссылка'] as const;
 export type PayMethod = (typeof PAY_METHODS)[number];
-export const payMethods = (clientType: ClientType): PayMethod[] =>
-  PAY_METHODS.filter((m) => m !== 'по счёту' || clientType === 'Юрлицо');
+/** Способы через провайдера: у них нет «принято руками» — только событие об оплате. */
+export const PAY_ONLINE: PayMethod[] = ['СБП по QR', 'платёжная ссылка'];
+export type OnlineKind = 'qr' | 'link';
+export const onlineKindOf = (method: string): OnlineKind | null =>
+  method === 'СБП по QR' ? 'qr' : method === 'платёжная ссылка' ? 'link' : null;
+export const onlineMethodOf = (kind: OnlineKind): PayMethod => (kind === 'qr' ? 'СБП по QR' : 'платёжная ссылка');
+export const payMethods = (clientType: ClientType, online = true): PayMethod[] =>
+  PAY_METHODS.filter((m) => (m !== 'по счёту' || clientType === 'Юрлицо') && (online || !PAY_ONLINE.includes(m)));
 /** В подотчёт попадает лишь то, что поверитель забрал лично: деньги по счёту
- *  идут сразу на расчётный счёт и через его руки не проходят. */
+ *  и по эквайрингу идут сразу на расчётный счёт и через его руки не проходят. */
 export const PAY_HAND: PayMethod[] = ['наличные', 'перевод на карту'];
+
+/* ──────────────────────────── чек ──────────────────────────── */
+
+/** Позиция кассового чека — в терминах 54-ФЗ: наименование, цена за единицу,
+ *  количество, ставка НДС, признак предмета и способа расчёта. Коды — как у
+ *  ЮKassa и большинства касс: `vat_code` 1 — без НДС, `payment_subject`
+ *  `service` — услуга, `payment_mode` `full_payment` — полный расчёт. */
+export interface ReceiptItem {
+  description: string;
+  quantity: number;
+  /** Цена за единицу в рублях — уже со скидкой пенсионеру, потому что скидка
+   *  за счёт компании и в чеке клиент видит то, что заплатил. */
+  amount: number;
+  vat_code: number;
+  payment_subject: 'service';
+  payment_mode: 'full_payment';
+}
+
+/** Строка прибора глазами чека: услуга, скидка, что за прибор. */
+export interface ReceiptDevice extends ActDevice {
+  device_type?: string | null;
+  serial?: string | null;
+}
+
+/** Наименование в чеке — не длиннее 128 знаков: столько принимает касса. */
+export const RECEIPT_NAME_MAX = 128;
+
+/** Позиции чека по строкам акта. Одна строка прибора — одна позиция: так чек
+ *  читается против акта построчно. Строки с нулевой ценой в чек не идут —
+ *  касса не принимает позицию на ноль рублей, а сумма от этого не меняется.
+ *  Сумма позиций всегда равна цене акта `priceOf` — на этом стоит блокировка
+ *  «сумма платежа совпадает с суммой акта». */
+export function receiptItems(
+  services: Map<string, Service & { name?: string }>,
+  clientType: ClientType,
+  devices: ReceiptDevice[],
+  vatCode = 1,
+): ReceiptItem[] {
+  const out: ReceiptItem[] = [];
+  for (const d of devices) {
+    const svc = services.get(d.service_id);
+    const price = priceOfDevice(svc, clientType, !!d.pensioner);
+    if (!svc || price <= 0) continue;
+    const name = [svc.name ?? svc.id, d.device_type, d.serial ? `№ ${d.serial}` : '']
+      .filter((s) => s && String(s).trim()).join(' · ');
+    out.push({
+      description: name.slice(0, RECEIPT_NAME_MAX),
+      quantity: 1,
+      amount: price,
+      vat_code: vatCode,
+      payment_subject: 'service',
+      payment_mode: 'full_payment',
+    });
+  }
+  return out;
+}
+
+/** Сумма чека: то, что сравнивается с ценой акта и с суммой платежа. */
+export const receiptTotal = (items: ReceiptItem[]): number =>
+  items.reduce((a, i) => a + i.amount * i.quantity, 0);
 
 /* ──────────────────────── приём и правка заявки ──────────────────────── */
 

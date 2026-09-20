@@ -122,7 +122,9 @@ terraform apply prod.tfplan
 3. Наполнить секреты внешних сервисов в Lockbox (`novofon`, `arshin`, `smtp`,
    `maps`, `payment`). Terraform создаёт их пустыми намеренно: ключ, введённый в
    консоли, не проходит ни через репозиторий, ни через состояние Terraform.
-   Идентификаторы — в выходе `lockbox_secret_ids`.
+   Идентификаторы — в выходе `lockbox_secret_ids`. Записи секрета `payment`
+   (эквайринг, `docs/payment.md`): `shop_id`, `secret_key`, `webhook_secret`,
+   необязательная `provider`; пустой секрет — эквайринг выключен.
 4. Выкладка приложения — пункт плана `cloud-cicd`. Terraform кладёт на ВМ только
    платформенную часть: Docker, Compose, агент мониторинга и файлы конфигурации
    в `/etc/uchetkin`.

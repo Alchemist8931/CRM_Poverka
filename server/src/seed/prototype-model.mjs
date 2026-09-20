@@ -159,7 +159,10 @@ const S = {
   city:CITIES[0], day:TODAY, staff:[], days:[], requests:[], routes:[], absences:[], waits:[], handovers:[], seq:1000,
   toast:null, openRoute:null, openStop:null, call:null, lb:null, ukCity:'', ukSeal:'', pMonth:TODAY.slice(0,7), planTab:'day',
   mMonth:TODAY.slice(0,7), meTab:'done', modal:null, edit:null, uns:null, ho:null, dupAsk:null, mchat:false,
-  intake:blankIntake(), op:blankOp()
+  intake:blankIntake(), op:blankOp(),
+  /* Эквайринг (пункт int-pay): подключён ли к контуру, открытый платёж на экране
+     поверителя, сверка за день у руководителя и форма возврата. */
+  payCfg:null, pay:null, acq:null, acqDay:TODAY, refund:null
 };
 const staffById = id => S.staff.find(s=>s.id===id);
 const nameOf = id => staffById(id)?.name || '—';
@@ -527,11 +530,16 @@ const priceOfDev = (r,d) => { const s = SVC[d.svc]; if(!s) return 0;
 const priceOf = r => (r.devices||[]).reduce((a,d)=>a+priceOfDev(r,d),0);
 
 /* ── оплата ─────────────────────────────── */
-const PAY_METHODS = ['наличные','перевод на карту','по счёту','не оплачено'];
-/* Счёт выставляется только юрлицу — физлицу этот способ не показываем. */
-const payMethods = r => PAY_METHODS.filter(m=>m!=='по счёту' || r.clientType==='Юрлицо');
-/* В подотчёт попадает лишь то, что поверитель забрал лично: деньги по счёту идут
-   сразу на расчётный счёт и через его руки не проходят. */
+const PAY_METHODS = ['наличные','перевод на карту','по счёту','не оплачено','СБП по QR','платёжная ссылка'];
+const PAY_ONLINE = ['СБП по QR','платёжная ссылка'];
+const onlineKindOf = m => m==='СБП по QR' ? 'qr' : m==='платёжная ссылка' ? 'link' : null;
+/* Подключён ли эквайринг: в рабочем режиме — по ответу сервера, в демо — всегда. */
+const payOnline = () => isDemo() || !!(S.payCfg && S.payCfg.enabled);
+/* Счёт выставляется только юрлицу — физлицу этот способ не показываем;
+   безнал через провайдера — только там, где он подключён. */
+const payMethods = r => PAY_METHODS.filter(m=>(m!=='по счёту' || r.clientType==='Юрлицо') && (payOnline() || !PAY_ONLINE.includes(m)));
+/* В подотчёт попадает лишь то, что поверитель забрал лично: деньги по счёту и по
+   эквайрингу идут сразу на расчётный счёт и через его руки не проходят. */
 const PAY_HAND = ['наличные','перевод на карту'];
 const paidWith = (r,m) => r.pay && r.pay.method===m ? (r.pay.amount||0) : 0;
 const handCash = r => r.pay && PAY_HAND.includes(r.pay.method) ? (r.pay.amount||0) : 0;

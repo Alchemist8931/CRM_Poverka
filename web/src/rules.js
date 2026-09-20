@@ -75,16 +75,22 @@ const priceOf = r => (r.devices||[]).reduce((a,d)=>a+priceOfDev(r,d),0);
 /* Скидка пенсионеру — за счёт компании: сдельные ставки от неё не зависят. */
 const discountOf = r => r.clientType==='Юрлицо' ? 0
   : (r.devices||[]).reduce((a,d)=>{ const s=SVC[d.svc]; return a + (s&&d.pens ? s.pF-s.pP : 0); },0);
-/* ---------- оплата на месте и подотчёт ----------
-   Эквайринга на первом этапе нет. Поверитель берёт с клиента наличные или перевод
-   на карту и до конца месяца держит деньги у себя как подотчёт; в конце месяца сдаёт
-   собранное руководителю за вычетом своей сдельной оплаты. CRM только учитывает суммы:
-   ни QR, ни чеков, ни фискализации здесь нет — они появятся вместе с эквайрингом. */
-const PAY_METHODS = ['наличные','перевод на карту','по счёту','не оплачено'];
-/* Счёт выставляется только юрлицу — физлицу этот способ не показываем. */
-const payMethods = r => PAY_METHODS.filter(m=>m!=='по счёту' || r.clientType==='Юрлицо');
-/* В подотчёт попадает лишь то, что поверитель забрал лично: деньги по счёту идут
-   сразу на расчётный счёт и через его руки не проходят. */
+/* ---------- оплата на месте, эквайринг и подотчёт ----------
+   Наличные и перевод на карту поверитель берёт с клиента и до конца месяца держит
+   у себя как подотчёт; в конце месяца сдаёт собранное руководителю за вычетом своей
+   сдельной оплаты. «СБП по QR» и «платёжная ссылка» (пункт int-pay) — безнал через
+   платёжного провайдера: деньги приходят на счёт ИП, чек пробивает онлайн-касса,
+   в подотчёт они не попадают. Показываются, когда провайдер подключён к контуру. */
+const PAY_METHODS = ['наличные','перевод на карту','по счёту','не оплачено','СБП по QR','платёжная ссылка'];
+const PAY_ONLINE = ['СБП по QR','платёжная ссылка'];
+const onlineKindOf = m => m==='СБП по QR' ? 'qr' : m==='платёжная ссылка' ? 'link' : null;
+/* Подключён ли эквайринг: в рабочем режиме — по ответу сервера, в демо — всегда. */
+const payOnline = () => isDemo() || !!(S.payCfg && S.payCfg.enabled);
+/* Счёт выставляется только юрлицу — физлицу этот способ не показываем;
+   безнал через провайдера — только там, где он подключён. */
+const payMethods = r => PAY_METHODS.filter(m=>(m!=='по счёту' || r.clientType==='Юрлицо') && (payOnline() || !PAY_ONLINE.includes(m)));
+/* В подотчёт попадает лишь то, что поверитель забрал лично: деньги по счёту и по
+   эквайрингу идут сразу на расчётный счёт и через его руки не проходят. */
 const PAY_HAND = ['наличные','перевод на карту'];
 const paidWith = (r,m) => r.pay && r.pay.method===m ? (r.pay.amount||0) : 0;
 const handCash = r => r.pay && PAY_HAND.includes(r.pay.method) ? (r.pay.amount||0) : 0;
@@ -102,20 +108,27 @@ function setPay(rid,k,v){
   const r = S.requests.find(x=>x.id===rid); if(!r) return;
   const p = payInit(r);
   if(k==='amount'){ p.amount = Math.max(0,parseInt(String(v).replace(/\D/g,''))||0); p.manual = true; }
-  else if(k==='method'){ p.method = v; if(!p.manual) p.amount = v==='не оплачено' ? 0 : priceOf(r); }
+  else if(k==='method'){ p.method = v; if(!p.manual || PAY_ONLINE.includes(v)) p.amount = v==='не оплачено' ? 0 : priceOf(r);
+    /* У безнала сумма — всегда цена акта: её задаёт сервер, руками не правится. */
+    if(PAY_ONLINE.includes(v)) p.manual = false; }
   else p[k] = v;
   /* Пока акт не закрыт, отметка живёт в форме: на сервер она уедет вместе с
      закрытием позиции. У закрытого акта правка суммы или способа — это уже
-     отдельная запись, и она уходит сразу. */
-  if(!isDemo() && r.status==='выполнена') savePayment(r);
+     отдельная запись, и она уходит сразу. Безналичный способ у закрытого акта
+     сервер примет только с созданным платежом — его создаёт кнопка «Показать QR». */
+  if(!isDemo() && r.status==='выполнена' && !(PAY_ONLINE.includes(p.method) && !r.online)) savePayment(r);
   render();
 }
+/* Безнал ждёт оплаты — это ещё не «оплачено»: отметка приходит от провайдера. */
+const payPending = r => !!r.pay && PAY_ONLINE.includes(r.pay.method) && !r.pay.at;
 const payTag = r => !r.pay ? '<span class="tg t-mut">оплата не отмечена</span>'
   : r.pay.method==='не оплачено' ? '<span class="tg t-err">без оплаты</span>'
-  : `<span class="tg ${r.pay.method==='по счёту'?'t-cold':'t-ok'}">${r.pay.method} · ${money(r.pay.amount)}</span>`;
+  : payPending(r) ? `<span class="tg t-warn">${r.pay.method} · ждёт оплаты</span>`
+  : `<span class="tg ${r.pay.method==='по счёту'?'t-cold':'t-ok'}">${r.pay.method} · ${money(r.pay.amount)}</span>${r.pay.receipt?` <span class="tg t-mut" title="Номер кассового чека">чек № ${esc(r.pay.receipt)}</span>`:''}`;
 const payLine = r => !r.pay ? 'оплата не отмечена'
   : r.pay.method==='не оплачено' ? 'без оплаты'+(r.pay.note?' · '+r.pay.note:'')
-  : `${r.pay.method} · ${money(r.pay.amount)}`;
+  : payPending(r) ? `${r.pay.method} · ждёт оплаты`
+  : `${r.pay.method} · ${money(r.pay.amount)}${r.pay.receipt?` · чек № ${r.pay.receipt}`:''}`;
 /* Подотчёт поверителя за месяц: что собрал на адресах, что ему начислено сдельной
    и что уже сдал руководителю. Сдача привязана к месяцу, за который её принесли,
    а не к дню приёмки: деньги за август обычно везут в первых числах сентября. */
@@ -140,4 +153,4 @@ function svcNames(r){
 const photoCount = r => (r.devices||[]).reduce((a,d)=>a+(d.photos?.length||0),0);
 const addrOf = r => `${r.street}, ${r.house}${r.entrance?', под. '+r.entrance:''}${r.flat?', кв. '+r.flat:''}`;
 
-export { PAY_HAND, PAY_METHODS, absentOn, addrOf, bookedIn, bookedOn, canDoAll, crewFor, crewOn, dayLock, dayState, dayTotal, discountOf, handCash, lockedFor, noPay, onShift, opsOn, paidWith, payInit, payLine, payMethods, payTag, photoCount, planFor, priceOf, priceOfDev, rateO, rateV, setPay, skillsOf, subReport, svcNames, tgSkill, worksOf, worksOn };
+export { PAY_HAND, PAY_METHODS, PAY_ONLINE, absentOn, addrOf, bookedIn, bookedOn, canDoAll, crewFor, crewOn, dayLock, dayState, dayTotal, discountOf, handCash, lockedFor, noPay, onShift, onlineKindOf, opsOn, paidWith, payInit, payLine, payMethods, payOnline, payPending, payTag, photoCount, planFor, priceOf, priceOfDev, rateO, rateV, setPay, skillsOf, subReport, svcNames, tgSkill, worksOf, worksOn };
