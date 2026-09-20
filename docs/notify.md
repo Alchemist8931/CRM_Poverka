@@ -18,8 +18,8 @@
 
 ## Отправитель: рабочий ящик конторы, а не технический домен
 
-Своего домена у системы нет и не будет до пункта **cloud-domain**: она живёт на
-временном адресе Яндекс Облака. Письмо, отправленное с технического имени вроде
+До пункта **cloud-domain** своего домена у системы нет: она живёт на временном
+имени Яндекс Облака. Письмо, отправленное с технического имени вроде
 `noreply@xn--...yandexcloud.net`, у которого на домене отправителя нет ни SPF, ни
 DKIM, уходит в спам — и настроить это с нашей стороны нельзя никак.
 
@@ -39,10 +39,11 @@ grep -rn "NOTIFY_FROM" server/src server/scripts   # где адрес вооб�
 
 ### Свой почтовый домен (пункт cloud-domain)
 
-Когда у системы появляется боевой домен, ящик отправителя переезжает на него:
-`уведомления@<домен>` (или как назовёт заказчица) в Яндекс 360 для бизнеса на
-том же домене. Порядок и проверки — `docs/ops.md`, «Переезд на боевой домен»,
-шаг «Почта». Записи зоны ведёт Terraform (`infra/dns.tf`, `mail_records_enabled`):
+Боевой домен системы — `uchetkin.ru` (куплен 20.09.2026). Ящик отправителя
+переезжает на него: `uvedomleniya@uchetkin.ru` (или как назовёт заказчица) в
+Яндекс 360 для бизнеса на том же домене. Порядок и проверки — `docs/ops.md`,
+«Переезд на боевой домен», шаг В. Записи зоны ведёт Terraform (`infra/dns.tf`,
+`mail_records_enabled`), сама зона заведена 20.09.2026:
 
 | Запись | Значение | Зачем |
 | --- | --- | --- |
@@ -50,7 +51,7 @@ grep -rn "NOTIFY_FROM" server/src server/scripts   # где адрес вооб�
 | TXT `@` | `v=spf1 redirect=_spf.yandex.net` | SPF: слать от имени домена можно только серверам Яндекса |
 | TXT `@` | `yandex-verification: …` | подтверждение владения доменом для Яндекс 360 (`mail_verification_txt`) |
 | TXT `mail._domainkey` | `v=DKIM1; k=rsa; t=s; p=…` | DKIM: подпись письма ключом домена, значение из админки 360 (`mail_dkim_public_key`) |
-| TXT `_dmarc` | `v=DMARC1; p=quarantine; rua=mailto:postmaster@<домен>; adkim=s; aspf=s` | DMARC: неподписанное письмо «от нас» — в спам, отчёты на postmaster |
+| TXT `_dmarc` | `v=DMARC1; p=quarantine; rua=mailto:postmaster@uchetkin.ru; adkim=s; aspf=s` | DMARC: неподписанное письмо «от нас» — в спам, отчёты на postmaster |
 
 Что меняется в системе: `NOTIFY_FROM` и `SMTP_USER` в `app.env` на новый ящик,
 `smtp_password` в Lockbox `smtp` — пароль приложения нового ящика
@@ -67,8 +68,9 @@ grep -rn "NOTIFY_FROM" server/src server/scripts   # где адрес вооб�
 3. Открыть «исходное письмо» (Gmail — «Показать оригинал», Яндекс — «Свойства
    письма», Mail.ru — «Заголовки») и найти строку `Authentication-Results`:
    должно быть `spf=pass`, `dkim=pass`, `dmarc=pass`. Один `fail` — искать в
-   записях зоны: `dig +short TXT <домен>`, `dig +short TXT mail._domainkey.<домен>`,
-   `dig +short TXT _dmarc.<домен>`.
+   записях зоны: `dig +short TXT uchetkin.ru`,
+   `dig +short TXT mail._domainkey.uchetkin.ru`, `dig +short TXT _dmarc.uchetkin.ru`
+   (из песочницы порт 53 наружу закрыт — запросы с узла «Alchemist LAB»).
 4. Сохранить результат (три заголовка) в `docs/uat.md`, журнал прогонов, — это
    и есть приложение к сверке пункта `cloud-domain`.
 

@@ -135,6 +135,12 @@ terraform apply prod.tfplan
 `uchetkin-tfstate`, ключ `dev/terraform.tfstate`, версионирование бакета
 включено. `apply` прошёл с кодом 0, повторный `plan` — «No changes».
 
+20.09.2026 в том же контуре применена **зона боевого домена** (пункт
+`cloud-domain`): `yandex_dns_zone.main` для `uchetkin.ru`, A-записи домена и
+`www` на адрес машины, MX, SPF и DMARC — шесть ресурсов, `apply` с кодом 0,
+повторный `plan` — «No changes». Система на домен ещё не переведена: у
+регистратора стоят его собственные NS.
+
 Контур **prod** не применялся. Готово к нему (пункт `cloud-prod`, 18.09.2026):
 `prod.tfvars` заполнен всем, кроме каталога (`folder_id`) и имени (второй шаг
 применения); TLS до Managed PostgreSQL в приложении (`sslmode=verify-full`,
@@ -320,9 +326,12 @@ Let's Encrypt выпускает на него настоящий сертифи
 | --- | --- | --- |
 | dev (он же рабочий с 18.09.2026) | `84-201-139-101.sslip.io` | HTTPS включён 18.09.2026 (пункт `live-tls`), сертификат Let's Encrypt у Caddy; со старого `http://84.201.139.101` — редирект (`legacy_redirect_from`) |
 | prod | `<адрес>.sslip.io`, адрес появляется при apply | не применялся; порядок в два шага — «Порядок применения», шаг 4 |
+| боевой домен | `uchetkin.ru` | куплен 20.09.2026 (Reg.ru), зона и записи заведены в Cloud DNS этим описанием (`manage_dns_zone = true`); NS у регистратора ещё не переключены, система на домен не переведена — пункт `cloud-domain`, `docs/ops.md` |
 
 Боевой домен подключается отдельным пунктом `cloud-domain`: меняется значение
-одной переменной, всё остальное описание не трогается.
+одной переменной, всё остальное описание не трогается. Имя боевого домена
+встречается в файле переменных контура (`dev.tfvars`) — в описании ресурсов его
+по-прежнему нет, поэтому поиск выше остаётся пустым.
 
 ## Отличия от постановки
 
@@ -489,7 +498,7 @@ Audit Trails бесплатен, платится только хранение 
 | Что | Переменная | Ресурс |
 | --- | --- | --- |
 | Имя системы | `app_domain` | всё, что считается в `locals.tf`: адреса в `app.env`, `frontend.json`, CORS бакета снимков, `APP_URL` сторожа |
-| Зона в Cloud DNS и A-запись | `manage_dns_zone = true`, `dns_zone_domain`, `dns_ttl` | `dns.tf`: `yandex_dns_zone.main`, `yandex_dns_recordset.app`; NS у регистратора — `ns1.yandexcloud.net`, `ns2.yandexcloud.net` (выход `dns_zone`) |
+| Зона в Cloud DNS и A-записи | `manage_dns_zone = true`, `dns_zone_domain`, `dns_ttl` | `dns.tf`: `yandex_dns_zone.main`, `yandex_dns_recordset.app` и `…www`; NS у регистратора — `ns1.yandexcloud.net`, `ns2.yandexcloud.net` (выход `dns_zone`). Пока `app_domain` ещё временный, A-запись домена стоит на вершине зоны (`locals.tf`, `app_in_zone`) |
 | Сертификат | `tls_enabled = true` | Caddy на ВМ (`ingress_mode = vm`): получает и продлевает сам, ALB и Certificate Manager в работе нет (`alb.tf`, «Отличия от постановки») |
 | Почтовый домен для Яндекс 360 | `mail_records_enabled`, `mail_verification_txt`, `mail_dkim_public_key`, `dmarc_policy`, `dmarc_rua` | `dns.tf`: MX `mx.yandex.net`, TXT SPF `v=spf1 redirect=_spf.yandex.net` и подтверждение на вершине зоны, `mail._domainkey` (DKIM), `_dmarc` |
 | Редирект со старых адресов | `legacy_redirect_from` | cloud-init пишет `/etc/uchetkin/caddy.d/legacy.caddy`, `deploy/Caddyfile` подключает каталог, `deploy/compose.yml` монтирует его; действует только при `tls_enabled = true` |

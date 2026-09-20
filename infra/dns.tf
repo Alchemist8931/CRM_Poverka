@@ -30,6 +30,19 @@ resource "yandex_dns_recordset" "app" {
   data    = [local.external_ip]
 }
 
+# «www» перед именем набирают по привычке, и такой адрес должен открываться, а не
+# упираться в ошибку DNS. Запись смотрит на ту же машину; отвечает по ней Caddy
+# редиректом на сам домен — имя перечислено в legacy_redirect_from.
+resource "yandex_dns_recordset" "www" {
+  count = var.manage_dns_zone && local.app_record_name == "@" ? 1 : 0
+
+  zone_id = yandex_dns_zone.main[0].id
+  name    = "www"
+  type    = "A"
+  ttl     = var.dns_ttl
+  data    = [local.external_ip]
+}
+
 # ── Почтовый домен (пункт cloud-domain): Яндекс 360 для бизнеса.
 #
 # Уведомления клиентам уходят с ящика на этом же домене (docs/notify.md), и

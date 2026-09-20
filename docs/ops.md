@@ -329,111 +329,138 @@ email: адрес не задан (alert_email пуст)
 
 ## Переезд на боевой домен (пункт `cloud-domain`)
 
-Решение владельца: живой домен подключается в самом конце, после запуска.
-Адрес системы живёт в одной переменной `app_domain` (`infra/README.md`, «Где
-живёт доменное имя»), поэтому сам переезд — один `apply` и несколько кабинетов.
-Что для этого описано в Terraform — `infra/README.md`, «Что меняется при переезде
-на боевой домен». Ниже — порядок по дням, с проверками. Домен ниже обозначен
-`<домен>`; текущий адрес — `http://84.201.139.101`.
+Решение владельца: живой домен подключается в самом конце, после запуска. Адрес
+системы живёт в одной переменной `app_domain` (`infra/README.md`, «Где живёт
+доменное имя»), поэтому сам переезд — это `apply`, несколько файлов на машине и
+несколько кабинетов. Что для этого описано в Terraform — `infra/README.md`,
+«Что меняется при переезде на боевой домен».
 
-### За неделю: домен, зона, почта
+**Состояние на 20.09.2026.** Домен `uchetkin.ru` куплен владельцем 20.09.2026 у
+Reg.ru (регистратор `REGRU-RU`, оплачен до 20.09.2027). Зона `uchetkin.ru`
+заведена в Cloud DNS и наполнена (`manage_dns_zone = true` в `infra/dev.tfvars`,
+шаг А ниже выполнен). Система пока работает на `https://84-201-139-101.sslip.io`.
+Дальше всё упирается в NS: у регистратора по-прежнему стоят `ns1.reg.ru` и
+`ns2.reg.ru`, и до их замены домен ведёт не в облако.
 
-1. **Имя и регистрация.** Имя согласовывает заказчица (предложение и
-   свободные варианты — «Учёткин — боевой домен» в файлах чата). Регистрирует
-   **ИП Бердинских А.А.** в своём кабинете регистратора (Reg.ru, RU-CENTER —
-   любой аккредитованный; `.ru` — около 170 ₽ в год) на реквизиты из карточки
-   предприятия: администратором домена должно быть ИП, а не подрядчик, иначе
-   передача владения (`docs/support.md`) не состоится. Подрядчику нужен доступ
-   только к разделу «DNS-серверы» или готовность заказчицы вписать два NS.
-2. **Делегировать зону в Cloud DNS.** В `infra/dev.tfvars` (рабочий контур —
-   dev-машина, пока `cloud-prod` не применён): `manage_dns_zone = true`,
-   `dns_zone_domain = "<домен>"`, `dns_ttl = 60`, `mail_records_enabled = true`;
-   `app_domain` пока **не** менять. `terraform apply` создаёт зону, A-запись
-   `<домен> → 84.201.139.101`, MX/SPF/DMARC. У регистратора прописать NS
-   `ns1.yandexcloud.net` и `ns2.yandexcloud.net`. Проверка через час-сутки:
+### Шаг А — зона в Cloud DNS (сделано 20.09.2026)
+
+В `infra/dev.tfvars`: `manage_dns_zone = true`, `dns_zone_domain = "uchetkin.ru"`,
+`dns_ttl = 60`, `mail_records_enabled = true`; `app_domain` при этом **не**
+меняется. `apply` создаёт зону и записи: `uchetkin.ru` и `www.uchetkin.ru` — на
+адрес машины, MX `mx.yandex.net`, SPF, DMARC. Пока `app_domain` вне зоны,
+A-запись кладётся на вершину зоны (`infra/locals.tf`, `app_in_zone`) — так домен
+указывает на машину ещё до переключения, и Let's Encrypt сможет его проверить.
+
+Проверка (с узла «Alchemist LAB» — из песочницы порт 53 наружу закрыт):
+
+```bash
+dig +short A   uchetkin.ru @ns1.yandexcloud.net   # 84.201.139.101
+dig +short MX  uchetkin.ru @ns1.yandexcloud.net   # 10 mx.yandex.net.
+dig +short TXT uchetkin.ru @ns1.yandexcloud.net   # "v=spf1 redirect=_spf.yandex.net"
+```
+
+### Шаг Б — делегирование (нужен кабинет Reg.ru)
+
+В кабинете Reg.ru у домена заменить DNS-серверы на `ns1.yandexcloud.net` и
+`ns2.yandexcloud.net`. Это единственное действие переезда, которое нельзя сделать
+ни из репозитория, ни из облака: кабинет регистратора — у владельца домена.
+Обновление в зоне `.ru` занимает от получаса до суток. Готовность:
+
+```bash
+dig +short NS uchetkin.ru            # ns1.yandexcloud.net. ns2.yandexcloud.net.
+dig +short A  uchetkin.ru            # 84.201.139.101, уже без указания сервера
+```
+
+### Шаг В — почтовый домен (нужен кабинет Яндекс 360)
+
+В Яндекс 360 для бизнеса (`admin.yandex.ru`) добавить `uchetkin.ru`; строку
+подтверждения `yandex-verification: …` вписать в `mail_verification_txt`, после
+подтверждения значение DKIM из «Почта → DKIM» — в `mail_dkim_public_key`, и
+`apply`. Завести ящик отправителя (например `uvedomleniya@uchetkin.ru`) и в его
+настройках — пароль приложения: обычный пароль SMTP Яндекса не принимает.
+Подробности и проверка доставки — `docs/notify.md`, «Свой почтовый домен».
+
+### Шаг Г — день переезда (30 минут, вечером)
+
+1. **Копия.** Запустить службу `uchetkin-backup` и дождаться строки «→ s3://…»
+   в её журнале (раздел «Резервные копии»).
+2. **Переключить Terraform.** В `dev.tfvars`: `app_domain = "uchetkin.ru"`,
+   `legacy_redirect_from = ["http://84.201.139.101", "84-201-139-101.sslip.io",
+   "www.uchetkin.ru"]` — старый адрес, старое имя и www ведут на домен. `apply`.
+   A-запись переедет с вершины зоны на сам домен без изменения значения.
+3. **Разложить файлы на машине.** На **принятой** в состояние ВМ cloud-init
+   повторно не запускается (`infra/README.md`, «Машина принята, а не создана»),
+   поэтому то, что он написал бы, кладётся руками по выходам `terraform output`:
+
+   | Файл | Что в нём меняется |
+   | --- | --- |
+   | `/opt/uchetkin/app.env` | `PUBLIC_BASE_URL`, `API_BASE_URL`, `WEBHOOK_BASE_URL`, `COOKIE_DOMAIN` — его читает контейнер API (`compose.yml`, `env_file`) |
+   | `/etc/uchetkin/app.env` | то же самое: это версия cloud-init, она не должна расходиться с рабочей |
+   | `/etc/uchetkin/caddy.env` | `SITE_ADDRESS=uchetkin.ru` |
+   | `/opt/uchetkin/config/frontend.json` | `apiBaseUrl`, `publicBaseUrl` — их читает фронт, пересборка не нужна |
+   | `/etc/uchetkin/caddy.d/legacy.caddy` | блок редиректа со старых адресов — как в cloud-init |
+
+   Затем `docker compose up -d`; если менялись `Caddyfile` или `compose.yml` —
+   сначала `git pull` в `/opt/uchetkin/src` и копия из `src/deploy`.
+   На prod (`cloud-prod`) всё это делает cloud-init, руками там ничего не правят.
+4. **Сертификат.** Caddy получает его при первом обращении по новому имени
+   (порт 80 открыт — HTTP-01). Проверка снаружи, с узла «Alchemist LAB»:
 
    ```bash
-   dig +short NS <домен>            # ns1.yandexcloud.net. ns2.yandexcloud.net.
-   dig +short A <домен>             # 84.201.139.101
-   dig +short MX <домен>            # 10 mx.yandex.net.
+   curl -sSI https://uchetkin.ru/health | head -1                    # HTTP/2 200
+   curl -sI http://84.201.139.101/ | grep -iE "^HTTP|^location"      # 301 на https://uchetkin.ru/
+   curl -sI https://84-201-139-101.sslip.io/ | grep -iE "^HTTP|^location"
+   echo | openssl s_client -connect uchetkin.ru:443 -servername uchetkin.ru 2>/dev/null \
+     | openssl x509 -noout -issuer -enddate
    ```
 
-3. **Почтовый домен.** В Яндекс 360 для бизнеса (`admin.yandex.ru`, вход
-   заказчицы) добавить `<домен>`; из мастера подтверждения взять строку
-   `yandex-verification: …` → `mail_verification_txt`, после подтверждения из
-   «Почта → DKIM» значение записи → `mail_dkim_public_key`, снова `apply`.
-   Завести ящик отправителя (например `uvedomleniya@<домен>`) и в его настройках
-   — пароль приложения. Пока идёт репутация, писать с него ничего не нужно.
-   Что проверить и как читать заголовки — `docs/notify.md`, «Свой почтовый домен».
-
-### День переезда (30 минут, вечером)
-
-4. **Копия.** `sudo systemctl start uchetkin-backup`, строка «→ s3://…» в
-   `journalctl -u uchetkin-backup -n 3`.
-5. **Переключить Terraform.** В `dev.tfvars`: `app_domain = "<домен>"`,
-   `tls_enabled = true`, `legacy_redirect_from = ["http://84.201.139.101"]`,
-   `extra_cors_origins = []`. `plan` покажет новые `app.env`, `frontend.json`,
-   `caddy.env`, `caddy.d/legacy.caddy` в cloud-init, CORS бакета снимков и
-   `APP_URL` сторожа. На **принятой** dev-машине cloud-init повторно не
-   запускается (`infra/README.md`, «Машина принята, а не создана»), поэтому
-   после `apply` те же четыре файла разложить руками по выходам `terraform
-   output`: в `/etc/uchetkin/app.env` — `PUBLIC_BASE_URL`, `API_BASE_URL`,
-   `WEBHOOK_BASE_URL`, `COOKIE_DOMAIN=<домен>`, строку `SESSION_COOKIE_SECURE=false`
-   **убрать**; в `caddy.env` — `SITE_ADDRESS=<домен>`; в
-   `/opt/uchetkin/config/frontend.json` — новые адреса; в
-   `/etc/uchetkin/caddy.d/legacy.caddy` — блок редиректа как в cloud-init.
-   Затем выкладка `deploy/` (`Caddyfile` и `compose.yml` с каталогом `caddy.d`)
-   и `docker compose up -d`. На prod (`cloud-prod`) всё это делает cloud-init.
-6. **Сертификат.** Caddy получает его при старте по имени (порт 80 открыт —
-   HTTP-01). Проверка снаружи, с узла «Alchemist LAB»:
-
-   ```bash
-   curl -sSI https://<домен>/health | head -1                  # HTTP/2 200
-   curl -sI http://84.201.139.101/ | grep -i -E "^HTTP|^location" # 301 → https://<домен>/
-   echo | openssl s_client -connect <домен>:443 -servername <домен> 2>/dev/null | openssl x509 -noout -issuer -enddate
-   ```
-
-   Автопродление: Caddy обновляет сертификат сам за 30 дней до конца; проверка
-   — счётчик «дней до конца сертификата» в статусе машины (`uchetkin-status`,
-   доска «Машина») не должен уменьшаться ниже 30.
-7. **Кабинеты.** Новофон: адрес приёмника вебхуков →
-   `https://<домен>/api/webhooks/novofon` (`docs/api.md`); тестовый входящий
+   Автопродление: Caddy обновляет сертификат сам примерно за 30 дней до конца и
+   хранит его в томе `caddy_data`. Проверка — счётчик «дней до конца сертификата»
+   в статусе машины (`uchetkin-status`, доска «Машина»): он не должен опускаться
+   ниже 30, а после обновления снова показывает около 90.
+5. **Кабинеты.** Новофон: адрес приёмника вебхуков —
+   `https://uchetkin.ru/api/webhooks/novofon` (`docs/api.md`); тестовый входящий
    звонок должен появиться в `GET /api/calls` и в журнале `api`. Яндекс Карты:
-   в ограничении ключа JS API добавить `<домен>`, старый адрес оставить на 30 дней
-   (`docs/maps.md`). «Аршин»: адресов системы в выгрузках нет
-   (`docs/arshin.md`) — менять нечего. Почта: `NOTIFY_FROM`, `SMTP_USER` в
+   в ограничении ключа JS API добавить `uchetkin.ru`, старый адрес оставить на
+   30 дней (`docs/maps.md`). «Аршин»: адресов системы в выгрузках нет
+   (`docs/arshin.md`) — менять нечего. Почта: `NOTIFY_FROM` и `SMTP_USER` в
    `app.env` на новый ящик, `smtp_password` в Lockbox `smtp` — пароль приложения;
    тестовое письмо на три внешних ящика по `docs/notify.md`.
-8. **Адрес в репозитории.** Один поиск показывает всё, что помнит старый адрес:
+
+   На 20.09.2026 внешние секреты (`novofon`, `maps`, `smtp`, `arshin`) пусты —
+   боевые ключи в контур не вносились, и перенастраивать в кабинетах пока нечего:
+   шаг делается вместе с внесением ключей.
+6. **Адрес в репозитории.** Один поиск показывает всё, что помнит старый адрес:
 
    ```bash
    grep -rn -E "84[-.]201[-.]139[-.]101|sslip\.io" --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist .
    ```
 
-   По состоянию на 18.09.2026 это константы `ADDRESS` в `docs/train/content/common.mjs`,
+   Это константы `ADDRESS` в `docs/train/content/common.mjs`,
    `docs/launch/build.mjs`, `docs/support/build.mjs`; значения по умолчанию в
    `e2e/lib/app.mjs`, `e2e/load/run.mjs`, `e2e/playwright.config.js`,
    `e2e/program/build.py`, `.github/workflows/uat.yml`; таблицы в `docs/launch.md`,
-   `docs/uat.md` и этот файл. Заменить на `https://<домен>`, пересобрать
-   инструкции и видео (`docs/train`, одна константа) и документы запуска, положить
-   их в файлы чата; в `docs/uat.md` история прогонов остаётся как есть.
-   Playwright-сценарии прогнать против нового адреса: `uat.yml` по кнопке с
-   `vars.UAT_BASE_URL = https://<домен>` (техническая учётка — `npm run uat:stand`
-   на машине, после прогона её снять).
-9. **Сотрудники.** Сообщение заказчице и операторам: новый адрес, старый ещё
+   `docs/uat.md`, `docs/migration.md` и этот файл. Заменить на
+   `https://uchetkin.ru`, пересобрать инструкции и видео (`docs/train`, одна
+   константа) и документы запуска, положить их в файлы чата; в `docs/uat.md`
+   история прогонов остаётся как есть. Playwright-сценарии прогнать против нового
+   адреса: `uat.yml` по кнопке с `vars.UAT_BASE_URL = https://uchetkin.ru`
+   (порядок прогона на рабочем контуре — `docs/uat.md`).
+7. **Сотрудники.** Сообщение заказчице и операторам: новый адрес, старый ещё
    30 дней сам переводит на новый; поверителям — переставить закладку на
    телефоне (инструкция поверителя, первая страница). Дата в `docs/launch.md`,
    таблица «Что появится после пилота».
 
 ### Через 30 дней
 
-10. **Снять редирект**: `legacy_redirect_from = []`, `apply`, на dev-машине
-    убрать блок из `/etc/uchetkin/caddy.d/legacy.caddy` и `docker compose up -d
-    caddy`; убрать старый адрес из ограничения ключа Карт; `dns_ttl` вернуть
-    к 300. Раньше — нельзя: закладки и ссылки в переписке ещё живы.
+8. **Снять редирект**: `legacy_redirect_from = []`, `apply`, на машине убрать
+   блок из `/etc/uchetkin/caddy.d/legacy.caddy` и перезапустить контейнер caddy;
+   убрать старый адрес из ограничения ключа Карт; `dns_ttl` вернуть к 300.
+   Раньше — нельзя: закладки и ссылки в переписке ещё живы. Запись `www` и её
+   редирект остаются навсегда.
 
-Откат в день переезда — вернуть прежние значения переменных и те же четыре
-файла на машине: данные не трогаются, A-запись домена остаётся.
+Откат в день переезда — вернуть прежние значения переменных и те же файлы на
+машине: данные не трогаются, зона и A-запись домена остаются.
 
 ## Машина и шлюз агента
 

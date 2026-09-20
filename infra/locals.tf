@@ -41,8 +41,14 @@ locals {
   dns_zone_fqdn   = "${trimsuffix(local.dns_zone_domain, ".")}."
   app_domain_fqdn = "${trimsuffix(var.app_domain, ".")}."
 
+  # Лежит ли адрес системы внутри зоны, которой управляет Terraform. На первом
+  # шаге переезда (cloud-domain) зона боевого домена уже создана, а система ещё
+  # живёт на временном имени — тогда A-запись заводится на вершину зоны, чтобы
+  # домен указывал на машину до переключения и Let's Encrypt мог его проверить.
+  app_in_zone = endswith(local.app_domain_fqdn, local.dns_zone_fqdn)
+
   # Имя A-записи внутри зоны: "@" для самой зоны, иначе левая часть имени.
-  app_record_name = local.app_domain_fqdn == local.dns_zone_fqdn ? "@" : trimsuffix(
+  app_record_name = !local.app_in_zone || local.app_domain_fqdn == local.dns_zone_fqdn ? "@" : trimsuffix(
     trimsuffix(local.app_domain_fqdn, local.dns_zone_fqdn), "."
   )
 
