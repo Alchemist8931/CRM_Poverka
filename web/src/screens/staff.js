@@ -20,6 +20,7 @@ import { I, svg } from '../ui/icons.js';
 import { cap, shell } from '../ui/shell.js';
 import { render, toast } from '../ui/render.js';
 import { isDemo } from '../api/mode.js';
+import { api } from '../api/client.js';
 import { closeSessions, createStaff, patchStaff, resetPassword } from '../api/actions.js';
 
 const ROLE_NAME = {operator:'оператор', senior:'старший оператор', supervisor:'руководитель', verifier:'поверитель'};
@@ -144,6 +145,87 @@ function usCopy(){
 }
 function usPwOk(){ S.usPw = null; render(); }
 
+/* ---------- телефония: связь учётной записи с сотрудником АТС ---------- */
+/* Звонок из карточки уходит в АТС от имени сотрудника АТС, а не от имени
+   учётной записи CRM: в кабинете Новофон свои идентификаторы. Общее у двух
+   систем одно — внутренний номер, по нему и сверяемся.
+
+   Найденное не подставляется молча: одинаковый внутренний номер у двоих или
+   переставленный в кабинете номер — обычное дело, и тихая правка увела бы
+   звонки не тому. Поэтому сервер показывает расхождение, а связывает строку
+   руководитель кнопкой. */
+
+async function telLoad(){
+  if(isDemo()) return toast('В демо-режиме телефонии нет: кабинет АТС спрашивать нечем.');
+  S.tel = {loading:true};
+  render();
+  try{
+    const settings = await api.get('/calls/settings');
+    // Без ключей АТС спрашивать нечего: показываем состояние и адреса для
+    // кабинета — это и есть то, чего в кабинете ещё не сделано.
+    const ats = settings.calling ? await api.get('/calls/employees') : null;
+    S.tel = {settings, ats};
+  }catch(err){
+    S.tel = {error: err?.message || 'Не удалось прочитать настройки телефонии.'};
+  }
+  render();
+}
+async function telLink(staffId, employeeId, numberId){
+  const out = await patchStaff(staffId, {
+    novofon_employee_id: employeeId === null ? null : Number(employeeId),
+    novofon_phone_number_id: numberId === null || numberId === undefined || numberId === '' ? null : Number(numberId),
+  }, employeeId === null ? 'Связь с АТС снята.' : 'Сотрудник связан с АТС.');
+  if(out) await telLoad();
+}
+
+const TEL_STATE = {
+  'совпало': '<span class="tg t-ok">совпало</span>',
+  'не связан': '<span class="tg t-warn">не связан</span>',
+  'расхождение': '<span class="tg t-err">расхождение</span>',
+  'нет в АТС': '<span class="tg t-err">нет в АТС</span>',
+  'нет внутреннего номера': '<span class="tg t-mut">нет вн. номера</span>',
+};
+
+function telRows(A){
+  return `<table class="audit"><thead><tr><th>Сотрудник</th><th>Вн. номер</th><th>В АТС</th>
+    <th>Связь сейчас</th><th>Состояние</th><th></th></tr></thead><tbody>
+    ${A.staff.map(r=>`<tr>
+      <td><b>${esc(r.full_name)}</b> <span class="tg t-mut">${esc(r.staff_id)}</span></td>
+      <td class="mono">${esc(r.ext||'—')}</td>
+      <td>${r.ats_employee_id===null?'—':`${esc(r.ats_name||'без имени')} <span class="mono">№${r.ats_employee_id}</span>`}</td>
+      <td class="mono">${r.novofon_employee_id===null?'—':`№${r.novofon_employee_id}${r.novofon_phone_number_id?` / ${r.novofon_phone_number_id}`:''}`}</td>
+      <td>${TEL_STATE[r.state]||esc(r.state)}</td>
+      <td>${r.ats_employee_id!==null && r.state!=='совпало'
+        ? `<button class="b" onclick="telLink('${r.staff_id}',${r.ats_employee_id},${r.ats_phone_number_id===null?'null':r.ats_phone_number_id})">Связать</button>`
+        : ''}
+        ${r.novofon_employee_id!==null?`<button class="g" onclick="telLink('${r.staff_id}',null,null)">Снять</button>`:''}</td></tr>`).join('')}
+  </tbody></table>
+  ${A.extra.length?`<p class="note">В АТС есть сотрудники без пары в системе:
+    ${A.extra.map(e=>`${esc(e.full_name||'без имени')} (вн. ${esc(e.ext||'—')})`).join(', ')}.
+    Впишите им внутренний номер в карточке — или заведите учётную запись.</p>`:''}`;
+}
+
+function telBlock(){
+  const T = S.tel;
+  const head = `<h3>Телефония</h3>
+    <p class="cap">Связь учётной записи с сотрудником АТС Новофон. Без неё кнопка «Позвонить» в карточке клиента
+      отвечает отказом, а отметка «на паузе» остаётся только в системе. Сверка идёт по внутреннему номеру:
+      он должен совпадать с номером в кабинете АТС.</p>`;
+  if(!T) return `<div class="c">${head}
+    <button class="b" onclick="telLoad()">Подтянуть из АТС</button></div>`;
+  if(T.loading) return `<div class="c">${head}<p class="note">Спрашиваем АТС…</p></div>`;
+  if(T.error) return `<div class="c">${head}<p class="note" style="color:var(--error)">${esc(T.error)}</p>
+    <button class="g" onclick="telLoad()">Повторить</button></div>`;
+  const C = T.settings;
+  return `<div class="c">${head}
+    <p class="note">Приём событий: ${C.receiving?'<b>включён</b>':'<b>выключен</b> — в секрете нет записи webhook_secret'};
+      обращения к АТС: ${C.calling?'<b>включены</b>':'<b>выключены</b> — в секрете нет access_token и virtual_number'}.
+      ${C.public_base_url?`Адрес системы: <span class="mono">${esc(C.public_base_url)}</span>.`:''}</p>
+    ${C.calling && T.ats ? telRows(T.ats)
+      : '<p class="note">Пока ключи АТС не заданы, сотрудников в кабинете не спросить: сначала кабинет, потом связь.</p>'}
+    <div class="row" style="margin-top:12px"><button class="g" onclick="telLoad()">Обновить</button></div></div>`;
+}
+
 /* ---------- разметка ---------- */
 const hhmm = at => { const d = new Date(at); const p = n => String(n).padStart(2,'0'); return `${p(d.getHours())}:${p(d.getMinutes())}`; };
 const stateTag = p => p.blocked ? '<span class="tg t-err">уволен</span>'
@@ -226,7 +308,8 @@ function viewStaff(){
         <td class="mono">${esc(p.pattern||'—')}</td>
         <td>${stateTag(p)}</td></tr>`).join('')}
     </tbody></table>`:'<div class="empty">По этому отбору сотрудников нет.</div>'}
-  </div>`);
+  </div>
+  ${S.role==='supervisor'?telBlock():''}`);
 }
 
-export { usBlock, usCancel, usClose, usCopy, usField, usNew, usOpen, usPwOk, usReset, usRows, usSave, usSet, usSkill, viewStaff };
+export { telBlock, telLink, telLoad, usBlock, usCancel, usClose, usCopy, usField, usNew, usOpen, usPwOk, usReset, usRows, usSave, usSet, usSkill, viewStaff };

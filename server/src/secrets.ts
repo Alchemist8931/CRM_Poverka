@@ -98,6 +98,38 @@ export function databaseUrlFrom(e: Entries, ssl: DbSsl = {}): string {
   return query ? `${url}?${query}` : url;
 }
 
+/** Записи секрета телефонии → переменные окружения (пункт novofon-live).
+ *
+ *  В секрете `uchetkin-dev-novofon` лежит всё, что человек заводит в кабинете
+ *  Новофон: секрет приёмника уведомлений, Secret ключа API, виртуальный номер,
+ *  группа операторов и адреса, с которых АТС шлёт уведомления. Раньше отсюда
+ *  бралась одна запись — секрет приёмника, — и на живом кабинете это значило
+ *  «события принимаем, но сами в АТС не ходим»: без `access_token` и номера
+ *  `canCall()` ложный, а звонок из карточки отвечает отказом.
+ *
+ *  Имена записей — те же, что в `docs/ops.md` («Включение телефонии»): секрет
+ *  заполняет человек командой `yc lockbox`, и разойтись им нельзя.
+ *
+ *  Запись с неизвестным именем пропускается молча — подставлять её «первой
+ *  попавшейся» под секрет приёмника (так было, пока запись была одна) теперь
+ *  опасно: под приёмник уехал бы ключ API. */
+const NOVOFON_VARS: Record<string, string> = {
+  webhook_secret: 'NOVOFON_WEBHOOK_SECRET',
+  access_token: 'NOVOFON_ACCESS_TOKEN',
+  virtual_number: 'NOVOFON_VIRTUAL_NUMBER',
+  group_id: 'NOVOFON_GROUP_ID',
+  allowed_ips: 'NOVOFON_ALLOWED_IPS',
+};
+
+export function novofonEnvFrom(entries: Entries): Entries {
+  const out: Entries = {};
+  for (const [key, name] of Object.entries(NOVOFON_VARS)) {
+    const value = entries[key]?.trim();
+    if (value) out[name] = value;
+  }
+  return out;
+}
+
 /** Чего не хватает окружению и из какого секрета это берётся. */
 function plan(env: NodeJS.ProcessEnv): { name: string; secretId: string }[] {
   const wanted: [string, string | undefined, string | undefined][] = [
@@ -179,12 +211,15 @@ export async function loadSecrets(env: NodeJS.ProcessEnv = process.env): Promise
       if (entries.provider) env.PAYMENT_PROVIDER = entries.provider;
       if (!entries.secret_key) continue;
     } else {
-      // Секреты внешних служб заводятся человеком в консоли: до этого момента
-      // секрет существует, но пуст. Пустой ключ вебхука — это рабочее
+      // Телефония. Секрет заводится человеком в кабинете Новофон: до этого
+      // момента секрет в Lockbox существует, но пуст. Пустой секрет — рабочее
       // состояние («приёмник отвечает 503»), а не повод не подняться.
-      const value = entries.webhook_secret || Object.values(entries)[0];
-      if (!value) continue;
-      env.NOVOFON_WEBHOOK_SECRET = value;
+      // Заданное в окружении сильнее секрета — как и у всех остальных.
+      const vars = novofonEnvFrom(entries);
+      const set = Object.entries(vars).filter(([key]) => !env[key]);
+      for (const [key, value] of set) env[key] = value;
+      loaded.push(...set.map(([key]) => key));
+      continue;
     }
     loaded.push(name);
   }

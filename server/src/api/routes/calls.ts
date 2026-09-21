@@ -457,6 +457,76 @@ const plugin: FastifyPluginAsync = async (app) => {
       staff,
     };
   });
+
+  /** Сотрудники АТС рядом с сотрудниками CRM: кого с кем связать.
+   *
+   *  Связь нужна двум вещам — звонку из карточки (`start.employee_call` берёт
+   *  идентификатор сотрудника) и отметке «на паузе» (она меняет доступность
+   *  номера в группе). Ни то, ни другое система угадать не может: в АТС свои
+   *  идентификаторы, и единственное общее с CRM — внутренний номер.
+   *
+   *  Поэтому здесь только сверка: что в АТС, что в CRM и где расхождение.
+   *  Записывает связь руководитель — `PATCH /api/staff/:id`, по строке за раз.
+   *  Молча подставлять найденное нельзя: одинаковый внутренний номер у двух
+   *  человек или переставленный в кабинете номер — обычное дело, и тихая
+   *  правка увела бы звонки не тому. */
+  app.get('/calls/employees', {
+    schema: {
+      tags: ['связь'],
+      summary: 'Сотрудники АТС и связь с учётными записями: сверка по внутреннему номеру',
+      security: [{ session: [] }],
+    },
+  }, async (req) => {
+    const user = requireUser(req);
+    if (user.role !== 'supervisor') throw new ApiError(403, 'Настройка телефонии — у руководителя.');
+    if (!app.novofon || !canCall(cfg)) {
+      throw new ApiError(503, 'Ключи АТС не заданы на этом контуре: список сотрудников спрашивать нечем.');
+    }
+    const employees = await app.novofon.employees();
+    const byExt = new Map<string, typeof employees[number]>();
+    for (const e of employees) {
+      const ext = String(e.extension ?? '').trim();
+      if (ext) byExt.set(ext, e);
+    }
+    const { rows: staff } = await app.db.query<{
+      id: string; full_name: string; ext: string | null;
+      novofon_employee_id: number | null; novofon_phone_number_id: number | null;
+    }>(
+      `SELECT id, full_name, ext, novofon_employee_id, novofon_phone_number_id FROM staff
+        WHERE role IN ('operator','senior','supervisor') AND blocked_at IS NULL ORDER BY full_name`);
+
+    const used = new Set<string>();
+    const rows = staff.map((p) => {
+      const ext = p.ext?.trim() || null;
+      const ats = ext ? byExt.get(ext) ?? null : null;
+      if (ext && ats) used.add(ext);
+      const employeeId = ats ? ats.id : null;
+      const numberId = ats?.phone_numbers?.[0]?.id ?? null;
+      const state = !ext ? 'нет внутреннего номера'
+        : !ats ? 'нет в АТС'
+          : p.novofon_employee_id === null ? 'не связан'
+            : p.novofon_employee_id !== employeeId
+              || (numberId !== null && p.novofon_phone_number_id !== numberId) ? 'расхождение'
+              : 'совпало';
+      return {
+        staff_id: p.id,
+        full_name: p.full_name,
+        ext,
+        novofon_employee_id: p.novofon_employee_id,
+        novofon_phone_number_id: p.novofon_phone_number_id,
+        ats_employee_id: employeeId,
+        ats_phone_number_id: numberId,
+        ats_name: ats?.full_name ?? null,
+        state,
+      };
+    });
+    // Сотрудник АТС без пары в CRM — не ошибка, но видеть его надо: чаще всего
+    // это внутренний номер, который в кабинете завели, а в карточку не внесли.
+    const extra = employees
+      .filter((e) => !used.has(String(e.extension ?? '').trim()))
+      .map((e) => ({ id: e.id, full_name: e.full_name ?? null, ext: e.extension ?? null }));
+    return { staff: rows, extra, group_id: cfg.groupId };
+  });
 };
 
 export default plugin;

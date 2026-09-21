@@ -113,6 +113,22 @@ const CARD = {
   svcs: { type: 'array', items: { type: 'string' } },
 } as const;
 
+/** Связь учётной записи с сотрудником АТС Новофон (пункт novofon-live).
+ *
+ * Эти два числа заводит не человек из головы: они приходят из кабинета
+ * (`get.employees`), и экран «Сотрудники» подставляет их кнопкой «Подтянуть из
+ * АТС», сопоставляя по внутреннему номеру. Руками их тоже можно вписать — но
+ * только руководителю и только здесь: без `novofon_employee_id` кнопка
+ * «Позвонить» отвечает отказом, а без `novofon_phone_number_id` отметка
+ * «на паузе» остаётся в CRM и не уходит в АТС.
+ *
+ * Пустое значение (`null`) — это «связь снять»: сотрудник уволился из АТС или
+ * его завели заново с другим номером. */
+const LINK = {
+  novofon_employee_id: { type: ['integer', 'null'], description: 'Сотрудник в АТС Новофон (get.employees → id)' },
+  novofon_phone_number_id: { type: ['integer', 'null'], description: 'Номер сотрудника в АТС: им переключается доступность в группе' },
+} as const;
+
 const plugin: FastifyPluginAsync = async (app) => {
   /* ── создание ────────────────────────────────────────────────── */
 
@@ -172,6 +188,7 @@ const plugin: FastifyPluginAsync = async (app) => {
         additionalProperties: false,
         properties: {
           ...CARD,
+          ...LINK,
           role: { type: 'string', enum: ROLES },
           blocked: { type: 'boolean', description: 'true — уволен, вход закрыт; false — вернулся' },
         },
@@ -207,6 +224,13 @@ const plugin: FastifyPluginAsync = async (app) => {
         if (b[col] === undefined) continue;
         const v = typeof b[col] === 'string' ? (b[col] as string).trim() : b[col];
         put(col, v === '' ? null : v);
+      }
+      // Связь с АТС: число или снятие связи. Правку видно в журнале действий —
+      // слой журнала сравнивает строку `staff` до и после, и эти столбцы в
+      // разницу попадают сами.
+      for (const col of ['novofon_employee_id', 'novofon_phone_number_id'] as const) {
+        if (b[col] === undefined) continue;
+        put(col, b[col] === null ? null : Number(b[col]));
       }
       if (b.email !== undefined) {
         const email = String(b.email).trim() || null;

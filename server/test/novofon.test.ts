@@ -14,7 +14,8 @@ import { strict as assert } from 'node:assert';
 import { describe, it } from 'node:test';
 import type { FastifyInstance } from 'fastify';
 import { as, draft, login, makeStand, type Stand } from './helpers.ts';
-import { novofonConfig } from '../src/novofon/config.ts';
+import { canCall, canReceive, novofonConfig } from '../src/novofon/config.ts';
+import { novofonEnvFrom } from '../src/secrets.ts';
 import { v1AuthHeader, v1EventSignature, v1QueryString } from '../src/novofon/signature.ts';
 import { atsTime, fromV1, fromV2 } from '../src/novofon/events.ts';
 import type { LineEvent } from '../src/novofon/bus.ts';
@@ -182,6 +183,112 @@ describe('Новофон: разбор событий', () => {
     })!;
     assert.equal(ev.kind, 'запись');
     assert.equal(ev.recordUrl, 'https://app.novofon.ru/system/media/talk/555/abc/');
+  });
+});
+
+describe('Новофон: ключи кабинета из секрета Lockbox', () => {
+  it('из секрета разбираются все записи кабинета, а не один секрет приёмника', () => {
+    // Записи заводит человек в кабинете Новофон и кладёт в Lockbox; имена здесь
+    // те же, что в docs/ops.md, «Включение телефонии».
+    assert.deepEqual(novofonEnvFrom({
+      webhook_secret: 'секрет-приёмника',
+      access_token: 'ключ-api',
+      virtual_number: '73432269924',
+      group_id: '77',
+      allowed_ips: '37.139.38.215',
+    }), {
+      NOVOFON_WEBHOOK_SECRET: 'секрет-приёмника',
+      NOVOFON_ACCESS_TOKEN: 'ключ-api',
+      NOVOFON_VIRTUAL_NUMBER: '73432269924',
+      NOVOFON_GROUP_ID: '77',
+      NOVOFON_ALLOWED_IPS: '37.139.38.215',
+    });
+  });
+
+  it('пустой секрет — рабочее состояние, чужая запись под приёмник не уходит', () => {
+    assert.deepEqual(novofonEnvFrom({}), {});
+    // Раньше под секрет приёмника бралась «первая попавшаяся» запись: с живым
+    // кабинетом это значило бы ключ API в роли пароля приёмника.
+    assert.deepEqual(novofonEnvFrom({ пароль_от_чего_то: 'x' }), {});
+    assert.deepEqual(novofonEnvFrom({ webhook_secret: '  ' }), {});
+  });
+
+  it('половина записей — половина возможностей: приём есть, звонка нет', () => {
+    const env = novofonEnvFrom({ webhook_secret: 'секрет-приёмника' }) as NodeJS.ProcessEnv;
+    const cfg = novofonConfig(env);
+    assert.equal(canReceive(cfg), true);
+    assert.equal(canCall(cfg), false, 'без access_token и номера звонить нечем');
+    const full = novofonConfig(novofonEnvFrom({
+      webhook_secret: 'секрет-приёмника', access_token: 'ключ-api', virtual_number: '73432269924',
+    }) as NodeJS.ProcessEnv);
+    assert.equal(canCall(full), true);
+  });
+});
+
+describe('Новофон: связь учётной записи с сотрудником АТС', () => {
+  const atsWith = (employees: unknown[]) => ({ employees: async () => employees } as unknown as NovofonApi);
+
+  it('расхождение показывается, а правит его руководитель', async (t) => {
+    const st = await v2Stand(
+      { NOVOFON_ACCESS_TOKEN: 'токен', NOVOFON_VIRTUAL_NUMBER: '73432269924' },
+      {
+        novofonClient: atsWith([
+          { id: 4242, full_name: 'Ефимова О.', extension: '102', phone_numbers: [{ id: 5001 }] },
+          { id: 4300, full_name: 'Кто-то из кабинета', extension: '109', phone_numbers: [{ id: 5009 }] },
+        ]),
+      });
+    t.after(() => st.close());
+    const sv = as(st.app, await login(st.app, 'sv'));
+
+    const before = body(await sv.get('/api/calls/employees'));
+    const o1 = before.staff.find((r: { staff_id: string }) => r.staff_id === 'o1');
+    assert.equal(o1.state, 'не связан');
+    assert.equal(o1.ats_employee_id, 4242);
+    assert.equal(o1.ats_phone_number_id, 5001);
+    // Руководителя в АТС нет — это видно, а не молчится.
+    assert.equal(before.staff.find((r: { staff_id: string }) => r.staff_id === 'sv').state, 'нет в АТС');
+    assert.deepEqual(before.extra, [{ id: 4300, full_name: 'Кто-то из кабинета', ext: '109' }]);
+
+    const saved = await sv.patch('/api/staff/o1', { novofon_employee_id: 4242, novofon_phone_number_id: 5001 });
+    assert.equal(saved.statusCode, 200);
+    const { rows } = await st.db.query<{ novofon_employee_id: number; novofon_phone_number_id: number }>(
+      'SELECT novofon_employee_id, novofon_phone_number_id FROM staff WHERE id = $1', ['o1']);
+    assert.deepEqual(rows[0], { novofon_employee_id: 4242, novofon_phone_number_id: 5001 });
+
+    const after = body(await sv.get('/api/calls/employees'));
+    assert.equal(after.staff.find((r: { staff_id: string }) => r.staff_id === 'o1').state, 'совпало');
+
+    // Правка связи — действие руководителя, и оно попадает в журнал вместе с тем,
+    // что именно поменялось.
+    const { rows: log } = await st.db.query<{ action: string; changed: string }>(
+      `SELECT action, after::text AS changed FROM audit_log WHERE entity = 'staff' AND entity_id = 'o1'
+        ORDER BY id DESC LIMIT 1`);
+    assert.equal(log[0]?.action, 'изменение');
+    assert.match(log[0]!.changed, /novofon_employee_id/);
+  });
+
+  it('связь снимается тем же способом, а оператору список АТС не положен', async (t) => {
+    const st = await v2Stand(
+      { NOVOFON_ACCESS_TOKEN: 'токен', NOVOFON_VIRTUAL_NUMBER: '73432269924' },
+      { novofonClient: atsWith([{ id: 4242, full_name: 'Ефимова О.', extension: '102', phone_numbers: [{ id: 5001 }] }]) });
+    t.after(() => st.close());
+    const sv = as(st.app, await login(st.app, 'sv'));
+    await sv.patch('/api/staff/o1', { novofon_employee_id: 4242, novofon_phone_number_id: 5001 });
+    assert.equal((await sv.patch('/api/staff/o1', { novofon_employee_id: null, novofon_phone_number_id: null })).statusCode, 200);
+    const { rows } = await st.db.query<{ novofon_employee_id: number | null }>(
+      'SELECT novofon_employee_id FROM staff WHERE id = $1', ['o1']);
+    assert.equal(rows[0]!.novofon_employee_id, null);
+
+    const op = as(st.app, await login(st.app, 'o1'));
+    assert.equal((await op.get('/api/calls/employees')).statusCode, 403);
+    assert.equal((await op.patch('/api/staff/o1', { novofon_employee_id: 4242 })).statusCode, 403);
+  });
+
+  it('без ключей АТС список сотрудников не спрашивается, а отвечает отказом', async (t) => {
+    const st = await v2Stand();
+    t.after(() => st.close());
+    const sv = as(st.app, await login(st.app, 'sv'));
+    assert.equal((await sv.get('/api/calls/employees')).statusCode, 503);
   });
 });
 
