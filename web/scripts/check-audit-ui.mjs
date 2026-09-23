@@ -137,7 +137,6 @@ async function signIn(who) {
   await page.evaluate(() => { try { localStorage.clear(); } catch (e) { /* приватный режим */ } });
   await page.reload({ waitUntil: 'load' });
   await page.waitForSelector('form.login');
-  await page.waitForSelector('#intro', { state: 'hidden', timeout: 20000 }).catch(() => {});
   await page.fill('form.login input[name=login]', who);
   await page.fill('form.login input[name=pw]', PASSWORD);
   await page.click('form.login button');

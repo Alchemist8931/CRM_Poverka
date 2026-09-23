@@ -57,8 +57,6 @@ await page.clock.setFixedTime(noon);
 
 await page.goto(url, { waitUntil: 'load' });
 await page.waitForSelector('form.login', { timeout: 20000 });
-// Заставка рисуется четыре секунды и всё это время перехватывает нажатия.
-await page.waitForSelector('#intro', { state: 'hidden', timeout: 20000 }).catch(() => {});
 await page.waitForTimeout(300);
 await page.screenshot({ path: `${out}/00-login.png`, fullPage: true });
 

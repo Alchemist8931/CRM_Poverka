@@ -34,7 +34,6 @@ page.on('request', (r) => { if (/\/(api|health)\b/.test(new URL(r.url()).pathnam
 
 await page.goto(url, { waitUntil: 'load' });
 await page.waitForSelector('form.login', { timeout: 20000 });
-await page.waitForSelector('#intro', { state: 'hidden', timeout: 20000 }).catch(() => {});
 await page.click('form.login button');
 await page.waitForSelector('.app', { timeout: 20000 });
 

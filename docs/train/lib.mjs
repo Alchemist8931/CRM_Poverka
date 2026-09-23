@@ -32,14 +32,13 @@ export async function quiet(page) {
   await page.waitForTimeout(250);
 }
 
-/** Открыть форму входа чистой вкладкой (без сессии и без заставки). */
+/** Открыть форму входа чистой вкладкой, без сессии. */
 export async function openLogin(page) {
   await page.context().clearCookies();
   await page.goto('/', { waitUntil: 'load' });
   await page.evaluate(() => { try { localStorage.clear(); } catch { /* приватный режим */ } });
   await page.reload({ waitUntil: 'load' });
   await page.waitForSelector('form.login');
-  await page.waitForSelector('#intro', { state: 'hidden', timeout: 20_000 }).catch(() => {});
   await page.waitForTimeout(300);
 }
 

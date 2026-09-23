@@ -15,7 +15,6 @@ import { addDays, iso, today, TODAY } from './util.js';
 import { dayLock } from './rules.js';
 import { seed } from './demo/seed.js';
 import { seedAudit } from './demo/audit.js';
-import { INTRO } from './ui/brand.js';
 import { render, step } from './ui/render.js';
 import { closeModal } from './ui/modals.js';
 import { closePrint } from './screens/print.js';
@@ -62,4 +61,3 @@ else {
 }
 
 NET.start();
-INTRO.start(()=>{ S.introDone=true; });

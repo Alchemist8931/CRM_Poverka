@@ -12,10 +12,16 @@ import { iconAt } from '../ui/brand.js';
 import { isDemo } from '../api/mode.js';
 import { login } from '../api/boot.js';
 
+/* Форма проявляется один раз — при открытии. Перерисовка экрана (неверный
+ * пароль, возврат после выхода) её не повторяет: мигание на каждой ошибке
+ * читалось бы как перезагрузка. */
+let appeared = false;
+
 function viewLogin(){
-  const hide = !S.introDone ? 'opacity:0;transform:translateY(10px)' : '';
+  const appear = appeared ? '' : ' appear';
+  appeared = true;
   const demo = isDemo();
-  return `<div class="login-wrap"><form class="login" style="${hide}" onsubmit="doLogin(event)">
+  return `<div class="login-wrap"><form class="login${appear}" onsubmit="doLogin(event)">
     <div class="brand"><span class="logo">${iconAt(26)}</span><h1>CRM «Учёткин»</h1></div>
     <div class="f"><label>Логин</label><input class="fld" name="login" value="${demo?'operator':''}" required></div>
     <div class="f"><label>Пароль</label><input class="fld" name="pw" type="password" value="${demo?'1234':''}" required></div>
